@@ -5,7 +5,7 @@ import { join } from "node:path"
 
 const CLI_VERSION = "0.0.0-next-16350"
 
-export type Channel = "dev" | "beta" | "prod" | "muc"
+export type Channel = "dev" | "beta" | "prod" | "muc" | "hubu"
 
 // MUC Harness: MUC 桌面端版本唯一真实来源。与上游 OpenCode workspace 版本（package.json，
 // rebase 时被上游 bump 覆盖）彻底解耦；electron-builder / 渲染层 / electron-updater 全部由此派生。
@@ -22,7 +22,7 @@ export async function getMucVersion(): Promise<string> {
 
 export function resolveChannel(): Channel {
   const raw = Bun.env.OPENCODE_CHANNEL
-  if (raw === "dev" || raw === "beta" || raw === "prod" || raw === "muc") return raw
+  if (raw === "dev" || raw === "beta" || raw === "prod" || raw === "muc" || raw === "hubu") return raw
   return "dev"
 }
 

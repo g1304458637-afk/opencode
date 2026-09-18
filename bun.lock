@@ -37,6 +37,7 @@
         "@dnd-kit/helpers": "0.5.0",
         "@dnd-kit/solid": "0.5.0",
         "@kobalte/core": "catalog:",
+        "@opencode-ai/brand": "workspace:*",
         "@opencode-ai/client": "file:vendor/opencode-ai-client-1.17.13-v2.tgz",
         "@opencode-ai/core": "workspace:*",
         "@opencode-ai/schema": "workspace:*",
@@ -92,6 +93,15 @@
         "vite": "catalog:",
         "vite-plugin-icons-spritesheet": "3.0.1",
         "vite-plugin-solid": "catalog:",
+      },
+    },
+    "packages/brand": {
+      "name": "@opencode-ai/brand",
+      "version": "0.0.1",
+      "devDependencies": {
+        "@types/bun": "catalog:",
+        "@types/node": "catalog:",
+        "@typescript/native-preview": "catalog:",
       },
     },
     "packages/cli": {
@@ -385,6 +395,7 @@
       "name": "@opencode-ai/desktop",
       "version": "1.18.31",
       "dependencies": {
+        "@opencode-ai/brand": "workspace:*",
         "@zip.js/zip.js": "2.7.62",
         "drizzle-orm": "catalog:",
         "effect": "catalog:",
@@ -598,6 +609,7 @@
         "@octokit/graphql": "9.0.2",
         "@octokit/rest": "catalog:",
         "@openauthjs/openauth": "catalog:",
+        "@opencode-ai/brand": "workspace:*",
         "@opencode-ai/codemode": "workspace:*",
         "@opencode-ai/llm": "workspace:*",
         "@opencode-ai/plugin": "workspace:*",
@@ -941,6 +953,7 @@
       "name": "@opencode-ai/tui",
       "version": "1.18.31",
       "dependencies": {
+        "@opencode-ai/brand": "workspace:*",
         "@opencode-ai/core": "workspace:*",
         "@opencode-ai/plugin": "workspace:*",
         "@opencode-ai/sdk": "workspace:*",
@@ -969,6 +982,7 @@
       "version": "1.18.31",
       "dependencies": {
         "@kobalte/core": "catalog:",
+        "@opencode-ai/brand": "workspace:*",
         "@pierre/diffs": "catalog:",
         "@shikijs/stream": "catalog:",
         "@shikijs/transformers": "3.9.2",
@@ -1941,6 +1955,8 @@
     "@openauthjs/openauth": ["@openauthjs/openauth@0.0.0-20250322224806", "", { "dependencies": { "@standard-schema/spec": "1.0.0-beta.3", "aws4fetch": "1.0.20", "jose": "5.9.6" }, "peerDependencies": { "arctic": "^2.2.2", "hono": "^4.0.0" } }, "sha512-p5IWSRXvABcwocH2dNI0w8c1QJelIOFulwhKk+aLLFfUbs8u1pr7kQbYe8yCSM2+bcLHiwbogpUQc2ovrGwCuw=="],
 
     "@opencode-ai/app": ["@opencode-ai/app@workspace:packages/app"],
+
+    "@opencode-ai/brand": ["@opencode-ai/brand@workspace:packages/brand"],
 
     "@opencode-ai/cli": ["@opencode-ai/cli@workspace:packages/cli"],
 
