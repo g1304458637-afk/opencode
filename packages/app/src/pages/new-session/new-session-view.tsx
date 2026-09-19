@@ -20,6 +20,7 @@ import { useLanguage } from "@/context/language"
 import { useSDK } from "@/context/sdk"
 import { useServerSync } from "@/context/server-sync"
 import { useProviders } from "@/hooks/use-providers"
+import { MUC_HIDE_OTHER_PROVIDERS } from "@/muc-flag"
 import { NEW_SESSION_CONTENT_WIDTH } from "@/pages/session/new-session-layout"
 import { Persist, persisted } from "@/utils/persist"
 import type { NewSessionDraftController } from "./new-session-draft-controller"
@@ -131,7 +132,8 @@ function ProviderTip() {
   }
 
   return (
-    <Show when={presence.present()}>
+    // MUC Harness: 校园分发隐藏"连接 75+ 提供商"提示（openProviders 入口）
+    <Show when={presence.present() && !MUC_HIDE_OTHER_PROVIDERS}>
       <div class="pointer-events-none absolute inset-x-0 bottom-4 flex justify-center px-10">
         <div
           ref={setRef}

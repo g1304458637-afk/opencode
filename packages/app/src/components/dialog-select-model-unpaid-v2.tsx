@@ -11,6 +11,7 @@ import { useProviders } from "@/hooks/use-providers"
 import { decode64 } from "@/utils/base64"
 import { useLanguage } from "@/context/language"
 import { ModelTooltip } from "./model-tooltip"
+import { MUC_HIDE_OTHER_PROVIDERS } from "@/muc-flag"
 
 type ModelState = ReturnType<typeof useLocal>["model"]
 const featuredProviders = ["opencode", "opencode-go", "openai", "anthropic", "google", "github-copilot"]
@@ -118,6 +119,8 @@ export const DialogSelectModelUnpaidV2: Component<{ model?: ModelState }> = (pro
             </For>
           </div>
 
+          {/* MUC Harness: 校园分发隐藏"添加更多提供商"区块 */}
+          <Show when={!MUC_HIDE_OTHER_PROVIDERS}>
           <div class="flex w-full flex-col">
             <div class="flex w-full flex-col items-start rounded-lg border-[0.5px] border-v2-border-border-muted bg-v2-background-bg-layer-02 p-2.5 pt-2">
               <div class="flex h-8 w-full select-none items-center px-0.5 pb-2">
@@ -169,6 +172,7 @@ export const DialogSelectModelUnpaidV2: Component<{ model?: ModelState }> = (pro
               </div>
             </div>
           </div>
+          </Show>
         </div>
       </DialogBody>
     </DialogV2>

@@ -8,6 +8,7 @@ import { Tooltip } from "@opencode-ai/ui/tooltip"
 import { type Component, Show } from "solid-js"
 import { useLocal } from "@/context/local"
 import { popularProviders, useProviders } from "@/hooks/use-providers"
+import { MUC_HIDE_OTHER_PROVIDERS } from "@/muc-flag"
 import { ModelTooltip } from "./model-tooltip"
 import { useLanguage } from "@/context/language"
 import { decode64 } from "@/utils/base64"
@@ -86,6 +87,8 @@ export const DialogSelectModelUnpaid: Component<{ model?: ModelState }> = (props
           )}
         </List>
       </div>
+      {/* MUC Harness: 校园分发隐藏"添加更多提供商"区块 */}
+      <Show when={!MUC_HIDE_OTHER_PROVIDERS}>
       <div class="px-1.5 pb-1.5">
         <div class="w-full rounded-sm border border-border-weak-base bg-surface-raised-base">
           <div class="w-full flex flex-col items-start gap-4 px-1.5 pt-4 pb-4">
@@ -142,6 +145,7 @@ export const DialogSelectModelUnpaid: Component<{ model?: ModelState }> = (props
           </div>
         </div>
       </div>
+      </Show>
     </Dialog>
   )
 }
