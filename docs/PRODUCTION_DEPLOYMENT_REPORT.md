@@ -99,10 +99,10 @@ sudo docker compose up -d --no-deps sub2api
 
 ## 16. Remaining Risks
 1. **验收 N（真实推理）未闭环**：「智谱」分组需在管理后台配置模型白名单（当前 `/v1/models` 返回 chatglm_lite/pro —— 配置后 mucode 自动跟随）；上游可用性待确认。
-2. **HTTP-only**：admin.wuxuexi.top 无 TLS。正式对外前需上 HTTPS（证书 + nginx 443 配置），并保持客户端默认网关（当前为 http，TLS 就绪后改回 https 常量）。
+2. ~~HTTP-only~~ **已解决（2026-09-19）**：Let's Encrypt 证书已覆盖 wuxuexi.top / www / admin / api 四域名（SAN 校验通过），nginx 已加 admin 的 443 server 块反代 8080；certbot cron（每日 3:24/15:24）+ deploy-hook 自动续期并 reload。旧 DigiCert 证书 9/19-9/21 到期问题随之消除。客户端默认网关已改回 https 并重新出包。
 3. **EXE 元数据**：Windows 包未内嵌图标/版本信息（免 wine 权衡），功能无损。
 4. **单实例部署**：生产为单容器单副本，重启存在秒级中断。
 5. 旧 4 把 Key（opencode.json 里的 8d60/9235/3975/d99e）已失效——需在网站重新签发或使用「一键连接」自动签发的新 Key。
 6. **上游官方 OpenCode Windows 桌面版（BETA）存在启动崩溃 bug**：报 `Cannot find module './windowsTerminal'`（其安装目录 `AppData\Local\Programs\@opencode-aidesktop`）。与 mucode 包无关（mucode 安装目录为 `Programs\mucode`）。如师生在 Windows 装了官方桌面版遇到此错，属上游缺陷；mucode 的 Windows 包安装目录不同，不受影响。
 7. mucode Windows 包未在真机 Windows 上做过启动实测（本环境无 Windows）；NSIS 包为标准 electron-builder 产物，风险低。
-8. mucode 三包内嵌的网关默认值为 http（现网即 http）；HTTPS 上线后需重打三包（改回 https 默认）。
+8. ~~网关默认 http~~ **已解决（2026-09-19）**：三包默认网关已改回 https://admin.wuxuexi.top 并重新打包部署（生产/本地 downloads + SHA256SUMS 同步更新）；80 端口暂时保留双跑以兼容旧包。
