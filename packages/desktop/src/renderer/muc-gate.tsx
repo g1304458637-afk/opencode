@@ -67,10 +67,11 @@ export function createMucGate(): { ready: Accessor<boolean>; MucGate: (props: { 
       // 模型计数随 connect 响应返回；稍作停留让用户看到"正在同步"
       await new Promise((r) => setTimeout(r, 400))
       setPhase({ kind: "success", modelCount: result.modelCount })
-      if (hotReconnect) {
-        // 主进程/磁盘已更新，重启让 sidecar（env 快照）拿到新凭据
-        window.api.relaunch()
-      }
+      // sidecar env 在 fork 时快照：首连与替换凭据一样，核心必须重启才能拿到
+      // MUC_API_KEY（否则模型列表为空）。停留展示成功卡片后统一 relaunch，
+      // 重启后 ready→主界面，模型即刻可用。
+      await new Promise((r) => setTimeout(r, 1200))
+      window.api.relaunch()
     } catch {
       setPhase({ kind: "error", error: "连接失败，请重试" })
     } finally {

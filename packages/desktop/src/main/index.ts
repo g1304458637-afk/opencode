@@ -65,7 +65,10 @@ const APP_IDS: Record<string, string> = {
   muc: "cn.edu.muc.harness",
 }
 const TEST_ONBOARDING = process.env.OPENCODE_TEST_ONBOARDING === "1"
-const SIDECAR_VERSION = process.env.OPENCODE_SIDECAR_V2 === "1" ? "v2" : "v1"
+// MUC Harness: muc 渠道强制 v1 sidecar（内联源码构建、含 gateway-only 模型过滤）。
+// v2 路径执行官方下载版 CLI，不含过滤逻辑，绝不能在校园分发版启用。
+const SIDECAR_VERSION =
+  CHANNEL === "muc" ? "v1" : process.env.OPENCODE_SIDECAR_V2 === "1" ? "v2" : "v1"
 const jsCallStackFeature = "DocumentPolicyIncludeJSCallStacksInCrashReports"
 
 let logger: ReturnType<typeof initLogging>

@@ -6,18 +6,24 @@ export default async function (context) {
   if (context.electronPlatformName !== "darwin") return
   if (process.env.OPENCODE_CHANNEL !== "muc") return
   const appPath = `${context.appOutDir}/${context.packager.appInfo.productFilename}.app`
-  console.log(`MUC Harness: after-sign v2 (xattr+codesign) -> ${appPath}`)
-  // 打包产物内的扩展属性（quarantine/FinderInfo）会让 codesign 拒签：
-  // "resource fork, Finder information, or similar detritus not allowed"
-  execSync(`xattr -cr "${appPath}"`, { stdio: "inherit" })
-  try {
-    execSync(`codesign --force --deep --sign - "${appPath}"`, { stdio: "inherit" })
-  } catch (e) {
-    // 重试一次：先合并资源分叉再清理
-    execSync(`dot_clean "${appPath}"`, { stdio: "inherit" })
-    execSync(`xattr -cr "${appPath}"`, { stdio: "inherit" })
-    execSync(`codesign --force --deep --sign - "${appPath}"`, { stdio: "inherit" })
+  console.log(`MUC Harness: after-sign v3 (xattr+codesign retry) -> ${appPath}`)
+
+  // 打包产物内的扩展属性（quarantine/FinderInfo/provenance）会让 codesign 拒签：
+  // "resource fork, Finder information, or similar detritus not allowed"。
+  // 系统进程可能在清理后重新附加属性（竞态），故清理+签名循环重试。
+  let lastError
+  for (let attempt = 1; attempt <= 5; attempt++) {
+    execSync(`xattr -cr "${appPath}"`)
+    try {
+      execSync(`codesign --force --deep --sign - "${appPath}"`, { stdio: "inherit" })
+      execSync(`codesign --verify --deep "${appPath}"`, { stdio: "inherit" })
+      console.log(`MUC Harness: ad-hoc signed ${appPath} (attempt ${attempt})`)
+      return
+    } catch (error) {
+      lastError = error
+      console.warn(`MUC Harness: codesign attempt ${attempt} failed, retrying...`)
+      await new Promise((resolve) => setTimeout(resolve, 800))
+    }
   }
-  execSync(`codesign --verify --deep "${appPath}"`, { stdio: "inherit" })
-  console.log(`MUC Harness: ad-hoc signed ${appPath}`)
+  throw lastError
 }

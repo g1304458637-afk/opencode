@@ -11,6 +11,7 @@ import { useServerSync } from "@/context/server-sync"
 import { DialogConnectProvider, useProviderConnectController } from "../dialog-connect-provider"
 import { DialogCustomProvider } from "../dialog-custom-provider"
 import { SettingsListV2 } from "./parts/list"
+import { MUC_HIDE_OTHER_PROVIDERS } from "@/muc-flag"
 import "./settings-v2.css"
 
 type ProviderSource = "env" | "api" | "config" | "custom"
@@ -192,6 +193,8 @@ export const SettingsProvidersV2: Component<{
           </SettingsListV2>
         </div>
 
+        {/* MUC Harness: 校园分发只保留学校网关模型 —— 隐藏热门提供商/自定义提供商/查看全部入口 */}
+        <Show when={!MUC_HIDE_OTHER_PROVIDERS}>
         <div class="settings-v2-section">
           <h3 class="settings-v2-section-title">{language.t("settings.providers.section.popular")}</h3>
           <SettingsListV2>
@@ -261,6 +264,7 @@ export const SettingsProvidersV2: Component<{
             {language.t("dialog.provider.viewAll")}
           </button>
         </div>
+        </Show>
       </div>
     </>
   )

@@ -1,6 +1,7 @@
 import { ProviderAuth } from "@/provider/auth"
 import { Config } from "@/config/config"
 import { ModelsDev } from "@opencode-ai/core/models-dev"
+import { MUC } from "@/provider/muc"
 import { Provider } from "@/provider/provider"
 import { Auth } from "@/auth"
 
@@ -44,8 +45,14 @@ export const providerHandlers = HttpApiBuilder.group(InstanceHttpApi, "provider"
       const all = yield* ModelsDev.Service.use((s) => s.get())
       const disabled = new Set(config.disabled_providers ?? [])
       const enabled = config.enabled_providers ? new Set(config.enabled_providers) : undefined
+      // MUC Harness: 与 provider.ts isProviderAllowed 保持一致 —— 校园分发版
+      // 只暴露 MUC 网关（sub2api*）提供商；否则此处的目录合并会把核心层
+      // 已过滤的 models.dev 全目录重新带给 UI。MUC_ALLOW_ALL_PROVIDERS=1 放开。
+      const mucAllowAll = process.env.MUC_ALLOW_ALL_PROVIDERS === "1"
+      const isMucProvider = (id: string) => id === MUC.id || id.startsWith("sub2api")
       const filtered: Record<string, (typeof all)[string]> = {}
       for (const [key, value] of Object.entries(all)) {
+        if (!mucAllowAll && !isMucProvider(key)) continue
         if ((enabled ? enabled.has(key) : true) && !disabled.has(key)) filtered[key] = value
       }
       const connected = yield* provider.list()
