@@ -62,6 +62,7 @@ const api: ElectronAPI = {
   mucConnect: (code: string) => ipcRenderer.invoke("muc:connect", code),
   mucDisconnect: () => ipcRenderer.invoke("muc:disconnect"),
   mucPendingCode: () => ipcRenderer.invoke("muc:pending-code"),
+  mucGetUsage: () => ipcRenderer.invoke("muc:get-usage"),
   getDefaultServerUrl: () => ipcRenderer.invoke("get-default-server-url"),
   setDefaultServerUrl: (url) => ipcRenderer.invoke("set-default-server-url", url),
   isFirstLaunchOnboardingPending: () => ipcRenderer.invoke("is-first-launch-onboarding-pending"),

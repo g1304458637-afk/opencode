@@ -54,6 +54,7 @@ export type ElectronAPI = {
   mucConnect: (code: string) => Promise<MucConnectResult>
   mucDisconnect: () => Promise<MucConnectionState>
   mucPendingCode: () => Promise<string | null>
+  mucGetUsage: () => Promise<MucUsageResult>
   getDefaultServerUrl: () => Promise<string | null>
   setDefaultServerUrl: (url: string | null) => Promise<void>
   isFirstLaunchOnboardingPending: () => Promise<boolean>
@@ -135,3 +136,25 @@ export type MucConnectionState =
 export type MucConnectResult =
   | { ok: true; state: MucConnectionState; modelCount?: number }
   | { ok: false; error: "invalid_code" | "invalid" | "expired" | "used" | "network" | "bad_response" | "unknown" }
+
+// 余额/用量快照（主进程 /v1/usage 聚合结果，不含任何凭据）
+export type MucUsageRateWindow = { window: string; limit: number; used: number; remaining: number; resetAt?: string }
+export type MucUsageModelStat = { model: string; requests: number; cost: number }
+export type MucUsageSnapshot = {
+  planName: string
+  remaining: number | null
+  unit: string
+  mode: "quota_limited" | "subscription" | "wallet" | "unknown"
+  todayCost: number
+  todayRequests: number
+  totalCost: number
+  totalRequests: number
+  expiresAt?: string
+  quota?: { limit: number; used: number; remaining: number; unit: string }
+  rateWindows: MucUsageRateWindow[]
+  topModels: MucUsageModelStat[]
+}
+
+export type MucUsageResult =
+  | { ok: true; usage: MucUsageSnapshot }
+  | { ok: false; error: "not_connected" | "unavailable" }

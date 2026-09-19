@@ -3,6 +3,7 @@
 
 import { Show, createContext, createSignal, useContext, onMount, onCleanup, type JSX, type Accessor } from "solid-js"
 import campusImg from "./assets/muc-campus.png"
+import { MucStatus } from "./muc-status"
 
 type MucState =
   | { connected: false }
@@ -114,6 +115,8 @@ export function createMucGate(): { ready: Accessor<boolean>; MucGate: (props: { 
     return (
       <Show when={ready()} fallback={<MucConnectPage phase={phase()} onRetry={() => setPhase({ kind: "not-connected" })} />}>
         {props.children}
+        {/* MUC Harness: sub2api 余额/用量悬浮条（仅连接成功后显示） */}
+        <MucStatus />
       </Show>
     )
   }
