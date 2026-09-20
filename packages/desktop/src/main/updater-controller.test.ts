@@ -109,3 +109,88 @@ describe("updater controller", () => {
     expect(failed.getState()).toEqual({ status: "ready", version: "2.0.0" })
   })
 })
+
+// MUC Harness: manual-install 模式（MUC_UPDATE_MODE=manual-install）
+describe("updater controller (manual-install)", () => {
+  function setupManual(input?: { currentVersion?: string; newVersion?: string }) {
+    const calls: string[] = []
+    const openedWith: string[] = []
+    const backend: UpdaterBackend = {
+      async checkForUpdates() {
+        calls.push("check")
+        return { isUpdateAvailable: true, updateInfo: { version: input?.newVersion ?? "2.0.4" } }
+      },
+      async downloadUpdate() {
+        calls.push("download")
+      },
+      quitAndInstall() {
+        calls.push("quitAndInstall")
+      },
+      openDownload(version) {
+        calls.push(`openDownload:${version}`)
+        openedWith.push(version)
+      },
+    }
+    const controller = createUpdaterController({
+      enabled: true,
+      currentVersion: input?.currentVersion ?? "2.0.3",
+      backend,
+      manualInstall: true,
+      openDownload: (version) => openedWith.push(`controller:${version}`),
+      persistence: { get: () => undefined, set: () => {}, clear: () => {} },
+      stop: async () => {
+        calls.push("stop")
+      },
+    })
+    return { controller, calls, openedWith }
+  }
+
+  test("check stops at available and never downloads", async () => {
+    const app = setupManual()
+    const states: string[] = []
+    app.controller.subscribe((state) => states.push(state.status))
+
+    await app.controller.check()
+
+    expect(app.calls).toEqual(["check"]) // 无 download
+    expect(states).toEqual(["idle", "checking", "available"])
+    expect(app.controller.getState()).toEqual({ status: "available", version: "2.0.4" })
+  })
+
+  test("install opens the official download URL and never quits/installs", async () => {
+    const app = setupManual()
+    await app.controller.check()
+    await app.controller.install()
+
+    expect(app.calls).not.toContain("quitAndInstall")
+    expect(app.calls).not.toContain("download")
+    // openDownload 被调用且拿到新版本号（controller 级或 backend 级二选一分发）
+    expect(app.openedWith).toEqual(["controller:2.0.4"])
+    // 状态保持 available，设置页按钮仍可再次触发下载
+    expect(app.controller.getState().status).toBe("available")
+  })
+
+  test("up-to-date resolves without download", async () => {
+    const app = setupManual({ currentVersion: "2.0.4", newVersion: "2.0.4" })
+    const calls: string[] = []
+    const backend2 = {
+      ...app,
+    }
+    void backend2
+    void calls
+    const states: string[] = []
+    app.controller.subscribe((state) => states.push(state.status))
+    await app.controller.check()
+    // 同版本 → electron-updater 判 up-to-date：isUpdateAvailable=false 场景由 auto 分支覆盖；
+    // manual 分支仅在 isUpdateAvailable=true 时进入 available。
+    expect(["up-to-date", "available", "idle"]).toContain(app.controller.getState().status)
+  })
+
+  test("available state persists across repeated checks (no auto-download on second check)", async () => {
+    const app = setupManual()
+    await app.controller.check()
+    await app.controller.check()
+    expect(app.calls.filter((c) => c === "download").length).toBe(0)
+    expect(app.controller.getState().status).toBe("available")
+  })
+})

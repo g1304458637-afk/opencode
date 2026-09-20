@@ -1,6 +1,6 @@
-import { app, dialog } from "electron"
+import { app, dialog, shell } from "electron"
 import pkg from "electron-updater"
-import { UPDATER_ENABLED, CHANNEL } from "./constants"
+import { UPDATER_ENABLED, CHANNEL, MUC_UPDATE_MODE } from "./constants"
 import { createUpdaterController, type UpdaterReadyRecord } from "./updater-controller"
 import { getLogger } from "./logging"
 import { getStore } from "./store"
@@ -9,6 +9,16 @@ import { nativeT } from "./native-translations"
 
 const { autoUpdater } = pkg
 const key = "ready"
+
+// MUC Harness: manual-install 模式的官方下载地址映射（平台+架构 → /downloads 固定别名）
+export function mucDownloadUrl(): string {
+  const base = "https://admin.wuxuexi.top/downloads"
+  if (process.platform === "darwin") return process.arch === "arm64" ? `${base}/mucode-mac-arm64.dmg` : `${base}/mucode-mac-x64.dmg`
+  if (process.platform === "win32") return `${base}/mucode-win-x64.exe`
+  return `${base}/muc`
+}
+
+const MANUAL_INSTALL = CHANNEL === "muc" && MUC_UPDATE_MODE === "manual-install"
 
 export function setupAutoUpdater(stop: () => Promise<void>) {
   const logger = getLogger()
@@ -31,9 +41,21 @@ export function setupAutoUpdater(stop: () => Promise<void>) {
   return createUpdaterController({
     enabled: UPDATER_ENABLED,
     currentVersion: app.getVersion(),
+    // MUC Harness: 当前产品策略 = manual-install（签名后经 MUC_UPDATE_MODE=auto-install 一键切回）
+    ...(MANUAL_INSTALL ? { manualInstall: true } : {}),
     backend: {
       checkForUpdates: () => autoUpdater.checkForUpdates(),
       downloadUpdate: () => autoUpdater.downloadUpdate(),
+      // MUC Harness: manual-install——打开对应平台/架构的官方下载地址
+      ...(MANUAL_INSTALL
+        ? {
+            openDownload: (version: string) => {
+              const url = mucDownloadUrl()
+              logger.log("MUC manual update: opening download URL", { version, url })
+              void shell.openExternal(url)
+            },
+          }
+        : {}),
       quitAndInstall: () => {
         // quitAndInstall closes all windows before emitting before-quit, so
         // flag the quit first to keep window ids persisted for restore.
@@ -77,8 +99,23 @@ export async function showUpdaterDialog(controller: ReturnType<typeof setupAutoU
     if (!alertOnFail) return
     await dialog.showMessageBox({
       type: "info",
-      message: nativeT("desktop.updater.dialog.upToDate.message"),
+      message: nativeT("desktop.updater.dialog.upToDate.message", { version: app.getVersion() }),
       title: nativeT("desktop.updater.dialog.upToDate.title"),
+    })
+    return
+  }
+  // MUC Harness: manual-install——发现新版本即提示下载安装（不进自动下载/安装链）
+  if (state.status === "available") {
+    await dialog.showMessageBox({
+      type: "info",
+      message: nativeT("desktop.updater.dialog.available.message", { version: state.version }),
+      title: nativeT("desktop.updater.dialog.available.title", { version: state.version }),
+      buttons: [nativeT("desktop.updater.dialog.download"), nativeT("desktop.updater.dialog.later")],
+      defaultId: 0,
+      cancelId: 1,
+    }).then((response) => {
+      if (response.response === 0) return controller.install()
+      return undefined
     })
     return
   }

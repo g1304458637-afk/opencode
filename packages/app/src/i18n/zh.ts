@@ -51,12 +51,15 @@ export const dict = {
 
   "desktop.updater.dialog.checkFailed.message": "检查更新失败。",
   "desktop.updater.dialog.checkFailed.title": "更新错误",
-  "desktop.updater.dialog.upToDate.message": "你使用的是最新版本。",
+  "desktop.updater.dialog.upToDate.message": "当前已经是最新版本（{{version}}）。",
   "desktop.updater.dialog.upToDate.title": "无可用更新",
   "desktop.updater.dialog.ready.message": "已下载更新 {{version}}。是否立即重启？",
   "desktop.updater.dialog.ready.title": "更新已就绪",
   "desktop.updater.dialog.restart": "重启",
   "desktop.updater.dialog.later": "稍后",
+  "desktop.updater.dialog.available.title": "发现新版本 MUC {{version}}",
+  "desktop.updater.dialog.available.message": "新版本已经发布。点击“下载安装”获取适用于当前设备的最新版安装包。",
+  "desktop.updater.dialog.download": "下载安装",
 
   "desktop.recovery.action.relaunch": "重新启动",
   "desktop.recovery.action.exportLogs": "导出日志",
@@ -958,6 +961,7 @@ export const dict = {
   "settings.updates.action.checking": "正在检查...",
   "settings.updates.action.downloading": "正在下载...",
   "settings.updates.action.installing": "正在安装...",
+  "settings.updates.action.download": "下载安装",
   "settings.updates.toast.latest.title": "已是最新版本",
   "settings.updates.toast.latest.description": "你正在使用最新版本的 OpenCode。",
 

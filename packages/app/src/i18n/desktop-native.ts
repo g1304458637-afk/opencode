@@ -270,12 +270,17 @@ export const DESKTOP_NATIVE_ENGLISH = {
 
   "desktop.updater.dialog.checkFailed.message": "Update check failed.",
   "desktop.updater.dialog.checkFailed.title": "Update Error",
-  "desktop.updater.dialog.upToDate.message": "You're up to date.",
+  "desktop.updater.dialog.upToDate.message": "You're up to date ({{version}}).",
   "desktop.updater.dialog.upToDate.title": "No Updates",
   "desktop.updater.dialog.ready.message": "Update {{version}} downloaded. Restart now?",
   "desktop.updater.dialog.ready.title": "Update Ready",
   "desktop.updater.dialog.restart": "Restart",
   "desktop.updater.dialog.later": "Later",
+  // MUC Harness: manual-install 更新模式对话框
+  "desktop.updater.dialog.available.title": "New MUC {{version}} available",
+  "desktop.updater.dialog.available.message":
+    'A new version has been released. Click "Download" to get the installer for this device.',
+  "desktop.updater.dialog.download": "Download",
 
   "desktop.recovery.action.relaunch": "Relaunch",
   "desktop.recovery.action.exportLogs": "Export Logs",

@@ -5,6 +5,19 @@
 
 ## 0. 更新模型（不可动摇的两条线）
 
+**当前产品模式（2026-09-21 决策）：`MUC_UPDATE_MODE = manual-install`**
+未购买签名证书期间，正式更新交付方式 = **自动检查版本 + 原生提醒 + 用户手动下载安装**：
+- 客户端照常从 Generic Provider 读 latest*.yml（版本发现 metadata），发现新版本 → 状态 `available` →
+  原生弹窗「发现新版本 MUC x.y.z [下载安装][稍后]」——**不自动下载、不自动安装**。
+- [下载安装] = `shell.openExternal` 打开对应平台/架构的 /downloads 固定别名 DMG/EXE。
+- 用户覆盖安装；用户数据/凭据（Keychain safeStorage + userData）不受影响。
+- 签名门按模式区分：manual-install 允许 unsigned 进 stable（显式标记 UNSIGNED_MANUAL_RELEASE）；
+  auto-install 模式下签名门强制（未签名 hard fail，绝不删门）。
+- 切换方式：`MUC_UPDATE_MODE=auto-install`（常量在 `src/main/constants.ts`，发布脚本同名 env），
+  无需重写任何更新基础设施。
+
+
+
 ```
 OpenCode upstream → MUC：人工审核、人工同步（git fetch upstream + rebase upstream/dev）
 MUC Release  → MUC 用户：自动检查、自动下载、用户确认安装（electron-updater）

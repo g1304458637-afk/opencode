@@ -8,6 +8,8 @@ export type UpdaterBackend = {
   checkForUpdates(): Promise<{ isUpdateAvailable?: boolean; updateInfo?: { version?: string } } | null | undefined>
   downloadUpdate(): Promise<unknown>
   quitAndInstall(): void
+  // MUC Harness: manual-install 模式——用系统浏览器打开官方下载地址（代替自动下载/安装）
+  openDownload?(version: string): void | Promise<void>
 }
 
 type UpdaterPersistence = {
@@ -23,6 +25,11 @@ export function createUpdaterController(input: {
   persistence: UpdaterPersistence
   stop: () => Promise<void>
   log?: (message: string, data?: object) => void
+  // MUC Harness: manual-install 模式（MUC_UPDATE_MODE=manual-install）——
+  // check 停在 available（不 downloadUpdate / 不 quitAndInstall），
+  // install() 转为 backend.openDownload(version)。缺省 false = 原自动安装行为。
+  manualInstall?: boolean
+  openDownload?: (version: string) => void | Promise<void>
 }) {
   let state: UpdaterState = input.enabled ? { status: "idle" } : { status: "disabled" }
   let pending: Promise<UpdaterState> | undefined
@@ -47,6 +54,11 @@ export function createUpdaterController(input: {
       if (!result?.isUpdateAvailable || !version || version === input.currentVersion) {
         await input.persistence.clear()
         return transition({ status: "up-to-date" })
+      }
+
+      // MUC Harness: manual-install——发现新版本即停，交给用户手动下载安装
+      if (input.manualInstall) {
+        return transition({ status: "available", version })
       }
 
       transition({ status: "downloading", version })
@@ -77,6 +89,14 @@ export function createUpdaterController(input: {
     },
     check,
     async install() {
+      // MUC Harness: manual-install——install 语义 = 打开官方下载地址（不进自动安装链）
+      if (input.manualInstall) {
+        if (state.status !== "available") throw new Error("Update is not available")
+        const opener = input.openDownload ?? input.backend.openDownload
+        if (!opener) throw new Error("manual-install mode requires openDownload backend")
+        await opener(state.version)
+        return
+      }
       if (state.status !== "ready") throw new Error("Update is not ready to install")
       const version = state.version
       transition({ status: "installing", version })

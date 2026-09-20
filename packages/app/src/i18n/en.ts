@@ -977,6 +977,7 @@ export const dict = {
   "settings.updates.action.checking": "Checking...",
   "settings.updates.action.downloading": "Downloading...",
   "settings.updates.action.installing": "Installing...",
+  "settings.updates.action.download": "Download",
   "settings.updates.toast.latest.title": "You're up to date",
   "settings.updates.toast.latest.description": "You're running the latest version of OpenCode.",
   "sound.option.none": "None",

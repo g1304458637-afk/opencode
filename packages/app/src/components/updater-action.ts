@@ -9,6 +9,9 @@ export function updaterAction(state: UpdaterState | undefined) {
   switch (state.status) {
     case "checking":
       return { label: "settings.updates.action.checking" as const }
+    // MUC Harness: manual-install——发现新版本，按钮 = 下载安装（走 install() → openDownload）
+    case "available":
+      return { label: "settings.updates.action.download" as const, run: "install" as const }
     case "downloading":
       return { label: "settings.updates.action.downloading" as const }
     case "ready":

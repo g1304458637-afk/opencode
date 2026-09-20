@@ -13,7 +13,7 @@ import contextMenu from "electron-context-menu"
 
 import type { ServerReadyData } from "../preload/types"
 import { checkAppExists, resolveAppPath } from "./apps"
-import { CHANNEL } from "./constants"
+import { CHANNEL, MUC_UPDATE_MODE } from "./constants"
 import { registerIpcHandlers, sendDeepLinks, sendMenuCommand } from "./ipc"
 import { forwardInitializationFailure } from "./initialization"
 import { exportDebugLogs, initCrashReporter, initLogging, startNetLog, write as writeLog } from "./logging"
@@ -31,7 +31,7 @@ import {
   spawnLocalServer,
   type SidecarListener,
 } from "./server"
-import { setupAutoUpdater, showUpdaterDialog } from "./updater"
+import { setupAutoUpdater, showUpdaterDialog, mucDownloadUrl } from "./updater"
 import { safeWebContentsURL } from "./window-state"
 import {
   getLastFocusedWindow,
@@ -380,19 +380,28 @@ const main = Effect.gen(function* () {
   void mucController.restoreToProcessEnv().catch((e) =>
     writeLog("main", "muc credential restore failed", { e: String(e) }, "error"),
   )
-  // MUC Harness: muc 渠道首检延迟 15s——更新器网络探测不得阻塞启动（历史曾致新 profile 挂死）；
-  // 后台下载完成后弹一次原生提示（[重启更新][稍后]），同版本不重复骚扰；
+  // MUC Harness: muc 渠道首检延迟 15s——更新器网络探测不得阻塞启动（历史曾致新 profile 挂死）。
+  // manual-install：发现新版本 → available → 原生提示 [下载安装][稍后]（会话内同版本只弹一次）。
+  // auto-install（未来签名后）：下载完成 → ready → [重启更新][稍后]。
   // 手动"检查更新"仍走菜单/设置入口（showUpdaterDialog）。仅 muc 门控，不改变 prod/beta 行为。
   if (CHANNEL === "muc") {
     const firstCheck = setTimeout(() => void updater.start(), 15_000)
     firstCheck.unref?.()
-    let readyNotifiedVersion: string | null = null
-    const unsubscribeReadyPrompt = updater.subscribe((state) => {
-      if (state.status !== "ready" || state.version === readyNotifiedVersion) return
-      readyNotifiedVersion = state.version
+    let lastPromptedVersion: string | null = null
+    const promptStates = MUC_UPDATE_MODE === "manual-install" ? ["available"] : ["ready"]
+    const unsubscribePrompt = updater.subscribe((state) => {
+      if (state.status !== "ready" && state.status !== "available") return
+      if (!promptStates.includes(state.status)) return
+      if (state.version === lastPromptedVersion) return
+      lastPromptedVersion = state.version
+      // MUC Harness: manual-install 运行时证据——记录该架构对应的官方下载地址
+      logger.log("MUC update available (manual install)", {
+        version: state.version,
+        downloadUrl: mucDownloadUrl(),
+      })
       void showUpdaterDialog(updater, false)
     })
-    app.once("will-quit", () => unsubscribeReadyPrompt())
+    app.once("will-quit", () => unsubscribePrompt())
   } else {
     void updater.start()
   }

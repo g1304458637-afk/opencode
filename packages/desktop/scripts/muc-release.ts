@@ -33,6 +33,11 @@ const DESKTOP_DIR = import.meta.dir.replace(/\/scripts$/, "")
 const DIST = `${DESKTOP_DIR}/dist`
 const DEFAULT_HOST = process.env.MUC_RELEASE_HOST ?? "admin@112.125.88.123"
 const REMOTE_ROOT = "/srv/sub2api/data/downloads"
+// MUC Harness: 发布模式。
+// - manual-install（当前默认）：允许 unsigned 产物进 stable（UNSIGNED_MANUAL_RELEASE），
+//   用户手动下载安装；签名门跳过。
+// - auto-install（未来签名后）：stable 强制签名门（mac Developer ID+公证 / win Authenticode）。
+const RELEASE_MODE = process.env.MUC_UPDATE_MODE === "auto-install" ? "auto-install" : "manual-install"
 
 const sha256 = (path: string) => createHash("sha256").update(readFileSync(path)).digest("hex")
 
@@ -259,6 +264,7 @@ async function verifyBuild(target: string, version: string) {
   const manifest = {
     target,
     version,
+    updateMode: RELEASE_MODE,
     generatedAt: new Date().toISOString(),
     files,
   }
@@ -512,11 +518,19 @@ async function upload(execute: boolean, host: string, testFeed: boolean) {
   }
   if (!existsSync(`${DIST}/${channelFile}`)) throw new Error(`missing ${channelFile}`)
 
-  // 0) 签名安全门：生产 stable 必须先过门，失败 → 不产生任何上传/manifest 变更
+  // 0) 签名安全门：stable 必须先过门，失败 → 不产生任何上传/manifest 变更。
+  //    manual-install（当前模式）：允许 unsigned 进 stable（用户手动下载安装），显式标记
+  //    UNSIGNED_MANUAL_RELEASE；auto-install（未来签名后）：门强制生效，未签名直接失败。
   if (!testFeed) {
-    console.log("=== 签名安全门（stable 生产发布）===")
-    if (isMac) gateMac()
-    else gateWin(localOf(payloadFiles[0]!))
+    if (RELEASE_MODE === "auto-install") {
+      console.log("=== 签名安全门（auto-install stable）===")
+      if (isMac) gateMac()
+      else gateWin(localOf(payloadFiles[0]!))
+    } else {
+      console.log("=== UNSIGNED_MANUAL_RELEASE ===")
+      console.log("manual-install 模式：允许 unsigned 产物进 stable（用户手动下载安装）；")
+      console.log("切换 MUC_UPDATE_MODE=auto-install 后签名门将强制生效。")
+    }
     await ensureVersionNotPublished(host, remoteDir, payloadFiles)
   } else {
     console.log("=== --test-feed：跳过签名门（测试 feed，不入 stable）===")
@@ -570,19 +584,43 @@ async function upload(execute: boolean, host: string, testFeed: boolean) {
   await sh(["scp", `${DIST}/${channelFile}`, `${host}:${remoteDir}/${channelFile}`])
 
   // 4) 人工下载别名（固定文件名，仅首装入口，不参与自动更新；test-feed 不动 /downloads）
+  //    #7：别名与本次正式 release 同 commit/同版本/同一次 build——上传后立刻
+  //    重生成 SHA256SUMS.txt 并做公网验证（HTTP 200 + Content-Length + SHA256）。
   if (!testFeed) {
-    if (isMac) {
-      await sh(["scp", `${DIST}/mucode-${version}-mac-${arch}.dmg`, `${host}:${REMOTE_ROOT}/mucode-mac-${arch}.dmg`])
-    } else {
-      await sh(["scp", `${DIST}/mucode-${version}-win-x64.exe`, `${host}:${REMOTE_ROOT}/mucode-win-x64.exe`])
-    }
+    const alias = isMac ? `mucode-mac-${arch}.dmg` : `mucode-win-x64.exe`
+    const aliasLocal = isMac ? `${DIST}/mucode-${version}-mac-${arch}.dmg` : `${DIST}/mucode-${version}-win-x64.exe`
+    await sh(["scp", aliasLocal, `${host}:${REMOTE_ROOT}/${alias}`])
     await sh([
       "ssh",
       host,
       `cd ${REMOTE_ROOT} && sha256sum mucode-mac-arm64.dmg mucode-mac-x64.dmg mucode-win-x64.exe > SHA256SUMS.txt`,
     ])
+    await verifyPublicAliases(host, [alias])
   }
   console.log("发布完成（manifest 已最后上线）")
+}
+
+/** #7 公网验证：/downloads 固定别名 HTTP 200 + Content-Length 一致 + 服务器 SHA256 一致 */
+async function verifyPublicAliases(host: string, aliases: string[]) {
+  const base = "https://admin.wuxuexi.top/downloads"
+  for (const alias of aliases) {
+    const head = Bun.spawnSync(["curl", "-sI", `${base}/${alias}`], { stdout: "pipe" })
+    const headers = head.stdout.toString()
+    if (!headers.includes(" 200")) throw new Error(`PUBLIC VERIFY FAIL: ${alias} HTTP 非 200`)
+    const localSize = (await Bun.file(`${DIST}/${alias}`).size).toString()
+    const remoteLen = headers.match(/content-length:\s*(\d+)/i)?.[1]
+    if (remoteLen !== localSize) throw new Error(`PUBLIC VERIFY FAIL: ${alias} Content-Length ${remoteLen} != 本地 ${localSize}`)
+    console.log(`public verify OK: ${alias} (200, ${localSize} bytes)`)
+  }
+  const sums = Bun.spawnSync(["ssh", host, `cat ${REMOTE_ROOT}/SHA256SUMS.txt`], { stdout: "pipe" })
+  if (sums.exitCode !== 0) throw new Error("PUBLIC VERIFY FAIL: 无法读取服务器 SHA256SUMS.txt")
+  for (const alias of aliases) {
+    const localHash = sha256(`${DIST}/${alias}`)
+    if (!sums.stdout.toString().includes(localHash)) {
+      throw new Error(`PUBLIC VERIFY FAIL: ${alias} 的 SHA256 不在服务器 SHA256SUMS.txt 中`)
+    }
+  }
+  console.log("public verify OK: SHA256SUMS.txt 与本地构建一致")
 }
 
 const cmd = process.argv[2]

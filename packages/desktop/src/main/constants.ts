@@ -13,3 +13,11 @@ export const UPDATER_ENABLED =
   (CHANNEL === "muc"
     ? process.env.MUC_DISABLE_AUTO_UPDATE !== "1"
     : CHANNEL !== "dev")
+
+// MUC Harness: MUC 更新模式（产品策略单一开关）。
+// - "manual-install"（当前）：自动检查 + 提醒 + 用户手动下载安装（shell.openExternal 官方 DMG/EXE）。
+//   不调用 downloadUpdate / quitAndInstall，不进 Squirrel/NSIS 自动安装链。
+// - "auto-install"（未来签名后）：现有 electron-updater 自动下载/自动安装链，一键切回。
+// 仅影响 muc 渠道；上游 prod/beta 恒为 auto-install。
+export const MUC_UPDATE_MODE: "manual-install" | "auto-install" =
+  CHANNEL === "muc" ? (process.env.MUC_UPDATE_MODE === "auto-install" ? "auto-install" : "manual-install") : "auto-install"
