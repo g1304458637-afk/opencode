@@ -46,6 +46,9 @@ const EFFORT_VARIANTS: Record<string, { reasoningEffort: string }> = {
 function gatewayModelVariants(modelID: string): Record<string, { reasoningEffort: string }> {
   // gpt-5* / o3* / o4*（含 gpt-5.6-luna、o3-mini、o4-mini 等变体）
   if (/^(gpt-5|o3|o4)([-.]|$)/.test(modelID)) return EFFORT_VARIANTS
+  // 新一代 GLM（glm-4.5/4.6/4.7/5 系）：上游实测接受 reasoning_effort 且低/高有行为差异；
+  // 老 glm-4 / glm-4v / cog* 不支持，不匹配（glm-50 之类未来型号也不会误伤）
+  if (/^glm-(4\.[5-9]|5)([-.]|$)/.test(modelID)) return EFFORT_VARIANTS
   return {}
 }
 
