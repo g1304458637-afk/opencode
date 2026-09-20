@@ -35,9 +35,24 @@ import { MUC, sub2apiDefaultProvider, mucApiKey, mucGatewayV1, fetchSub2APIModel
 
 const OPENAI_HEADER_TIMEOUT_DEFAULT = 300_000
 
+// MUC harness: 思考强度档位 —— 只放行确定支持 reasoning_effort 的 OpenAI 系推理模型，
+// 避免向不支持的模型发送该参数（上游可能直接报错）。其余模型保持空档位（控件不显示）。
+const EFFORT_VARIANTS: Record<string, { reasoningEffort: string }> = {
+  low: { reasoningEffort: "low" },
+  medium: { reasoningEffort: "medium" },
+  high: { reasoningEffort: "high" },
+}
+
+function gatewayModelVariants(modelID: string): Record<string, { reasoningEffort: string }> {
+  // gpt-5* / o3* / o4*（含 gpt-5.6-luna、o3-mini、o4-mini 等变体）
+  if (/^(gpt-5|o3|o4)([-.]|$)/.test(modelID)) return EFFORT_VARIANTS
+  return {}
+}
+
 // MUC harness: 为网关动态发现的模型构造安全默认元数据（已知家族给更大上下文）
 function mucDynamicModel(providerID: string, modelID: string, baseURL: string, npm?: string): Model {
   const context = modelID.startsWith("claude") ? 200_000 : 128_000
+  const variants = gatewayModelVariants(modelID)
   return {
     id: ModelV2.ID.make(modelID),
     providerID: ProviderV2.ID.make(providerID),
@@ -51,7 +66,7 @@ function mucDynamicModel(providerID: string, modelID: string, baseURL: string, n
     limit: { context, output: 32_000 },
     capabilities: {
       temperature: true,
-      reasoning: false,
+      reasoning: Object.keys(variants).length > 0,
       attachment: false,
       toolcall: true,
       interleaved: false,
@@ -59,7 +74,7 @@ function mucDynamicModel(providerID: string, modelID: string, baseURL: string, n
       output: { text: true, audio: false, image: false, video: false, pdf: false },
     },
     release_date: "",
-    variants: {},
+    variants,
   }
 }
 
