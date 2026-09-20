@@ -45,14 +45,17 @@ export function NewSessionView(props: {
           class="pointer-events-none absolute inset-0 h-full w-full object-cover"
         />
         <div class="pointer-events-none absolute inset-x-0 top-0 h-[55%] bg-gradient-to-b from-[#FBF6ED] via-[#FBF6ED]/85 to-transparent" />
-        <div class="absolute inset-x-0 top-[25.375%] flex justify-center px-6">
+        {/* MUC Harness: 品牌标识放左上角，中央留给输入区 */}
+        <div class="absolute left-6 top-5 flex flex-col items-start">
+          <WordmarkV2 class="h-14 w-auto" />
+          <p class="mt-1 text-xs font-medium tracking-[0.2em] text-[#8f6a3c]">
+            中央民族大学 · 美美与共 知行合一
+          </p>
+        </div>
+        <div class="absolute inset-x-0 top-[46%] flex justify-center px-6">
           <div class={NEW_SESSION_CONTENT_WIDTH}>
-            <WordmarkV2 class="h-auto w-full" />
-            <p class="mt-2 text-center text-xs font-medium tracking-[0.2em] text-[#8f6a3c]">
-              中央民族大学 · 美美与共 知行合一
-            </p>
-            <div class="mt-8 flex flex-col gap-8">
-              <PromptInputV2Composer controller={props.input} />
+            {/* MUC Harness: workspace selector moved above the composer (Codex-style) */}
+            <div class="flex flex-col gap-3">
               <Show when={props.project.empty()}>
                 <PromptProjectAddButton controller={props.project} />
               </Show>
@@ -76,6 +79,7 @@ export function NewSessionView(props: {
                   </Show>
                 </div>
               </Show>
+              <PromptInputV2Composer controller={props.input} />
             </div>
           </div>
         </div>
