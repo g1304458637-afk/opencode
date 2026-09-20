@@ -22,8 +22,10 @@
 //
 // 本脚本只发布 muc-harness 已测试的本地构建产物；不触碰上游 OpenCode。
 
-import { existsSync, readFileSync, writeFileSync } from "node:fs"
+import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { createHash } from "node:crypto"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 import { $ } from "bun"
 import { getMucVersion, MUC_VERSION_SOURCE } from "./utils"
 
@@ -77,11 +79,9 @@ async function pruneNativePackages(target: string) {
       }
     }
   }
-  const roots = [
-    `${DESKTOP_DIR}/node_modules`,
-    `${DESKTOP_DIR}/../../node_modules`,
-    `${DESKTOP_DIR}/../../node_modules/.bun/node_modules`,
-  ]
+  // rel 形如 "node_modules/<scope>/<pkg>-<platform>"，root 直接取到 node_modules 的上一级；
+  // bun 隔离布局里 hoist 副本还存在于 node_modules/.bun/node_modules/（同样按 rel 定位）
+  const roots = [`${DESKTOP_DIR}`, `${DESKTOP_DIR}/../..`, `${DESKTOP_DIR}/../../node_modules/.bun`]
   let pruned = 0
   for (const root of roots) {
     for (const rel of doomed) {
@@ -93,6 +93,7 @@ async function pruneNativePackages(target: string) {
     }
   }
   console.log(`pruned ${pruned} non-target native platform package dirs（keep ${keepPkg}）`)
+  restorePending.value = true
 }
 
 /** bun 在 mac 上不安装 win32/linux 平台包——win 目标需显式拉取 win32-x64 平台包进 node_modules，
@@ -108,6 +109,17 @@ async function ensureWinPtyPackage() {
   await sh(["cp", "-R", `${tmp}/node_modules/@lydell/node-pty-win32-x64`, dest])
   await sh(["rm", "-rf", tmp])
   console.log(`fetched @lydell/node-pty-win32-x64@${version} into node_modules`)
+}
+
+/** restore 后校验本机（构建机）原生依赖确实可用：arm64 binding + watcher binding */
+function verifyRestore() {
+  const binding = `${DESKTOP_DIR}/node_modules/@lydell/node-pty-darwin-arm64/prebuilds/darwin-arm64/pty.node`
+  if (!existsSync(binding)) {
+    throw new Error(`restore verify FAIL: 本机 node-pty binding 缺失（${binding}）`)
+  }
+  if (!existsSync(`${DESKTOP_DIR}/node_modules/@parcel/watcher-darwin-arm64/watcher.node`)) {
+    throw new Error("restore verify FAIL: 本机 parcel watcher binding 缺失")
+  }
 }
 
 async function restoreNativePackages() {
@@ -254,23 +266,118 @@ async function verifyBuild(target: string, version: string) {
   console.log(`verify OK (${target} @ ${version}); manifest → ${manifestPath}`)
 }
 
+// ===== build 临界区异常安全（A）=====
+// prune 会临时删除 node_modules 中的非目标平台包；package 失败/中断都必须恢复。
+const restorePending = { value: false }
+
+function buildLockPath(): string {
+  const hash = createHash("sha256").update(DESKTOP_DIR).digest("hex").slice(0, 12)
+  return join(tmpdir(), `muc-release-build-${hash}.lock`)
+}
+
+function acquireBuildLock() {
+  const path = buildLockPath()
+  for (let attempt = 0; ; attempt++) {
+    try {
+      writeFileSync(path, String(process.pid), { flag: "wx" })
+      return
+    } catch {
+      const raw = existsSync(path) ? readFileSync(path, "utf8").trim() : ""
+      const pid = Number(raw)
+      let alive = false
+      if (Number.isInteger(pid) && pid > 0) {
+        try {
+          process.kill(pid, 0)
+          alive = true
+        } catch (e) {
+          alive = (e as NodeJS.ErrnoException).code === "EPERM"
+        }
+      }
+      if (alive) {
+        throw new Error(
+          `BUILD_LOCK: 另一个 muc-release build 正在运行（pid ${pid}，lock=${path}）。` +
+            `并发架构构建共享同一 node_modules，禁止同时 prune；请等待或先结束对方。`,
+        )
+      }
+      // 陈旧锁（持有进程已死）→ 收走重试；极少数竞态下多试两次
+      if (attempt < 2) {
+        try {
+          rmSync(path)
+        } catch {}
+        continue
+      }
+      throw new Error(`BUILD_LOCK: 无法获取 lock ${path}（陈旧且清理失败）`)
+    }
+  }
+}
+
+function releaseBuildLock() {
+  try {
+    rmSync(buildLockPath())
+  } catch {}
+}
+
+/** SIGINT/SIGTERM 尽最大努力恢复被 prune 的 node_modules 并释放锁，再退出。 */
+function installSignalGuard() {
+  const handler = (sig: string) => {
+    console.error(`\n${sig} received; best-effort recovery…`)
+    if (restorePending.value) {
+      try {
+        console.error("restoring pruned native packages…")
+        Bun.spawnSync(["bun", "install", "--force", "--frozen-lockfile"], {
+          cwd: `${DESKTOP_DIR}/../..`,
+          env: process.env,
+          stdout: "ignore",
+          stderr: "inherit",
+        })
+      } catch {}
+    }
+    releaseBuildLock()
+    process.exit(128 + (sig === "SIGINT" ? 2 : 15))
+  }
+  process.on("SIGINT", () => handler("SIGINT"))
+  process.on("SIGTERM", () => handler("SIGTERM"))
+}
+
 async function build(target: string) {
   const version = await getMucVersion()
   console.log(`MUC release: building ${target} @ ${version}`)
   process.env.OPENCODE_CHANNEL = "muc"
   // MUC Harness: node-pty 平台包跟随【打包目标】而非构建机（native 架构错配根因修复）
   process.env.MUC_PTY_PKG = PTY_PKG_BY_TARGET[target]!
-  // 全量 build（含 prebuild：dist/node 重建）。版本只读注入：
-  // 渲染层走 electron.vite MUC_VERSION define，打包走 extraMetadata.version，
-  // 构建流程不修改任何 git tracked 源文件。
-  await sh(["bun", "run", "build"])
-  if (target === "win-x64") await ensureWinPtyPackage()
-  await pruneNativePackages(target)
-  const eb = ["npx", "electron-builder", "--config", "electron-builder.config.ts", "--publish", "never"]
-  if (target === "mac-arm64") await sh([...eb, "--mac", "--arm64"])
-  if (target === "mac-x64") await sh([...eb, "--mac", "--x64"])
-  if (target === "win-x64") await sh([...eb, "--win", "--x64"])
-  await restoreNativePackages()
+  installSignalGuard()
+  acquireBuildLock()
+  // 测试钩子：模拟 package 阶段失败（prune 已发生、restore 未执行），用于验证
+  // finally 恢复/信号恢复；跳过重型 build 以聚焦临界区。正常发布绝不设置。
+  const forceFail = process.env.MUC_RELEASE_FORCE_FAIL === "1"
+  try {
+    if (!forceFail) {
+      // 全量 build（含 prebuild：dist/node 重建）。版本只读注入：
+      // 渲染层走 electron.vite MUC_VERSION define，打包走 extraMetadata.version，
+      // 构建流程不修改任何 git tracked 源文件。
+      await sh(["bun", "run", "build"])
+    }
+    if (target === "win-x64") await ensureWinPtyPackage()
+    await pruneNativePackages(target)
+    if (forceFail) {
+      const delay = Number(process.env.MUC_RELEASE_FAIL_DELAY ?? "0")
+      if (delay > 0) {
+        console.log(`FORCE_FAIL: holding critical section for ${delay}s…`)
+        await new Promise((r) => setTimeout(r, delay * 1000))
+      }
+      throw new Error("FORCE_FAIL: simulated packaging failure (MUC_RELEASE_FORCE_FAIL=1)")
+    }
+    const eb = ["npx", "electron-builder", "--config", "electron-builder.config.ts", "--publish", "never"]
+    if (target === "mac-arm64") await sh([...eb, "--mac", "--arm64"])
+    if (target === "mac-x64") await sh([...eb, "--mac", "--x64"])
+    if (target === "win-x64") await sh([...eb, "--win", "--x64"])
+  } finally {
+    // 无论 package 成功/失败/中断，都必须把开发环境 node_modules 恢复原状
+    await restoreNativePackages().finally(() => {
+      restorePending.value = false
+      releaseBuildLock()
+    })
+  }
   await verifyBuild(target, version)
 }
 
