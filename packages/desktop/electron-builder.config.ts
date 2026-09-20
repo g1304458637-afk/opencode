@@ -171,11 +171,12 @@ function getConfig() {
         icon: "resources/muc/icon.icns",
         protocols: { name: "MUC Connect", schemes: ["muc", "opencode"] },
         // MUC Harness: muc 自有更新源（generic provider，无账号 token）。
-        // ${platform}/${arch} 由 electron-builder 在生成 app-update.yml 时按产物展开为
-        // darwin/arm64、darwin/x64、win32/x64，实现平台+架构隔离的 latest*.yml。
+        // 注意必须用 ${os}（目标平台键 mac/win，electron-builder 按产物展开）——
+        // ${platform} 展开的是构建机 platform，交叉打包会带错 feed 目录。
+        // 实际生成：.../stable/mac/arm64、.../stable/mac/x64、.../stable/win/x64。
         publish: {
           provider: "generic",
-          url: `${MUC_UPDATE_FEED_BASE}/\${platform}/\${arch}`,
+          url: `${MUC_UPDATE_FEED_BASE}/\${os}/\${arch}`,
         },
         ...(mucVersion ? { extraMetadata: { ...base.extraMetadata, version: mucVersion } } : {}),
         // muc 走自有校园分发渠道，无 Apple Developer 证书体系：

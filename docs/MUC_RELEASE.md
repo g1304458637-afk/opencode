@@ -44,9 +44,10 @@ release.json
 - provider：`generic`（无账号、无 token），配置在 `electron-builder.config.ts` muc 分支。
 - 基址：`https://admin.wuxuexi.top/downloads/muc-updates/stable`
 - 客户端实际 feed（由 electron-builder 按产物展开 `${platform}/${arch}` 写入 app-update.yml）：
-  - `.../stable/darwin/arm64/latest-mac.yml`
-  - `.../stable/darwin/x64/latest-mac.yml`
-  - `.../stable/win32/x64/latest.yml`
+  - `.../stable/mac/arm64/latest-mac.yml`
+  - `.../stable/mac/x64/latest-mac.yml`
+  - `.../stable/win/x64/latest.yml`
+  （`${os}` 宏 = 目标平台键 mac/win；勿用 `${platform}`——那会展开成构建机的 darwin/win32，交叉打包必错）
 - 检查频率：启动后延迟 15s 首检 + 每 10 分钟；发现新版自动下载（SHA512 校验），**安装必须用户确认**。
 - 逃生门：`MUC_DISABLE_AUTO_UPDATE=1` 环境变量可完全关闭（故障回退时让用户禁用检查）。
 - 本地/E2E 覆盖：构建时 `MUC_UPDATE_FEED_URL=http://127.0.0.1:<port>/muc-updates/stable`。
@@ -60,15 +61,15 @@ release.json
 ├── mucode-win-x64.exe
 ├── SHA256SUMS.txt
 └── muc-updates/stable/                 ← 自动更新 feed（版本化文件名，永不覆盖）
-    ├── darwin/arm64/
+    ├── mac/arm64/
     │   ├── latest-mac.yml              ← 最后上传
     │   ├── mucode-<v>-mac-arm64.zip
     │   └── mucode-<v>-mac-arm64.zip.blockmap
-    ├── darwin/x64/
+    ├── mac/x64/
     │   ├── latest-mac.yml
     │   ├── mucode-<v>-mac-x64.zip
     │   └── mucode-<v>-mac-x64.zip.blockmap
-    └── win32/x64/
+    └── win/x64/
         ├── latest.yml
         ├── mucode-<v>-win-x64.exe
         └── mucode-<v>-win-x64.exe.blockmap

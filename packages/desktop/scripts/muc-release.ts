@@ -126,7 +126,7 @@ async function upload(execute: boolean, host: string) {
 
   const isMac = manifest.target.startsWith("mac")
   const arch = isMac ? (manifest.target === "mac-arm64" ? "arm64" : "x64") : "x64"
-  const remoteDir = isMac ? `${REMOTE_ROOT}/muc-updates/stable/darwin/${arch}` : `${REMOTE_ROOT}/muc-updates/stable/win32/x64`
+  const remoteDir = isMac ? `${REMOTE_ROOT}/muc-updates/stable/mac/${arch}` : `${REMOTE_ROOT}/muc-updates/stable/win/x64`
   const channelFile = isMac ? "latest-mac.yml" : "latest.yml"
   const payloadFiles = manifest.files
     .map((f: { file: string }) => f.file)
