@@ -29,7 +29,7 @@ MUC Release  → MUC 用户：自动检查、自动下载、用户确认安装�
 
 ```
 release.json
-  ├─ prebuild（syncMucVersionToPackageJson）→ package.json version → 渲染层 pkg.version（UI 显示）
+  ├─ electron.vite define（MUC_VERSION，仅 muc 渠道）→ 渲染层 UI 显示版本
   ├─ electron-builder extraMetadata.version → Info.plist CFBundleShortVersionString
   │                                        → asar package.json（Windows app.getVersion()）
   │                                        → latest*.yml 的 version
@@ -37,7 +37,11 @@ release.json
   └─ app.getVersion()（打包后）＝ electron-updater currentVersion
 ```
 
-禁止手工改 package.json 的 version（prebuild 会以 release.json 覆盖之）。
+package.json 是 git tracked 源文件，构建流程**只读不写**（prebuild 不再改它）；
+版本注入 = electron.vite define（渲染层）+ electron-builder extraMetadata.version（打包侧）。
+自动一致性测试：`bun test packages/desktop/scripts/muc-version.test.ts`
+（release.json == Info.plist == asar package.json == latest*.yml == 产物文件名；
+并断言 prebuild 前后 `git status --porcelain` 完全一致）。
 
 ## 2. 更新源（Phase 2/3）
 
@@ -119,19 +123,66 @@ bun scripts/muc-release.ts upload --execute      # payload → 远端校验 → 
   up-to-date / installing / error`，经 `updater-subscribe` IPC 推送到渲染层。
 - 网络失败：后台检查只记日志不弹窗；手动检查才显示错误对话框。
 
-## 6. 签名现状（Phase 0 审计，2026-09-20）
+## 6. 签名现状与正式签名准备（Production Hardening，2026-09-21）
 
 ```text
 macOS signed:      ad-hoc（identity:null + scripts/after-sign-mac.js；无 Developer ID）
 macOS notarized:   否（spctl rejected）
-Windows signed:    否（signAndEditExecutable:false；sign 脚本仅 GITHUB_ACTIONS 生效）
+Windows signed:    否（signAndEditExecutable:false；无证书）
+状态：             WAITING_FOR_APPLE_SIGNING_CREDENTIAL / WAITING_FOR_WINDOWS_SIGNING_CERT
 ```
 
-**MAC_AUTO_UPDATE_BLOCKED_BY_SIGNING**：ad-hoc 签名下 electron-updater 本体不做签名校验
-（`verifyUpdateCodeSignature` 仅 Windows NSIS 路径），SHA512 由 latest-mac.yml 保证；
-但 Squirrel.Mac 原生安装器对 ad-hoc 更新包的行为未获正式支持保障，且无公证的首装
-Gatekeeper 体验依赖 `xattr -cr` 修补。macOS 自动更新在拿到 Developer ID + notarization
-之前，**不得对师生承诺生产可用**；Phase 9 E2E 的实测结论见 §8。
+**实测定论（2026-09-20 E2E）**：ad-hoc 更新在 check/download/SHA512/ready/Squirrel 交接
+全部通过，最终被 Squirrel.Mac 拒绝：`Code signature ... did not pass validation`。
+**不要尝试绕过 Squirrel 签名校验**；唯一正路 = 正式签名。
+
+### 6.1 macOS 正式方案（目标态）
+
+```
+Developer ID Application + Hardened Runtime + notarization + stapling
+```
+
+- 代码已就绪：`electron-builder.config.ts` muc 分支双模式——设 `MUC_SIGN_IDENTITY`
+  （或 `CSC_NAME`）即切换为 Developer ID 签名 + `notarize: true`（hardenedRuntime 恒开），
+  且不再跑 ad-hoc afterSign 钩子；不设则保持 ad-hoc 测试模式。
+- **所需 Apple 凭据清单**（全部经 Keychain / 环境变量 / CI secrets 注入，禁止入仓）：
+  1. Apple Developer Program（Team ID）
+  2. `Developer ID Application` 证书 + 私钥（导入构建机 Keychain，或 CI 以
+     `CSC_LINK`/`CSC_KEY_PASSWORD` 注入；identity 名经 `MUC_SIGN_IDENTITY` 传入）
+  3. 公证凭据二选一：`APPLE_ID` + `APPLE_APP_SPECIFIC_PASSWORD` + `APPLE_TEAM_ID`，
+     或 App Store Connect API key（`APPLE_API_KEY`/`APPLE_API_KEY_ID`/`APPLE_API_ISSUER`）
+- entitlements 审计：`resources/entitlements.plist` = Electron 标准 JIT 套件
+  （allow-jit / allow-unsigned-executable-memory / disable-library-validation /
+  dyld-env-vars / disable-executable-page-protection）+ 麦克风；与 hardened runtime
+  兼容，公证无冲突。bundle id：主程序 `cn.edu.muc.harness`，helper 自动派生
+  `cn.edu.muc.harness.helper`，同一 Team ID 签名即可。
+- 发布门（脚本内建）：`upload`（stable，非 `--test-feed`）强制
+  `codesign verify` + `Authority=Developer ID Application` + `stapler validate`
+  三关全过，否则直接失败、零上传。
+
+### 6.2 Windows 正式方案（目标态）
+
+- electron-builder 26 标准 signtool 接口：设 `WIN_CSC_LINK`（.pfx）+
+  `WIN_CSC_KEY_PASSWORD`（或 `CSC_LINK`/`CSC_KEY_PASSWORD`）后自动启用
+  `signtoolOptions` 签名 + exe/NSIS 元数据编辑（`signAndEditExecutable: true`）。
+- 证书约束：`.pfx/.p12` 与密码只走环境变量/CI secrets；EV/硬件 token 证书需在
+  真实 Windows 构建机上签名（signtool 无法在 mac 交叉执行）。
+- 一致性：exe publisher、NSIS installer publisher、electron-updater 下载后校验
+  （latest.yml `publisherName` ↔ 签名证书）将自动统一为同一 Publisher。
+- 发布门：`upload` stable 在 win32 上运行 `signtool verify /pa /all`；mac 交叉构建
+  无法验证 → 直接拒绝发布 stable。
+
+### 6.3 Keychain "mucode Safe Storage" 弹窗归因（#5）
+
+```text
+adhoc build:         每次重装 CDHash/designated requirement 变化 → Keychain ACL 失配
+                     → 首次访问 safeStorage 弹 "mucode Safe Storage" 授权框（等输入，
+                     期间相关启动流程阻塞）；Allow 后本次有效，下次重装再来。
+Developer ID build:  designated requirement 稳定（Team ID 锚定）→ 首次 Allow/Always Allow
+                     之后，签名更新替换 bundle 不再触发弹窗。
+```
+
+处理原则：不为消除弹窗删除用户 Keychain 数据或弱化 safeStorage 策略；正式签名后复测。
 
 ## 7. 回滚与坏版本（Phase 10）
 

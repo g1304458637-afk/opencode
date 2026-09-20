@@ -33,6 +33,9 @@ import "./styles.css"
 import { Splash } from "@opencode-ai/ui/logo"
 import { useTheme } from "@opencode-ai/ui/theme/context"
 
+// MUC Harness: muc 渠道版本来自 release.json（vite define）；其余渠道回退 package.json
+const APP_VERSION = import.meta.env.MUC_VERSION ?? pkg.version
+
 const root = document.getElementById("root")
 if (import.meta.env.DEV && !(root instanceof HTMLElement)) {
   throw new Error(t("desktop.error.dev.rootNotFound"))
@@ -42,7 +45,7 @@ if (import.meta.env.VITE_SENTRY_DSN) {
   Sentry.init({
     dsn: import.meta.env.VITE_SENTRY_DSN,
     environment: import.meta.env.VITE_SENTRY_ENVIRONMENT ?? import.meta.env.MODE,
-    release: import.meta.env.VITE_SENTRY_RELEASE ?? `desktop@${pkg.version}`,
+    release: import.meta.env.VITE_SENTRY_RELEASE ?? `desktop@${APP_VERSION}`,
     initialScope: {
       tags: {
         platform: "desktop",
@@ -169,7 +172,7 @@ const createPlatform = (windowState: DesktopWindowState): Platform => {
   return {
     platform: "desktop",
     os,
-    version: pkg.version,
+    version: APP_VERSION,
     windowID: windowState.id,
 
     async openDirectoryPickerDialog(opts) {

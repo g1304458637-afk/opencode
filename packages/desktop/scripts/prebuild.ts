@@ -2,11 +2,12 @@
 import { existsSync } from "node:fs"
 import { $ } from "bun"
 
-import { downloadCliToResources, resolveChannel, syncMucVersionToPackageJson } from "./utils"
+import { downloadCliToResources, resolveChannel } from "./utils"
 
 const channel = resolveChannel()
-// MUC Harness: 渲染层 bundle 读取 package.json 的 version，必须在打包前与 release.json 对齐
-await syncMucVersionToPackageJson(channel)
+// MUC Harness: 版本只读不写——package.json 是 git tracked 源文件，构建流程禁止改动；
+// 渲染层版本经 electron.vite.config.ts 的 MUC_VERSION define 注入，打包版本经
+// electron-builder extraMetadata.version 注入（单一来源 resources/muc/release.json）。
 await $`bun ./scripts/copy-icons.ts ${channel}`
 await $`bun ./scripts/copy-metainfo.ts ${channel}`
 

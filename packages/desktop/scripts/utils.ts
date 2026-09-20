@@ -20,19 +20,6 @@ export async function getMucVersion(): Promise<string> {
   return version
 }
 
-/** MUC Harness: 把 package.json 的 version 同步为 MUC 版本（prebuild 生命周期自动执行），
- * 使渲染层 bundle 内嵌的 pkg.version 与 Info.plist / latest.yml 保持一致。 */
-export async function syncMucVersionToPackageJson(channel: Channel) {
-  if (channel !== "dev" && channel !== "muc") return
-  const version = await getMucVersion()
-  const pkgPath = new URL("../package.json", import.meta.url)
-  const pkg = await Bun.file(pkgPath).json()
-  if (pkg.version === version) return
-  pkg.version = version
-  await Bun.write(pkgPath, JSON.stringify(pkg, null, 2) + "\n")
-  console.log(`MUC Harness: package.json version synced to MUC release version ${version}`)
-}
-
 export function resolveChannel(): Channel {
   const raw = Bun.env.OPENCODE_CHANNEL
   if (raw === "dev" || raw === "beta" || raw === "prod" || raw === "muc") return raw

@@ -164,6 +164,16 @@ function getConfig() {
       }
     }
     case "muc": {
+      // MUC Harness: 双模式签名。
+      // - 默认（无凭据）：ad-hoc（identity:null + afterSign 钩子做 ad-hoc 签名），
+      //   供本地/E2E 测试；Squirrel.Mac 会拒绝 ad-hoc 更新（已实测），
+      //   即 MAC_AUTO_UPDATE_BLOCKED_BY_SIGNING / WAITING_FOR_APPLE_SIGNING_CREDENTIAL。
+      // - 正式（设 MUC_SIGN_IDENTITY 或 CSC_NAME）：Developer ID 签名 + hardened runtime
+      //   + notarize（公证凭据经 APPLE_ID/APPLE_APP_SPECIFIC_PASSWORD/APPLE_TEAM_ID 或
+      //   App Store Connect API key 环境注入），不跑 ad-hoc afterSign 钩子。
+      // 凭据只走环境变量/Keychain/CI secrets，仓库内禁止出现任何证书或密钥文件。
+      const macSigningIdentity = process.env.MUC_SIGN_IDENTITY ?? process.env.CSC_NAME ?? null
+      const winCertificate = process.env.WIN_CSC_LINK ?? process.env.CSC_LINK ?? null
       return {
         ...base,
         appId,
@@ -179,23 +189,34 @@ function getConfig() {
           url: `${MUC_UPDATE_FEED_BASE}/\${os}/\${arch}`,
         },
         ...(mucVersion ? { extraMetadata: { ...base.extraMetadata, version: mucVersion } } : {}),
-        // muc 走自有校园分发渠道，无 Apple Developer 证书体系：
-        // identity:null 跳过正式签名，afterSign 钩子做 ad-hoc 签名（避免 macOS 报"已损坏"），
-        // 显式关闭公证，避免构建机存在 APPLE_ID 环境变量时 electron-builder 直接报错。
         // MUC Harness: mac 产物全版本化（26.x 的 mac 无 target 级 artifactName，dmg/zip 共用）；
         // zip 供 latest-mac.yml 引用（feed 内永不覆盖），dmg 由发布脚本写 /downloads 固定名别名。
         mac: {
           ...base.mac,
           icon: "resources/muc/icon.icns",
-          identity: null,
-          notarize: false,
+          hardenedRuntime: true,
+          entitlements: "resources/entitlements.plist",
+          entitlementsInherit: "resources/entitlements.plist",
           artifactName: "mucode-\${version}-mac-\${arch}.\${ext}",
+          ...(macSigningIdentity
+            ? { identity: macSigningIdentity, notarize: true }
+            : { identity: null, notarize: false }),
         },
-        afterSign: "scripts/after-sign-mac.js",
+        ...(macSigningIdentity ? {} : { afterSign: "scripts/after-sign-mac.js" }),
         dmg: { ...base.dmg, icon: "resources/muc/icon.icns" },
-        // MUC Harness: 跨平台构建免 wine（exe 不内嵌图标/版本信息，v1 可接受）
+        // MUC Harness: 跨平台构建免 wine（exe 不内嵌图标/版本信息，v1 可接受）。
+        // 正式 Windows 签名：设 WIN_CSC_LINK(.pfx) + WIN_CSC_KEY_PASSWORD（或 CSC_LINK/CSC_KEY_PASSWORD）
+        // 后启用 signtool 签名与 exe 元数据编辑；无凭据时保持 unsigned（WAITING_FOR_WINDOWS_SIGNING_CERT）。
         win: {
-          signAndEditExecutable: false,
+          ...(winCertificate
+            ? {
+                signAndEditExecutable: true,
+                signtoolOptions: {
+                  certificateFile: winCertificate,
+                  certificatePassword: process.env.WIN_CSC_KEY_PASSWORD ?? process.env.CSC_KEY_PASSWORD,
+                },
+              }
+            : { signAndEditExecutable: false }),
           target: [{ target: "nsis", arch: ["x64"] }],
           icon: "resources/muc/icon.ico",
         },

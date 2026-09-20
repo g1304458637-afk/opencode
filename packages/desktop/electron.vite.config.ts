@@ -2,6 +2,7 @@ import { sentryVitePlugin } from "@sentry/vite-plugin"
 import { defineConfig } from "electron-vite"
 import appPlugin from "@opencode-ai/app/vite"
 import * as fs from "node:fs/promises"
+import { readFileSync } from "node:fs"
 
 const OPENCODE_SERVER_DIST = "../opencode/dist/node"
 
@@ -10,6 +11,15 @@ const channel = (() => {
   if (raw === "dev" || raw === "beta" || raw === "prod" || raw === "muc") return raw
   if (process.env.OPENCODE_CHANNEL === "latest") return "prod"
   return "dev"
+})()
+
+// MUC Harness: muc 渠道渲染层版本注入（只读 release.json，绝不写回 package.json）。
+// 其余渠道不定义该宏，渲染层回退到自身 package.json 版本（上游 prod/beta 行为不变）。
+const mucVersion = (() => {
+  if (channel !== "muc") return null
+  const release = JSON.parse(readFileSync(new URL("./resources/muc/release.json", import.meta.url), "utf8"))
+  if (typeof release.version !== "string") throw new Error("resources/muc/release.json: missing version")
+  return release.version
 })()
 
 const nodePtyPkg = `@lydell/node-pty-${process.platform}-${process.arch}`
@@ -94,6 +104,8 @@ const require = __cjs_mod__.createRequire(import.meta.url);
     define: {
       // MUC Harness: 渲染层通道（titlebar 徽标按此判断；muc 不显示 DEV 徽标）
       "import.meta.env.VITE_OPENCODE_CHANNEL": JSON.stringify(channel),
+      // MUC Harness: muc 渠道版本（与 Info.plist / latest*.yml 同源于 release.json）
+      ...(mucVersion ? { "import.meta.env.MUC_VERSION": JSON.stringify(mucVersion) } : {}),
     },
     plugins: [appPlugin, sentry],
     publicDir: "../../../app/public",

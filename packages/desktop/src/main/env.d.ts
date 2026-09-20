@@ -1,5 +1,7 @@
 interface ImportMetaEnv {
   readonly OPENCODE_CHANNEL: string
+  // MUC Harness: muc 渠道由 electron.vite.config.ts define 注入（其余渠道 undefined）
+  readonly MUC_VERSION?: string
 }
 
 interface ImportMeta {

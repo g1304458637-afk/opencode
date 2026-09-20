@@ -1,23 +1,29 @@
 #!/usr/bin/env bun
-// MUC Harness: mucode 发布脚本（Phase 7/11）。
+// MUC Harness: mucode 发布脚本（Phase 7/11 + Production Hardening）。
 //
 // 命令：
 //   bun scripts/muc-release.ts version
 //   bun scripts/muc-release.ts bump 2.0.1
 //   bun scripts/muc-release.ts build mac-arm64|mac-x64|win-x64
-//   bun scripts/muc-release.ts upload [--execute] [--host admin@host]
+//   bun scripts/muc-release.ts verify mac-arm64|mac-x64|win-x64
+//   bun scripts/muc-release.ts upload [--execute] [--host admin@host] [--test-feed]
 //
 // 原子发布顺序（upload 子命令内建，顺序不可调换）：
+//   0. 签名安全门（仅生产 stable；--test-feed 豁免）
 //   1. 版本化 payload（zip/exe/blockmap）先上传
 //   2. 远端 SHA256/大小逐字节校验
 //   3. 最后上传 latest-mac.yml / latest.yml（manifest 最后出现）
-//   4. 刷新 /downloads 人工下载别名（无版本文件名）+ SHA256SUMS.txt
+//   4. （仅 stable）刷新 /downloads 人工下载别名 + SHA256SUMS.txt
+//
+// 签名安全门（#6）：生产 stable 上传前必须通过——
+//   mac: codesign verify PASS + Authority=Developer ID Application + stapler validate PASS
+//   win: 在 win32 上 signtool verify /pa PASS（mac 交叉构建无法验证 → 拒绝发布 stable）
+// 任何一项不满足 → 直接失败，不产生任何上传/manifest 变更。
 //
 // 本脚本只发布 muc-harness 已测试的本地构建产物；不触碰上游 OpenCode。
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs"
 import { createHash } from "node:crypto"
-import { readdirSync } from "node:fs"
 import { $ } from "bun"
 import { getMucVersion, MUC_VERSION_SOURCE } from "./utils"
 
@@ -90,7 +96,6 @@ async function verifyBuild(target: string, version: string) {
     files.push(
       { file: `mucode-${version}-win-x64.exe`, sha256: sha256(exe), bytes: (await Bun.file(exe).size) },
       { file: `mucode-${version}-win-x64.exe.blockmap`, sha256: sha256(`${exe}.blockmap`), bytes: (await Bun.file(`${exe}.blockmap`).size) },
-      { file: `mucode-win-x64.exe`, sha256: sha256(`${DIST}/mucode-win-x64.exe`), bytes: (await Bun.file(`${DIST}/mucode-win-x64.exe`).size) },
     )
   }
 
@@ -109,8 +114,9 @@ async function build(target: string) {
   const version = await getMucVersion()
   console.log(`MUC release: building ${target} @ ${version}`)
   process.env.OPENCODE_CHANNEL = "muc"
-  // 全量 build（含 prebuild：dist/node 重建 + release.json → package.json 版本同步），
-  // 保证渲染层 pkg.version 与 extraMetadata.version 一致。
+  // 全量 build（含 prebuild：dist/node 重建）。版本只读注入：
+  // 渲染层走 electron.vite MUC_VERSION define，打包走 extraMetadata.version，
+  // 构建流程不修改任何 git tracked 源文件。
   await sh(["bun", "run", "build"])
   const eb = ["npx", "electron-builder", "--config", "electron-builder.config.ts", "--publish", "never"]
   if (target === "mac-arm64") await sh([...eb, "--mac", "--arm64"])
@@ -119,18 +125,70 @@ async function build(target: string) {
   await verifyBuild(target, version)
 }
 
-async function upload(execute: boolean, host: string) {
+function findMacApp(): string {
+  const dir = [`${DIST}/mac-arm64`, `${DIST}/mac`].find((d) => existsSync(`${d}/mucode.app/Contents/Info.plist`))
+  if (!dir) throw new Error("mucode.app not found under dist/mac[-arm64]")
+  return `${dir}/mucode.app`
+}
+
+function runCapture(cmd: string[]): { code: number; out: string } {
+  const proc = Bun.spawnSync(cmd, { stdout: "pipe", stderr: "pipe" })
+  return { code: proc.exitCode ?? 1, out: proc.stdout.toString() + proc.stderr.toString() }
+}
+
+/** #6 签名安全门（macOS）：ad-hoc / 未公证 → 直接失败。 */
+function gateMac() {
+  const app = findMacApp()
+  const steps: Array<[string, () => { code: number; out: string }]> = [
+    [`codesign --verify --deep --strict ${app}`, () => runCapture(["codesign", "--verify", "--deep", "--strict", app])],
+    [
+      "codesign -dv: Authority=Developer ID Application",
+      () => {
+        const r = runCapture(["codesign", "-dv", app])
+        return { code: r.out.includes("Authority=Developer ID Application") ? 0 : 1, out: r.out }
+      },
+    ],
+    [`xcrun stapler validate ${app}`, () => runCapture(["xcrun", "stapler", "validate", app])],
+  ]
+  for (const [name, run] of steps) {
+    const r = run()
+    if (r.code !== 0) {
+      console.error(`SIGNATURE GATE FAIL: ${name}\n${r.out.slice(0, 800)}`)
+      throw new Error("macOS signature gate failed（WAITING_FOR_APPLE_SIGNING_CREDENTIAL；测试发布请用 --test-feed）")
+    }
+    console.log(`gate OK: ${name}`)
+  }
+}
+
+/** #6 签名安全门（Windows）：必须在 win32 + signtool 可用，否则拒绝发布 stable。 */
+function gateWin(exe: string) {
+  if (process.platform !== "win32") {
+    throw new Error(
+      "Windows signature gate failed: signtool verify 只能在 Windows 上执行；" +
+        "mac 交叉构建无法验证签名 → 不允许发布 stable（WAITING_FOR_WINDOWS_SIGNING_CERT；测试发布请用 --test-feed）",
+    )
+  }
+  const r = runCapture(["signtool", "verify", "/pa", "/all", exe])
+  if (r.code !== 0) {
+    console.error(`SIGNATURE GATE FAIL: signtool verify /pa /all ${exe}\n${r.out.slice(0, 800)}`)
+    throw new Error("Windows signature gate failed")
+  }
+  console.log("gate OK: signtool verify /pa /all")
+}
+
+async function upload(execute: boolean, host: string, testFeed: boolean) {
   const version = await getMucVersion()
   const manifest = JSON.parse(readFileSync(`${DIST}/muc-release-manifest.json`, "utf8"))
   if (manifest.version !== version) throw new Error(`manifest version ${manifest.version} != ${version}（先重新 build）`)
 
   const isMac = manifest.target.startsWith("mac")
   const arch = isMac ? (manifest.target === "mac-arm64" ? "arm64" : "x64") : "x64"
-  const remoteDir = isMac ? `${REMOTE_ROOT}/muc-updates/stable/mac/${arch}` : `${REMOTE_ROOT}/muc-updates/stable/win/x64`
+  const feedDir = testFeed ? "test" : "stable"
+  const remoteDir = isMac
+    ? `${REMOTE_ROOT}/muc-updates/${feedDir}/mac/${arch}`
+    : `${REMOTE_ROOT}/muc-updates/${feedDir}/win/x64`
   const channelFile = isMac ? "latest-mac.yml" : "latest.yml"
-  const payloadFiles = manifest.files
-    .map((f: { file: string }) => f.file)
-    .filter((f: string) => !f.startsWith("mucode-mac") || f.includes(`mac-${arch}`))
+  const payloadFiles = (manifest.files as Array<{ file: string }>).map((f) => f.file)
 
   const localOf = (file: string) => `${DIST}/${file}`
   for (const file of payloadFiles) {
@@ -138,11 +196,20 @@ async function upload(execute: boolean, host: string) {
   }
   if (!existsSync(`${DIST}/${channelFile}`)) throw new Error(`missing ${channelFile}`)
 
+  // 0) 签名安全门：生产 stable 必须先过门，失败 → 不产生任何上传/manifest 变更
+  if (!testFeed) {
+    console.log("=== 签名安全门（stable 生产发布）===")
+    if (isMac) gateMac()
+    else gateWin(localOf(payloadFiles[0]!))
+  } else {
+    console.log("=== --test-feed：跳过签名门（测试 feed，不入 stable）===")
+  }
+
   console.log(`\n=== 发布计划 ${version} (${manifest.target}) → ${host}:${remoteDir} ===`)
   console.log("步骤 1: 上传版本化 payload:", payloadFiles.join(", "))
   console.log("步骤 2: 远端 SHA256/大小校验")
   console.log(`步骤 3: 最后上传 manifest: ${channelFile}`)
-  console.log("步骤 4: 刷新 /downloads 人工别名 + SHA256SUMS.txt")
+  if (!testFeed) console.log("步骤 4: 刷新 /downloads 人工别名 + SHA256SUMS.txt")
 
   if (!execute) {
     console.log("\n(dry-run，未做任何修改；确认无误后加 --execute)")
@@ -150,7 +217,7 @@ async function upload(execute: boolean, host: string) {
   }
 
   // 1) payload（版本化文件名，永不覆盖已发布版本）
-  await sh(["rsync", "-av", "--partial", ...payloadFiles.map((f: string) => localOf(f)), `${host}:${remoteDir}/`])
+  await sh(["rsync", "-av", "--partial", ...payloadFiles.map((f) => localOf(f)), `${host}:${remoteDir}/`])
 
   // 2) 远端校验
   const check = Bun.spawnSync(
@@ -159,25 +226,27 @@ async function upload(execute: boolean, host: string) {
   )
   if (check.exitCode !== 0) throw new Error("remote verify failed")
   for (const file of payloadFiles) {
-    const local = manifest.files.find((f: { file: string }) => f.file === file)
-    if (!check.stdout.toString().includes(local.sha256)) throw new Error(`remote sha256 mismatch: ${file}`)
+    const local = (manifest.files as Array<{ file: string; sha256: string }>).find((f) => f.file === file)
+    if (!check.stdout.toString().includes(local!.sha256)) throw new Error(`remote sha256 mismatch: ${file}`)
   }
   console.log("remote payload verify OK")
 
   // 3) manifest 最后发布
   await sh(["scp", `${DIST}/${channelFile}`, `${host}:${remoteDir}/${channelFile}`])
 
-  // 4) 人工下载别名（固定文件名，仅首装入口，不参与自动更新）
-  if (isMac) {
-    await sh(["scp", `${DIST}/mucode-${version}-mac-${arch}.dmg`, `${host}:${REMOTE_ROOT}/mucode-mac-${arch}.dmg`])
-  } else {
-    await sh(["scp", `${DIST}/mucode-${version}-win-x64.exe`, `${host}:${REMOTE_ROOT}/mucode-win-x64.exe`])
+  // 4) 人工下载别名（固定文件名，仅首装入口，不参与自动更新；test-feed 不动 /downloads）
+  if (!testFeed) {
+    if (isMac) {
+      await sh(["scp", `${DIST}/mucode-${version}-mac-${arch}.dmg`, `${host}:${REMOTE_ROOT}/mucode-mac-${arch}.dmg`])
+    } else {
+      await sh(["scp", `${DIST}/mucode-${version}-win-x64.exe`, `${host}:${REMOTE_ROOT}/mucode-win-x64.exe`])
+    }
+    await sh([
+      "ssh",
+      host,
+      `cd ${REMOTE_ROOT} && sha256sum mucode-mac-arm64.dmg mucode-mac-x64.dmg mucode-win-x64.exe > SHA256SUMS.txt`,
+    ])
   }
-  await sh([
-    "ssh",
-    host,
-    `cd ${REMOTE_ROOT} && sha256sum mucode-mac-arm64.dmg mucode-mac-x64.dmg mucode-win-x64.exe > SHA256SUMS.txt`,
-  ])
   console.log("发布完成（manifest 已最后上线）")
 }
 
@@ -196,10 +265,14 @@ if (cmd === "version") {
 } else if (cmd === "build") {
   if (!["mac-arm64", "mac-x64", "win-x64"].includes(arg ?? "")) throw new Error("usage: build mac-arm64|mac-x64|win-x64")
   await build(arg)
+} else if (cmd === "verify") {
+  if (!["mac-arm64", "mac-x64", "win-x64"].includes(arg ?? "")) throw new Error("usage: verify mac-arm64|mac-x64|win-x64")
+  await verifyBuild(arg, await getMucVersion())
 } else if (cmd === "upload") {
   const execute = process.argv.includes("--execute")
+  const testFeed = process.argv.includes("--test-feed")
   const hostIdx = process.argv.indexOf("--host")
-  await upload(execute, hostIdx > 0 ? process.argv[hostIdx + 1] : DEFAULT_HOST)
+  await upload(execute, hostIdx > 0 ? process.argv[hostIdx + 1] : DEFAULT_HOST, testFeed)
 } else {
-  console.log("usage: muc-release.ts version|bump <ver>|build <target>|upload [--execute] [--host user@host]")
+  console.log("usage: muc-release.ts version|bump <ver>|build|verify|upload [--execute] [--test-feed] [--host user@host]")
 }
