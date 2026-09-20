@@ -1767,7 +1767,17 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                             size="normal"
                             options={variants()}
                             current={props.controls.model.selection.variant.current() ?? "default"}
-                            label={(x) => (x === "default" ? language.t("common.default") : x)}
+                            label={(x) =>
+                              x === "default"
+                                ? "思考强度"
+                                : x === "low"
+                                  ? "低"
+                                  : x === "medium"
+                                    ? "中"
+                                    : x === "high"
+                                      ? "高"
+                                      : x
+                            }
                             onSelect={(value) => {
                               props.controls.model.selection.variant.set(value === "default" ? undefined : value)
                               restoreFocus()
