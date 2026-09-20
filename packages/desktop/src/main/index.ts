@@ -380,7 +380,22 @@ const main = Effect.gen(function* () {
   void mucController.restoreToProcessEnv().catch((e) =>
     writeLog("main", "muc credential restore failed", { e: String(e) }, "error"),
   )
-  void updater.start()
+  // MUC Harness: muc 渠道首检延迟 15s——更新器网络探测不得阻塞启动（历史曾致新 profile 挂死）；
+  // 后台下载完成后弹一次原生提示（[重启更新][稍后]），同版本不重复骚扰；
+  // 手动"检查更新"仍走菜单/设置入口（showUpdaterDialog）。仅 muc 门控，不改变 prod/beta 行为。
+  if (CHANNEL === "muc") {
+    const firstCheck = setTimeout(() => void updater.start(), 15_000)
+    firstCheck.unref?.()
+    let readyNotifiedVersion: string | null = null
+    const unsubscribeReadyPrompt = updater.subscribe((state) => {
+      if (state.status !== "ready" || state.version === readyNotifiedVersion) return
+      readyNotifiedVersion = state.version
+      void showUpdaterDialog(updater, false)
+    })
+    app.once("will-quit", () => unsubscribeReadyPrompt())
+  } else {
+    void updater.start()
+  }
   const updateTimer = setInterval(() => void updater.check(), 10 * 60 * 1000)
   updateTimer.unref()
   app.once("will-quit", () => clearInterval(updateTimer))

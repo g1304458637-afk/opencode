@@ -1,4 +1,5 @@
 import { execFile } from "node:child_process"
+import { readFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { promisify } from "node:util"
@@ -33,6 +34,24 @@ const channel = (() => {
   const raw = process.env.OPENCODE_CHANNEL
   if (raw === "dev" || raw === "beta" || raw === "prod" || raw === "muc") return raw
   return "dev"
+})()
+
+// MUC Harness: 更新 feed 基址可被环境变量覆盖（本地 E2E 指向 127.0.0.1 的临时 feed）。
+// 只影响 muc 渠道；prod/beta 的 GitHub publish 不受影响。
+const MUC_UPDATE_FEED_BASE =
+  process.env.MUC_UPDATE_FEED_URL ?? "https://admin.wuxuexi.top/downloads/muc-updates/stable"
+
+// MUC Harness: MUC 版本唯一真实来源（resources/muc/release.json），与上游 OpenCode
+// workspace 版本解耦。extraMetadata.version 写进 Info.plist / asar package.json /
+// latest.yml / 产物文件名，保证 app.getVersion()（= electron-updater currentVersion）、
+// macOS CFBundleShortVersionString、UI 显示版本、update feed 版本四方一致。
+const mucVersion = (() => {
+  if (channel !== "muc") return null
+  const release = JSON.parse(
+    readFileSync(path.join(packageDir, "resources", "muc", "release.json"), "utf8"),
+  ) as { version?: unknown }
+  if (typeof release.version !== "string") throw new Error("resources/muc/release.json: missing version")
+  return release.version
 })()
 
 const APP_IDS = {
@@ -151,10 +170,26 @@ function getConfig() {
         productName: "mucode",
         icon: "resources/muc/icon.icns",
         protocols: { name: "MUC Connect", schemes: ["muc", "opencode"] },
+        // MUC Harness: muc 自有更新源（generic provider，无账号 token）。
+        // ${platform}/${arch} 由 electron-builder 在生成 app-update.yml 时按产物展开为
+        // darwin/arm64、darwin/x64、win32/x64，实现平台+架构隔离的 latest*.yml。
+        publish: {
+          provider: "generic",
+          url: `${MUC_UPDATE_FEED_BASE}/\${platform}/\${arch}`,
+        },
+        ...(mucVersion ? { extraMetadata: { ...base.extraMetadata, version: mucVersion } } : {}),
         // muc 走自有校园分发渠道，无 Apple Developer 证书体系：
         // identity:null 跳过正式签名，afterSign 钩子做 ad-hoc 签名（避免 macOS 报"已损坏"），
         // 显式关闭公证，避免构建机存在 APPLE_ID 环境变量时 electron-builder 直接报错。
-        mac: { ...base.mac, icon: "resources/muc/icon.icns", identity: null, notarize: false },
+        // MUC Harness: mac 产物全版本化（26.x 的 mac 无 target 级 artifactName，dmg/zip 共用）；
+        // zip 供 latest-mac.yml 引用（feed 内永不覆盖），dmg 由发布脚本写 /downloads 固定名别名。
+        mac: {
+          ...base.mac,
+          icon: "resources/muc/icon.icns",
+          identity: null,
+          notarize: false,
+          artifactName: "mucode-\${version}-mac-\${arch}.\${ext}",
+        },
         afterSign: "scripts/after-sign-mac.js",
         dmg: { ...base.dmg, icon: "resources/muc/icon.icns" },
         // MUC Harness: 跨平台构建免 wine（exe 不内嵌图标/版本信息，v1 可接受）
@@ -167,6 +202,8 @@ function getConfig() {
           oneClick: true,
           installerIcon: "resources/muc/icon.ico",
           uninstallerIcon: "resources/muc/icon.ico",
+          // MUC Harness: 更新 feed 引用版本化 exe；/downloads/mucode-win-x64.exe 由发布脚本写别名
+          artifactName: "mucode-\${version}-win-\${arch}.\${ext}",
         },
       }
     }

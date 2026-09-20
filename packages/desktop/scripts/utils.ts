@@ -7,6 +7,32 @@ const CLI_VERSION = "0.0.0-next-16350"
 
 export type Channel = "dev" | "beta" | "prod" | "muc"
 
+// MUC Harness: MUC 桌面端版本唯一真实来源。与上游 OpenCode workspace 版本（package.json，
+// rebase 时被上游 bump 覆盖）彻底解耦；electron-builder / 渲染层 / electron-updater 全部由此派生。
+export const MUC_VERSION_SOURCE = "resources/muc/release.json"
+
+export async function getMucVersion(): Promise<string> {
+  const file = Bun.file(new URL(`../${MUC_VERSION_SOURCE}`, import.meta.url))
+  const { version } = await file.json()
+  if (typeof version !== "string" || !/^\d+\.\d+\.\d+(-[\w.]+)?$/.test(version)) {
+    throw new Error(`${MUC_VERSION_SOURCE}: missing valid semver "version"`)
+  }
+  return version
+}
+
+/** MUC Harness: 把 package.json 的 version 同步为 MUC 版本（prebuild 生命周期自动执行），
+ * 使渲染层 bundle 内嵌的 pkg.version 与 Info.plist / latest.yml 保持一致。 */
+export async function syncMucVersionToPackageJson(channel: Channel) {
+  if (channel !== "dev" && channel !== "muc") return
+  const version = await getMucVersion()
+  const pkgPath = new URL("../package.json", import.meta.url)
+  const pkg = await Bun.file(pkgPath).json()
+  if (pkg.version === version) return
+  pkg.version = version
+  await Bun.write(pkgPath, JSON.stringify(pkg, null, 2) + "\n")
+  console.log(`MUC Harness: package.json version synced to MUC release version ${version}`)
+}
+
 export function resolveChannel(): Channel {
   const raw = Bun.env.OPENCODE_CHANNEL
   if (raw === "dev" || raw === "beta" || raw === "prod" || raw === "muc") return raw

@@ -1,6 +1,6 @@
 import { app, dialog } from "electron"
 import pkg from "electron-updater"
-import { UPDATER_ENABLED } from "./constants"
+import { UPDATER_ENABLED, CHANNEL } from "./constants"
 import { createUpdaterController, type UpdaterReadyRecord } from "./updater-controller"
 import { getLogger } from "./logging"
 import { getStore } from "./store"
@@ -17,7 +17,8 @@ export function setupAutoUpdater(stop: () => Promise<void>) {
   autoUpdater.allowPrerelease = false
   autoUpdater.allowDowngrade = true
   autoUpdater.autoDownload = false
-  autoUpdater.autoInstallOnAppQuit = false
+  // MUC Harness: muc 渠道"稍后"语义 = 正常退出后静默安装（Phase 6 UX）；上游 prod/beta 维持 false
+  autoUpdater.autoInstallOnAppQuit = CHANNEL === "muc"
   logger.log("auto updater configured", {
     channel: autoUpdater.channel,
     allowPrerelease: autoUpdater.allowPrerelease,
