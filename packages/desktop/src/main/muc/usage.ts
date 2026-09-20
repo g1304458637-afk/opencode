@@ -124,11 +124,18 @@ export function parseMucUsage(body: unknown): MucUsageSnapshot {
   return snapshot
 }
 
-export async function fetchMucUsage(gateway: string, apiKey: string): Promise<MucUsageSnapshot | undefined> {
+export async function fetchMucUsage(
+  gateway: string,
+  apiKey: string,
+  clientVersion?: string,
+): Promise<MucUsageSnapshot | undefined> {
   try {
     const url = gateway.replace(/\/+$/, "") + "/v1/usage"
+    // MUC Harness: 附带 mucode/<版本> UA，服务端可统计旧版滞留率；版本未知时不影响请求
+    const headers: Record<string, string> = { Authorization: `Bearer ${apiKey}` }
+    if (clientVersion) headers["User-Agent"] = `mucode/${clientVersion}`
     const res = await fetch(url, {
-      headers: { Authorization: `Bearer ${apiKey}` },
+      headers,
       signal: AbortSignal.timeout(8_000),
     })
     if (!res.ok) return undefined

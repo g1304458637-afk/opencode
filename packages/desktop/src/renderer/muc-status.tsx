@@ -3,7 +3,7 @@
 // 数据经主进程 IPC 拉取（凭据不出主进程）。本文件为 mucode 新增文件。
 
 import { Show, createSignal, onCleanup, onMount, For } from "solid-js"
-import type { MucUsageSnapshot } from "../preload/types"
+import type { MucUpdateState, MucUsageSnapshot } from "../preload/types"
 
 const STORE_NAME = "muc-status"
 const REFRESH_MS = 5 * 60 * 1000
@@ -43,6 +43,19 @@ export function MucStatus() {
   const [stale, setStale] = createSignal(false)
   const [loading, setLoading] = createSignal(false)
   const [pos, setPos] = createSignal<Pos>(defaultPos())
+  const [update, setUpdate] = createSignal<MucUpdateState | null>(null)
+
+  // 有新版本时返回非空对象（供 Show 收窄）；否则 null
+  const updateAvailable = () => {
+    const u = update()
+    return u?.available ? u : null
+  }
+
+  const refreshUpdate = async () => {
+    try {
+      setUpdate(await window.api.mucGetUpdate())
+    } catch {}
+  }
 
   const refresh = async () => {
     setLoading(true)
@@ -82,6 +95,7 @@ export function MucStatus() {
       }
     })
     void refresh()
+    void refreshUpdate()
     const timer = setInterval(() => void refresh(), REFRESH_MS)
     const onResize = () => setPos((p) => clampPos(p))
     window.addEventListener("resize", onResize)
@@ -121,6 +135,8 @@ export function MucStatus() {
     if (moved) {
       void window.api.storeSet(STORE_NAME, "ballPos", JSON.stringify(pos()))
     } else {
+      // 展开面板时顺带刷新一次新版本状态（主进程带缓存，无额外网络开销）
+      if (!open()) void refreshUpdate()
       setOpen((v) => !v)
     }
   }
@@ -157,6 +173,24 @@ export function MucStatus() {
               ✕
             </button>
           </div>
+
+          <Show when={updateAvailable()}>
+            {(u) => (
+              <button
+                type="button"
+                class="mb-2 flex w-full items-center justify-between rounded-lg bg-sky-50 px-2 py-1.5 text-[11px] text-sky-700 hover:bg-sky-100"
+                onClick={() => void window.api.mucOpenDownloadPage()}
+              >
+                <span>
+                  有新版本 {u().version}
+                  <Show when={u().forced}>
+                    <span class="ml-1 font-semibold">（必须更新）</span>
+                  </Show>
+                </span>
+                <span>去下载 →</span>
+              </button>
+            )}
+          </Show>
 
           <Show when={usage()} fallback={<div class="py-3 text-center text-black/50">暂无数据</div>}>
             {(u) => (
@@ -261,6 +295,11 @@ export function MucStatus() {
           class="absolute right-0.5 top-0.5 size-2 rounded-full border border-white/60"
           classList={{ "bg-emerald-400": !stale(), "bg-amber-400": stale() }}
         />
+        <Show when={updateAvailable()}>
+          <span class="absolute left-1 top-1 flex size-3.5 animate-pulse items-center justify-center rounded-full bg-sky-400 text-[8px] font-bold leading-none text-white">
+            新
+          </span>
+        </Show>
         <Show when={loading()}>
           <span class="absolute inset-0 animate-pulse rounded-full bg-white/10" />
         </Show>

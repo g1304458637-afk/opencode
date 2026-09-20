@@ -55,6 +55,8 @@ export type ElectronAPI = {
   mucDisconnect: () => Promise<MucConnectionState>
   mucPendingCode: () => Promise<string | null>
   mucGetUsage: () => Promise<MucUsageResult>
+  mucGetUpdate: () => Promise<MucUpdateState>
+  mucOpenDownloadPage: () => Promise<void>
   getDefaultServerUrl: () => Promise<string | null>
   setDefaultServerUrl: (url: string | null) => Promise<void>
   isFirstLaunchOnboardingPending: () => Promise<boolean>
@@ -158,3 +160,8 @@ export type MucUsageSnapshot = {
 export type MucUsageResult =
   | { ok: true; usage: MucUsageSnapshot }
   | { ok: false; error: "not_connected" | "unavailable" }
+
+// 新版本自检结果（主进程拉 /downloads/latest-mucode.json 后的聚合结论）
+export type MucUpdateState =
+  | { available: false }
+  | { available: true; forced: boolean; version: string; notes?: string; releasedAt?: string }

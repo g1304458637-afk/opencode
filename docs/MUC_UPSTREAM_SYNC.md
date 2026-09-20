@@ -72,13 +72,36 @@ git push origin muc-harness --force-with-lease   # rebase 改写历史后必须 
   且每处都加 `// MUC Harness:` 注释标记
 - UI 隐藏类定制统一走 `packages/app/src/muc-flag.ts` 的开关 + `<Show>` 包裹
 
-## mucode 自身更新（现状与可选方向）
+## mucode 自身更新（L2 已实现：版本自检提示，不自动安装）
 
-现状：muc 渠道 `UPDATER_ENABLED=false`，应用更新 = 师生从 /muc 页面下载新
-安装包覆盖安装；opencode 核心随安装包一起更新（sidecar v1 内联）。
+muc 渠道 `UPDATER_ENABLED=false` 保持不变（不自动下载安装）。应用内已接入
+"版本自检提示"：
 
-可选后续：electron-updater 自托管源——发版脚本生成 `latest.yml` 上传到
-sub2api `/downloads/`，打包配置加 `publish: { provider: generic,
-url: "https://admin.wuxuexi.top/downloads" }` 并对 muc 渠道打开 updater。
-做之前需要解决 mac 包签名信任链（当前 ad-hoc，electron-updater 仍可下载
-替换，但提示体验弱于正式签名）。
+- **版本号**：打包版本 = `<package.json 版本>-muc.<MUC_BUILD>`（见
+  `electron-builder.config.ts`，发版时递增 `MUC_BUILD`），`app.getVersion()` 即该值。
+- **版本源**：`https://admin.wuxuexi.top/downloads/latest-mucode.json`，由
+  `packages/desktop/scripts/muc-manifest.mjs` 生成（字段 version / releasedAt /
+  notes / minSupported / downloads{file,url,sha256,size}）。
+- **客户端行为**（`src/main/muc/update-check.ts` 纯逻辑 + `muc/ipc.ts` 接线）：
+  启动 15s 后拉取 manifest；有新版 → 系统通知（点击打开 /muc 页）；
+  低于 `minSupported` → 强制升级对话框（每次启动出现，直到升级）；悬浮球挂
+  "新"徽标、面板内提供"去下载"。`/v1/usage` 请求携带 `mucode/<版本>` UA 供服务端
+  统计旧版滞留率。manifest 源固定为官方网关，不随用户配置的 gateway 变化。
+- **网站端**：/muc 页（sub2api `MucView.vue`）读取同一 manifest 展示
+  "最新版本"区块，manifest 缺失时区块整体隐藏。
+
+### 发版 checklist（每次发新包）
+
+1. 递增 `electron-builder.config.ts` 的 `MUC_BUILD`；若基于新上游，先完成 rebase 与必检门。
+2. 三平台打包：`OPENCODE_CHANNEL=muc bun run build && bun run package:mac -- --arm64` /
+   `-- --x64` / `bun run package:win`。
+3. `node scripts/muc-manifest.mjs --dist dist --notes "…" [--min-supported x.y.z-muc.n]`
+   （缺平台产物会告警；需要强制升级时才设置 minSupported）。
+4. 上传 dist 安装包 + `SHA256SUMS` + `latest-mucode.json` 到生产 `/downloads/`。
+5. 验证：/muc 页版本区块展示新版本；客户端悬浮球"新"徽标与系统通知可触发。
+6. 用 admin 站内公告系统发一条更新说明。
+
+### L3（electron-updater 自动更新，暂缓）
+
+仍按原计划：等 Apple Developer 签名体系补齐后对 mac 打开 updater（generic
+provider 指向 /downloads + latest.yml）；Windows 可先行（需先补 exe 版本资源）。
