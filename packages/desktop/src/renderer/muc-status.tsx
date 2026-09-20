@@ -83,7 +83,7 @@ export function MucStatus() {
 
   return (
     <div
-      class="fixed bottom-3 right-3 z-[9999] select-none font-sans text-[12px]"
+      class="fixed bottom-3 left-3 z-[9999] select-none font-sans text-[12px]"
       onBlur={() => setOpen(false)}
     >
       <Show
@@ -91,7 +91,7 @@ export function MucStatus() {
         fallback={
           <button
             type="button"
-            class="flex items-center gap-2 rounded-full border border-black/10 bg-black/70 px-3 py-1.5 text-white shadow-lg backdrop-blur hover:bg-black/80"
+            class="flex items-center gap-2 rounded-full border border-white/20 bg-neutral-900 px-3 py-1.5 text-white shadow-[0_2px_10px_rgba(0,0,0,0.55)] hover:bg-neutral-800"
             onClick={() => setOpen(true)}
             title="sub2api 账户用量"
           >
