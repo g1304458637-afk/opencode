@@ -21,6 +21,22 @@ const fmtMoney = (v: number | null | undefined) => {
   return `$${s}`
 }
 
+// Wallet（新合同）：8 位小数字符串 → $12.48 展示
+const fmtWallet = (w: { balance: string } | null | undefined) => {
+  if (!w || typeof w.balance !== "string") return null
+  const n = Number(w.balance)
+  return Number.isFinite(n) ? fmtMoney(n) : null
+}
+
+// usage_status → 文案（阈值由服务端定义，前端只做映射，不复制数值）
+const USAGE_STATUS_LABELS: Record<string, string> = {
+  unmetered: "不限",
+  normal: "正常",
+  high: "使用较多",
+  near_limit: "接近本周额度",
+  exhausted: "本周额度已用完",
+}
+
 const fmtTime = (iso: string) => {
   try {
     return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
@@ -135,8 +151,21 @@ export function MucStatus() {
   const remainingText = () => {
     const u = usage()
     if (!u) return "—"
+    // 新合同优先：钱包余额（订阅用户同样显示钱包）
+    const walletText = fmtWallet(u.wallet)
+    if (walletText !== null) return walletText
     if (u.remaining === null) return "不限"
     return fmtMoney(u.remaining)
+  }
+
+  const subscriptionStatus = () => usage()?.subscriptionStatus ?? null
+  const resetCardsAvailable = () => {
+    const n = usage()?.resetCardsAvailable
+    return typeof n === "number" && n > 0 ? n : 0
+  }
+  const walletBalanceText = () => {
+    const u = usage()
+    return u ? fmtWallet(u.wallet) : null
   }
 
   return (
@@ -161,6 +190,32 @@ export function MucStatus() {
           <Show when={usage()} fallback={<div class="py-3 text-center text-black/50">暂无数据</div>}>
             {(u) => (
               <div class="flex flex-col gap-1.5">
+                <Show when={subscriptionStatus()}>
+                  {(ss) => (
+                    <div class="rounded-lg border border-black/5 bg-black/[.02] px-2 py-1.5">
+                      <div class="flex items-center justify-between">
+                        <span class="text-[13px] font-semibold">{ss().displayName}</span>
+                        <Show
+                          when={ss().weeklyUsagePercent !== null}
+                          fallback={<span class="text-[11px] text-black/50">不限</span>}
+                        >
+                          <span class="text-[15px] font-semibold">{ss().weeklyUsagePercent}%</span>
+                        </Show>
+                      </div>
+                      <div class="mt-0.5 flex items-center justify-between text-[11px] text-black/60">
+                        <span>本周使用量</span>
+                        <span>{USAGE_STATUS_LABELS[ss().usageStatus] ?? ss().usageStatus}</span>
+                      </div>
+                      <Show when={ss().weeklyPeriodEndsAt}>
+                        <div class="flex items-center justify-between text-[11px] text-black/60">
+                          <span>下次恢复</span>
+                          <span>{ss().weeklyPeriodEndsAt!.slice(0, 10)}</span>
+                        </div>
+                      </Show>
+                    </div>
+                  )}
+                </Show>
+
                 <div class="grid grid-cols-2 gap-1.5">
                   <div class="rounded-lg bg-black/[.04] px-2 py-1.5">
                     <div class="text-[10px] text-black/50">剩余</div>
@@ -175,6 +230,20 @@ export function MucStatus() {
                     <div class="text-[10px] text-black/40">{u().todayRequests} 次请求</div>
                   </div>
                 </div>
+
+                <Show when={walletBalanceText()}>
+                  <div class="flex items-center justify-between text-[11px] text-black/60">
+                    <span>钱包余额</span>
+                    <span>{walletBalanceText()}</span>
+                  </div>
+                </Show>
+
+                <Show when={resetCardsAvailable() > 0}>
+                  <div class="flex items-center justify-between text-[11px] text-black/60">
+                    <span>重置卡</span>
+                    <span>×{resetCardsAvailable()}</span>
+                  </div>
+                </Show>
 
                 <Show when={u().quota}>
                   <div class="text-[11px] text-black/60">
