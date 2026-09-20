@@ -1,13 +1,17 @@
-// MUC Harness: sub2api 余额/用量悬浮条。
-// 仅在已连接状态渲染于主界面右下角；数据经主进程 IPC 拉取（凭据不出主进程）。
-// 本文件为 mucode 新增文件，不修改上游共享组件。
+// MUC Harness: sub2api 余额/用量悬浮球。
+// 可自由拖动的圆形悬浮球（位置持久化），点击展开用量详情面板（吸附在球上方）。
+// 数据经主进程 IPC 拉取（凭据不出主进程）。本文件为 mucode 新增文件。
 
 import { Show, createSignal, onCleanup, onMount, For } from "solid-js"
 import type { MucUsageSnapshot } from "../preload/types"
 
 const STORE_NAME = "muc-status"
 const REFRESH_MS = 5 * 60 * 1000
+const BALL_SIZE = 56
+const PANEL_WIDTH = 280
+const EDGE = 8
 
+type Pos = { x: number; y: number }
 type Cached = { usage: MucUsageSnapshot; fetchedAt: string }
 
 const fmtMoney = (v: number | null | undefined) => {
@@ -25,20 +29,20 @@ const fmtTime = (iso: string) => {
   }
 }
 
+const clampPos = (p: Pos): Pos => ({
+  x: Math.min(Math.max(p.x, EDGE), Math.max(EDGE, window.innerWidth - BALL_SIZE - EDGE)),
+  y: Math.min(Math.max(p.y, EDGE), Math.max(EDGE, window.innerHeight - BALL_SIZE - EDGE)),
+})
+
+const defaultPos = (): Pos => ({ x: EDGE, y: window.innerHeight - BALL_SIZE - 12 })
+
 export function MucStatus() {
   const [open, setOpen] = createSignal(false)
   const [usage, setUsage] = createSignal<MucUsageSnapshot | null>(null)
   const [fetchedAt, setFetchedAt] = createSignal<string>("")
   const [stale, setStale] = createSignal(false)
   const [loading, setLoading] = createSignal(false)
-
-  const cache = (v: Cached | null): Cached | null => {
-    if (v) {
-      void window.api.storeSet(STORE_NAME, "last", JSON.stringify(v))
-      return v
-    }
-    return null
-  }
+  const [pos, setPos] = createSignal<Pos>(defaultPos())
 
   const refresh = async () => {
     setLoading(true)
@@ -46,11 +50,11 @@ export function MucStatus() {
       const res = await window.api.mucGetUsage()
       if (res.ok) {
         setUsage(res.usage)
-        setFetchedAt(new Date().toISOString())
+        const now = new Date().toISOString()
+        setFetchedAt(now)
         setStale(false)
-        cache({ usage: res.usage, fetchedAt: new Date().toISOString() })
+        void window.api.storeSet(STORE_NAME, "last", JSON.stringify({ usage: res.usage, fetchedAt: now }))
       } else {
-        // 拉取失败：回退上次缓存并标记过期
         const raw = await window.api.storeGet(STORE_NAME, "last")
         if (raw && !usage()) {
           try {
@@ -69,9 +73,63 @@ export function MucStatus() {
   }
 
   onMount(() => {
+    // 恢复上次拖动的位置（越界则回默认）
+    void window.api.storeGet(STORE_NAME, "ballPos").then((raw) => {
+      if (raw) {
+        try {
+          setPos(clampPos(JSON.parse(raw) as Pos))
+        } catch {}
+      }
+    })
     void refresh()
     const timer = setInterval(() => void refresh(), REFRESH_MS)
-    onCleanup(() => clearInterval(timer))
+    const onResize = () => setPos((p) => clampPos(p))
+    window.addEventListener("resize", onResize)
+    onCleanup(() => {
+      clearInterval(timer)
+      window.removeEventListener("resize", onResize)
+    })
+  })
+
+  // ---- 拖拽：Pointer Events，位移 >4px 判定为拖动，否则视为点击 ----
+  let dragging = false
+  let moved = false
+  let startX = 0
+  let startY = 0
+  let origX = 0
+  let origY = 0
+
+  const onPointerDown = (e: PointerEvent) => {
+    dragging = true
+    moved = false
+    startX = e.clientX
+    startY = e.clientY
+    origX = pos().x
+    origY = pos().y
+    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+  }
+  const onPointerMove = (e: PointerEvent) => {
+    if (!dragging) return
+    const dx = e.clientX - startX
+    const dy = e.clientY - startY
+    if (moved || Math.abs(dx) > 4 || Math.abs(dy) > 4) moved = true
+    if (moved) setPos(clampPos({ x: origX + dx, y: origY + dy }))
+  }
+  const onPointerUp = () => {
+    if (!dragging) return
+    dragging = false
+    if (moved) {
+      void window.api.storeSet(STORE_NAME, "ballPos", JSON.stringify(pos()))
+    } else {
+      setOpen((v) => !v)
+    }
+  }
+
+  // 面板吸附在球正上方，左右夹取避免出屏
+  const panelStyle = () => ({
+    left: `${Math.min(Math.max(pos().x, EDGE), Math.max(EDGE, window.innerWidth - PANEL_WIDTH - EDGE))}px`,
+    top: `${Math.max(EDGE, pos().y - 10)}px`,
+    transform: "translateY(-100%)",
   })
 
   const remainingText = () => {
@@ -82,34 +140,12 @@ export function MucStatus() {
   }
 
   return (
-    <div
-      class="fixed bottom-3 left-3 z-[9999] select-none font-sans text-[12px]"
-      onBlur={() => setOpen(false)}
-    >
-      <Show
-        when={open()}
-        fallback={
-          <button
-            type="button"
-            class="flex items-center gap-2 rounded-full border border-white/20 bg-neutral-900 px-3 py-1.5 text-white shadow-[0_2px_10px_rgba(0,0,0,0.55)] hover:bg-neutral-800"
-            onClick={() => setOpen(true)}
-            title="sub2api 账户用量"
-          >
-            <span
-              class="inline-block size-1.5 rounded-full"
-              classList={{ "bg-emerald-400": !stale(), "bg-amber-400": stale() }}
-            />
-            <span class="max-w-[220px] truncate">
-              {usage()?.planName || "sub2api"} · 剩余 {remainingText()}
-              {usage() ? ` · 今日 ${fmtMoney(usage()!.todayCost)}` : ""}
-            </span>
-            <Show when={loading()}>
-              <span class="animate-pulse text-white/60">…</span>
-            </Show>
-          </button>
-        }
-      >
-        <div class="w-[280px] rounded-xl border border-black/10 bg-white p-3 text-[#1a1a1a] shadow-xl">
+    <>
+      <Show when={open()}>
+        <div
+          class="fixed z-[9998] w-[280px] rounded-xl border border-black/10 bg-white p-3 text-[#1a1a1a] shadow-xl"
+          style={panelStyle()}
+        >
           <div class="mb-2 flex items-center justify-between">
             <span class="text-[13px] font-semibold">
               {usage()?.planName || "sub2api 账户"}
@@ -204,6 +240,31 @@ export function MucStatus() {
           </Show>
         </div>
       </Show>
-    </div>
+
+      <button
+        type="button"
+        title="sub2api 账户用量（可拖动）"
+        class="fixed z-[9999] flex touch-none flex-col items-center justify-center rounded-full border-2 border-white/25 bg-gradient-to-b from-[#c01215] to-[#8f0c0d] text-white shadow-[0_4px_14px_rgba(0,0,0,0.5)] transition-transform hover:scale-105 active:scale-95"
+        classList={{
+          "cursor-grabbing opacity-80": dragging,
+          "cursor-grab": !dragging,
+        }}
+        style={{ left: `${pos().x}px`, top: `${pos().y}px`, width: `${BALL_SIZE}px`, height: `${BALL_SIZE}px` }}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
+      >
+        <span class="text-[9px] leading-none text-white/75">余额</span>
+        <span class="mt-0.5 max-w-full truncate px-1 text-[12px] font-bold leading-none">{remainingText()}</span>
+        <span
+          class="absolute right-0.5 top-0.5 size-2 rounded-full border border-white/60"
+          classList={{ "bg-emerald-400": !stale(), "bg-amber-400": stale() }}
+        />
+        <Show when={loading()}>
+          <span class="absolute inset-0 animate-pulse rounded-full bg-white/10" />
+        </Show>
+      </button>
+    </>
   )
 }
