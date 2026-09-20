@@ -34,9 +34,145 @@ const REMOTE_ROOT = "/srv/sub2api/data/downloads"
 
 const sha256 = (path: string) => createHash("sha256").update(readFileSync(path)).digest("hex")
 
+/** 目标平台的 node-pty 平台包（vite externalize 与 native 卫生过滤都以此为准） */
+const PTY_PKG_BY_TARGET: Record<string, string> = {
+  "mac-arm64": "@lydell/node-pty-darwin-arm64",
+  "mac-x64": "@lydell/node-pty-darwin-x64",
+  "win-x64": "@lydell/node-pty-win32-x64",
+}
+
+/**
+ * 打包前物理裁剪与目标平台/架构不符的原生平台包（含唯一架构 .node）。
+ * electron-builder 的 files 过滤不作用于自动收集的 node_modules（实测），
+ * 因此以裁剪保证「错误架构平台包 = 0」；打包后用 bun install 恢复开发环境。
+ */
+const NATIVE_HYGIENE_FAMILIES: Array<{ scope: string; name: string; platforms: string[] }> = [
+  {
+    scope: "@lydell",
+    name: "node-pty",
+    platforms: ["darwin-arm64", "darwin-x64", "linux-arm64", "linux-x64", "linux-arm64-musl", "linux-x64-musl", "linux-arm64-glibc", "linux-x64-glibc", "win32-arm64", "win32-x64"],
+  },
+  {
+    scope: "@parcel",
+    name: "watcher",
+    platforms: ["darwin-arm64", "darwin-x64", "linux-arm64", "linux-x64", "linux-arm64-musl", "linux-x64-musl", "linux-arm64-glibc", "linux-x64-glibc", "win32-arm64", "win32-x64"],
+  },
+  {
+    scope: "@msgpackr-extract",
+    name: "msgpackr-extract",
+    platforms: ["darwin-arm64", "darwin-x64", "linux-arm", "linux-arm64", "linux-x64", "win32-x64"],
+  },
+]
+
+async function pruneNativePackages(target: string) {
+  const keepPkg = PTY_PKG_BY_TARGET[target]!
+  const keepPlatform = keepPkg.replace("@lydell/node-pty-", "").split("-")[0]!
+  const wrongPlatformArch = target === "mac-arm64" ? "darwin-x64" : target === "mac-x64" ? "darwin-arm64" : null
+  const doomed: string[] = []
+  for (const { scope, name, platforms } of NATIVE_HYGIENE_FAMILIES) {
+    for (const platform of platforms) {
+      if (platform === keepPlatform) continue
+      if (platform === wrongPlatformArch || !platform.startsWith(keepPlatform)) {
+        doomed.push(`node_modules/${scope}/${name}-${platform}`)
+      }
+    }
+  }
+  const roots = [
+    `${DESKTOP_DIR}/node_modules`,
+    `${DESKTOP_DIR}/../../node_modules`,
+    `${DESKTOP_DIR}/../../node_modules/.bun/node_modules`,
+  ]
+  let pruned = 0
+  for (const root of roots) {
+    for (const rel of doomed) {
+      const full = `${root}/${rel}`
+      if (existsSync(full)) {
+        await $`rm -rf ${full}`
+        pruned++
+      }
+    }
+  }
+  console.log(`pruned ${pruned} non-target native platform package dirs（keep ${keepPkg}）`)
+}
+
+/** bun 在 mac 上不安装 win32/linux 平台包——win 目标需显式拉取 win32-x64 平台包进 node_modules，
+ * 供 electron-builder 收集（与 downloadCliToResources 同一隔离安装模式）。 */
+async function ensureWinPtyPackage() {
+  const pkgJson = JSON.parse(readFileSync(`${DESKTOP_DIR}/package.json`, "utf8"))
+  const version = pkgJson.optionalDependencies?.["@lydell/node-pty-win32-x64"]
+  if (!version) throw new Error("desktop package.json: @lydell/node-pty-win32-x64 optionalDependency not found")
+  const dest = `${DESKTOP_DIR}/node_modules/@lydell/node-pty-win32-x64`
+  if (existsSync(`${dest}/prebuilds/win32-x64/conpty.node`)) return
+  const tmp = Bun.spawnSync(["mktemp", "-d", "/tmp/muc-winpty-XXXXXX"]).stdout.toString().trim()
+  await sh(["bun", "install", "--no-save", "--cwd", tmp, `@lydell/node-pty-win32-x64@${version}`, "--os=win32", "--cpu=x64"])
+  await sh(["cp", "-R", `${tmp}/node_modules/@lydell/node-pty-win32-x64`, dest])
+  await sh(["rm", "-rf", tmp])
+  console.log(`fetched @lydell/node-pty-win32-x64@${version} into node_modules`)
+}
+
+async function restoreNativePackages() {
+  console.log("restoring node_modules (bun install --frozen-lockfile)…")
+  const proc = Bun.spawn(["bun", "install", "--force", "--frozen-lockfile"], {
+    cwd: `${DESKTOP_DIR}/../..`,
+    env: process.env,
+    stdout: "inherit",
+    stderr: "inherit",
+  })
+  if ((await proc.exited) !== 0) throw new Error("bun install restore failed")
+}
+
+/** native 架构门：包内所有 .node 与主执行档必须匹配目标架构（universal 允许）。 */
+function nativeArchGate(target: string, appPath: string) {
+  const wantArch = target === "mac-arm64" ? "arm64" : target === "mac-x64" ? "x86_64" : "x86_64"
+  const roots = [`${appPath}/Contents/Resources/app.asar.unpacked`, `${appPath}/Contents/Frameworks`]
+  let checked = 0
+  for (const root of roots) {
+    if (!existsSync(root)) continue
+    const nodes = Bun.spawnSync(["bash", "-c", `find ${JSON.stringify(root)} -name "*.node" -type f`], {
+      stdout: "pipe",
+    }).stdout.toString().split("\n").filter(Boolean)
+    for (const node of nodes) {
+      checked++
+      const kind = Bun.spawnSync(["file", "-b", node], { stdout: "pipe" }).stdout.toString()
+      if (kind.includes("Mach-O")) {
+        const lipo = Bun.spawnSync(["lipo", "-info", node], { stdout: "pipe", stderr: "pipe" })
+        const archs = lipo.stdout.toString()
+        if (lipo.exitCode !== 0) {
+          throw new Error(`NATIVE ARCH GATE: 无法判定 Mach-O 架构 ${node}: ${lipo.stderr.toString().slice(0, 200)}`)
+        }
+        // lipo 两种输出：fat → "Architectures: arm64 x86_64"；thin → "Non-fat file ... is architecture: arm64"
+        const thin = archs.match(/is architecture: (\S+)\s*$/)?.[1]
+        const pass = /Architectures:/.test(archs) ? archs.includes(wantArch) : thin === wantArch
+        if (!pass) throw new Error(`NATIVE ARCH GATE FAIL: ${node} → ${archs.trim()}（期望 ${wantArch}）`)
+      } else if (kind.includes("PE32+")) {
+        if (wantArch !== "x86_64") throw new Error(`NATIVE ARCH GATE FAIL: PE32+ .node 出现在非 win 包：${node}`)
+      } else {
+        throw new Error(`NATIVE ARCH GATE: 未识别的二进制类型 ${node}: ${kind.slice(0, 120)}`)
+      }
+    }
+  }
+  const exeInfo = Bun.spawnSync(["file", "-b", `${appPath}/Contents/MacOS/mucode`], { stdout: "pipe" })
+    .stdout.toString()
+  if (!exeInfo.includes(wantArch)) {
+    throw new Error(`NATIVE ARCH GATE FAIL: 主执行档架构错误 → ${exeInfo.trim()}（期望 ${wantArch}）`)
+  }
+  // 平台包卫生：目标平台不含错误的 darwin 架构包目录
+  const wanted = PTY_PKG_BY_TARGET[target]
+  const wrongDirs: string[] = []
+  if (wanted.startsWith("@lydell/node-pty-darwin-")) {
+    const wrong = wanted.endsWith("arm64") ? "darwin-x64" : "darwin-arm64"
+    for (const root of roots) {
+      const bad = `${root}/node_modules/@lydell/node-pty-${wrong}`
+      if (existsSync(bad)) wrongDirs.push(bad)
+    }
+  }
+  if (wrongDirs.length > 0) throw new Error(`NATIVE ARCH GATE FAIL: 错误架构平台包仍在包内：${wrongDirs.join(", ")}`)
+  console.log(`native arch gate OK (${target}): ${checked} 个 .node + 主执行档全部匹配`)
+}
+
 async function sh(cmd: string[]) {
   console.log(`+ ${cmd.join(" ")}`)
-  const proc = Bun.spawn(cmd, { cwd: DESKTOP_DIR, stdout: "inherit", stderr: "inherit" })
+  const proc = Bun.spawn(cmd, { cwd: DESKTOP_DIR, env: process.env, stdout: "inherit", stderr: "inherit" })
   const code = await proc.exited
   if (code !== 0) throw new Error(`command failed (${code}): ${cmd.join(" ")}`)
 }
@@ -76,6 +212,7 @@ async function verifyBuild(target: string, version: string) {
 
     const zip = `${DIST}/mucode-${version}-mac-${arch}.zip`
     if (!existsSync(zip)) throw new Error(`missing update payload ${zip}`)
+    nativeArchGate(target, appPath)
     files.push(
       { file: `mucode-${version}-mac-${arch}.zip`, sha256: sha256(zip), bytes: (await Bun.file(zip).size) },
       { file: `mucode-${version}-mac-${arch}.zip.blockmap`, sha256: sha256(`${zip}.blockmap`), bytes: (await Bun.file(`${zip}.blockmap`).size) },
@@ -93,6 +230,13 @@ async function verifyBuild(target: string, version: string) {
     if (parseYmlVersion(latestYml) !== version) throw new Error(`latest.yml version != ${version}`)
     const exe = `${DIST}/mucode-${version}-win-x64.exe`
     if (!existsSync(exe)) throw new Error(`missing update payload ${exe}`)
+    // win：darwin 平台包不得混入 + .node 全部为 PE（x64）
+    const unpackedRoot = `${DIST}/win-unpacked/resources/app.asar.unpacked`
+    if (existsSync(`${unpackedRoot}/node_modules/@lydell/node-pty-darwin-arm64`)) {
+      throw new Error("NATIVE ARCH GATE FAIL: win 包内混入 node-pty-darwin-arm64")
+    }
+    const winPty = `${unpackedRoot}/node_modules/@lydell/node-pty-win32-x64/prebuilds/win32-x64/conpty.node`
+    if (!existsSync(winPty)) throw new Error(`NATIVE ARCH GATE FAIL: win 包缺少 win32-x64 conpty.node（${winPty}）`)
     files.push(
       { file: `mucode-${version}-win-x64.exe`, sha256: sha256(exe), bytes: (await Bun.file(exe).size) },
       { file: `mucode-${version}-win-x64.exe.blockmap`, sha256: sha256(`${exe}.blockmap`), bytes: (await Bun.file(`${exe}.blockmap`).size) },
@@ -114,14 +258,19 @@ async function build(target: string) {
   const version = await getMucVersion()
   console.log(`MUC release: building ${target} @ ${version}`)
   process.env.OPENCODE_CHANNEL = "muc"
+  // MUC Harness: node-pty 平台包跟随【打包目标】而非构建机（native 架构错配根因修复）
+  process.env.MUC_PTY_PKG = PTY_PKG_BY_TARGET[target]!
   // 全量 build（含 prebuild：dist/node 重建）。版本只读注入：
   // 渲染层走 electron.vite MUC_VERSION define，打包走 extraMetadata.version，
   // 构建流程不修改任何 git tracked 源文件。
   await sh(["bun", "run", "build"])
+  if (target === "win-x64") await ensureWinPtyPackage()
+  await pruneNativePackages(target)
   const eb = ["npx", "electron-builder", "--config", "electron-builder.config.ts", "--publish", "never"]
   if (target === "mac-arm64") await sh([...eb, "--mac", "--arm64"])
   if (target === "mac-x64") await sh([...eb, "--mac", "--x64"])
   if (target === "win-x64") await sh([...eb, "--win", "--x64"])
+  await restoreNativePackages()
   await verifyBuild(target, version)
 }
 
@@ -136,25 +285,85 @@ function runCapture(cmd: string[]): { code: number; out: string } {
   return { code: proc.exitCode ?? 1, out: proc.stdout.toString() + proc.stderr.toString() }
 }
 
-/** #6 签名安全门（macOS）：ad-hoc / 未公证 → 直接失败。 */
+const sha512 = (path: string) => createHash("sha512").update(readFileSync(path)).digest("base64")
+
+/** 解析 latest*.yml 的 version + files[]（url/size/sha512），用于 manifest 引用完整性校验 */
+function parseChannelManifest(path: string) {
+  const raw = readFileSync(path, "utf8")
+  const version = raw.match(/^version:\s*['"]?([^'"\n]+)['"]?/m)?.[1]
+  if (!version) throw new Error(`${path}: no version field`)
+  const files = [...raw.matchAll(/- url: (\S+)\n\s+sha512: (\S+)\n\s+size: (\d+)/g)].map((m) => ({
+    url: m[1]!,
+    sha512: m[2]!,
+    size: Number(m[3]),
+  }))
+  if (files.length === 0) throw new Error(`${path}: no files[] parsed`)
+  return { version, files, path }
+}
+
+/** #8 manifest 引用完整性：本地逐一核对 url/size/sha512；不一致 → DO_NOT_PUBLISH_MANIFEST */
+function verifyLocalManifest(manifestPath: string) {
+  const cm = parseChannelManifest(manifestPath)
+  for (const f of cm.files) {
+    const local = `${DIST}/${f.url}`
+    if (!existsSync(local)) throw new Error(`DO_NOT_PUBLISH_MANIFEST: ${f.url} referenced by ${manifestPath} missing locally`)
+    const size = Bun.file(local).size
+    const hash = sha512(local)
+    if (size !== f.size) throw new Error(`DO_NOT_PUBLISH_MANIFEST: ${f.url} size ${size} != manifest ${f.size}`)
+    if (hash !== f.sha512) throw new Error(`DO_NOT_PUBLISH_MANIFEST: ${f.url} sha512 mismatch`)
+  }
+  console.log(`local manifest integrity OK: ${manifestPath} (${cm.files.length} files @ ${cm.version})`)
+}
+
+/** #7 同版本重复发布保护：stable 中该版本 payload 已存在 → 硬拒（immutable releases） */
+async function ensureVersionNotPublished(host: string, remoteDir: string, payloadFiles: string[]) {
+  const paths = payloadFiles.map((f) => `'${remoteDir}/${f}'`).join(" ")
+  const probe = Bun.spawnSync(
+    ["ssh", host, `for f in ${paths}; do [ -e "$f" ] && echo "EXISTS $f"; done`],
+    { stdout: "pipe", stderr: "pipe" },
+  )
+  const out = probe.stdout.toString()
+  const existing = out.split("\n").filter((l) => l.startsWith("EXISTS"))
+  if (existing.length > 0) {
+    throw new Error(
+      `IMMUTABLE_RELEASE: 该版本 payload 已存在于 stable，禁止覆盖重发：\n${existing.join("\n")}\n` +
+        `请 bump 新版本（如 2.0.3）后重新 build + upload。`,
+    )
+  }
+  console.log("version-not-published probe OK（stable 中无同版本 payload）")
+}
+
+/** #6 签名安全门（macOS）：ad-hoc / 未公证 → 直接失败，错误信息指明缺失的凭据类别。 */
 function gateMac() {
   const app = findMacApp()
-  const steps: Array<[string, () => { code: number; out: string }]> = [
-    [`codesign --verify --deep --strict ${app}`, () => runCapture(["codesign", "--verify", "--deep", "--strict", app])],
+  const steps: Array<[string, string, () => { code: number; out: string }]> = [
     [
-      "codesign -dv: Authority=Developer ID Application",
+      "codesign --verify --deep --strict",
+      "应用签名无效（codesign verify 失败）",
+      () => runCapture(["codesign", "--verify", "--deep", "--strict", app]),
+    ],
+    [
+      "Developer ID Application identity",
+      "缺少 Developer ID Application 证书（当前为 ad-hoc 或无 identity）——WAITING_FOR_APPLE_SIGNING_CREDENTIAL",
       () => {
         const r = runCapture(["codesign", "-dv", app])
         return { code: r.out.includes("Authority=Developer ID Application") ? 0 : 1, out: r.out }
       },
     ],
-    [`xcrun stapler validate ${app}`, () => runCapture(["xcrun", "stapler", "validate", app])],
+    [
+      "notarization stapling",
+      "缺少 notarization/staple（公证凭据未配置或未公证）——WAITING_FOR_APPLE_SIGNING_CREDENTIAL",
+      () => runCapture(["xcrun", "stapler", "validate", app]),
+    ],
   ]
-  for (const [name, run] of steps) {
+  for (const [name, missing, run] of steps) {
     const r = run()
     if (r.code !== 0) {
       console.error(`SIGNATURE GATE FAIL: ${name}\n${r.out.slice(0, 800)}`)
-      throw new Error("macOS signature gate failed（WAITING_FOR_APPLE_SIGNING_CREDENTIAL；测试发布请用 --test-feed）")
+      throw new Error(
+        `macOS signature gate failed：${missing}。` +
+          `stable 生产发布被拒绝；测试发布请用 --test-feed（muc-updates/test/，无签名要求）。`,
+      )
     }
     console.log(`gate OK: ${name}`)
   }
@@ -164,14 +373,14 @@ function gateMac() {
 function gateWin(exe: string) {
   if (process.platform !== "win32") {
     throw new Error(
-      "Windows signature gate failed: signtool verify 只能在 Windows 上执行；" +
+      "Windows signature gate failed：signtool verify 只能在 Windows 上执行；" +
         "mac 交叉构建无法验证签名 → 不允许发布 stable（WAITING_FOR_WINDOWS_SIGNING_CERT；测试发布请用 --test-feed）",
     )
   }
   const r = runCapture(["signtool", "verify", "/pa", "/all", exe])
   if (r.code !== 0) {
     console.error(`SIGNATURE GATE FAIL: signtool verify /pa /all ${exe}\n${r.out.slice(0, 800)}`)
-    throw new Error("Windows signature gate failed")
+    throw new Error("Windows signature gate failed：缺代码签名证书或签名校验未过——WAITING_FOR_WINDOWS_SIGNING_CERT")
   }
   console.log("gate OK: signtool verify /pa /all")
 }
@@ -201,9 +410,13 @@ async function upload(execute: boolean, host: string, testFeed: boolean) {
     console.log("=== 签名安全门（stable 生产发布）===")
     if (isMac) gateMac()
     else gateWin(localOf(payloadFiles[0]!))
+    await ensureVersionNotPublished(host, remoteDir, payloadFiles)
   } else {
     console.log("=== --test-feed：跳过签名门（测试 feed，不入 stable）===")
   }
+
+  // #8 manifest 引用完整性：本地核对 latest*.yml 的 url/size/sha512 与实际 payload 一致
+  verifyLocalManifest(`${DIST}/${channelFile}`)
 
   console.log(`\n=== 发布计划 ${version} (${manifest.target}) → ${host}:${remoteDir} ===`)
   console.log("步骤 1: 上传版本化 payload:", payloadFiles.join(", "))
@@ -219,17 +432,32 @@ async function upload(execute: boolean, host: string, testFeed: boolean) {
   // 1) payload（版本化文件名，永不覆盖已发布版本）
   await sh(["rsync", "-av", "--partial", ...payloadFiles.map((f) => localOf(f)), `${host}:${remoteDir}/`])
 
-  // 2) 远端校验
+  // 2) 远端校验：sha256/大小 + #8 manifest 引用完整性（sha512/size 必须与 latest*.yml 一致）
+  const cm = parseChannelManifest(`${DIST}/${channelFile}`)
   const check = Bun.spawnSync(
-    ["ssh", host, `cd ${remoteDir} && sha256sum ${payloadFiles.join(" ")} && stat -c '%n %s' ${payloadFiles.join(" ")}`],
+    [
+      "ssh",
+      host,
+      `cd ${remoteDir} && sha256sum ${payloadFiles.join(" ")} && sha512sum ${payloadFiles.join(" ")} && stat -c '%n %s' ${payloadFiles.join(" ")}`,
+    ],
     { stdout: "pipe", stderr: "inherit" },
   )
   if (check.exitCode !== 0) throw new Error("remote verify failed")
+  const remoteOut = check.stdout.toString()
   for (const file of payloadFiles) {
     const local = (manifest.files as Array<{ file: string; sha256: string }>).find((f) => f.file === file)
-    if (!check.stdout.toString().includes(local!.sha256)) throw new Error(`remote sha256 mismatch: ${file}`)
+    if (!remoteOut.includes(local!.sha256)) throw new Error(`remote sha256 mismatch: ${file}`)
   }
-  console.log("remote payload verify OK")
+  for (const f of cm.files) {
+    const remoteHex = remoteOut.match(new RegExp(`^([0-9a-f]{128})\\s+${f.url.replace(/\./g, "\\.")}$`, "m"))?.[1]
+    if (!remoteHex) throw new Error(`DO_NOT_PUBLISH_MANIFEST: ${f.url} sha512 未在远端找到`)
+    const localSha512B64 = sha512(localOf(f.url))
+    const remoteB64 = Buffer.from(remoteHex, "hex").toString("base64")
+    if (remoteB64 !== localSha512B64) throw new Error(`DO_NOT_PUBLISH_MANIFEST: ${f.url} 远端 sha512 != latest*.yml`)
+    const remoteSize = remoteOut.match(new RegExp(`^${f.url.replace(/\./g, "\\.")}\\s+(\\d+)$`, "m"))?.[1]
+    if (remoteSize !== String(f.size)) throw new Error(`DO_NOT_PUBLISH_MANIFEST: ${f.url} 远端 size != latest*.yml`)
+  }
+  console.log("remote payload verify OK（sha256/manifest + sha512/size vs latest*.yml）")
 
   // 3) manifest 最后发布
   await sh(["scp", `${DIST}/${channelFile}`, `${host}:${remoteDir}/${channelFile}`])

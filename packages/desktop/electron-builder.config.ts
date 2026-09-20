@@ -38,8 +38,15 @@ const channel = (() => {
 
 // MUC Harness: 更新 feed 基址可被环境变量覆盖（本地 E2E 指向 127.0.0.1 的临时 feed）。
 // 只影响 muc 渠道；prod/beta 的 GitHub publish 不受影响。
-const MUC_UPDATE_FEED_BASE =
-  process.env.MUC_UPDATE_FEED_URL ?? "https://admin.wuxuexi.top/downloads/muc-updates/stable"
+// #5 HTTPS 守卫：正式 feed 强制 https；仅允许 localhost/127.0.0.1 用 http（测试 feed）。
+const MUC_UPDATE_FEED_BASE = (() => {
+  const base = process.env.MUC_UPDATE_FEED_URL ?? "https://admin.wuxuexi.top/downloads/muc-updates/stable"
+  const isLocalHttp = base.startsWith("http://") && /\/\/(127\.0\.0\.1|localhost|\[::1\])[:/]/.test(base)
+  if (base.startsWith("http://") && !isLocalHttp) {
+    throw new Error(`MUC update feed must use https (got ${base}); localhost http is allowed for E2E only`)
+  }
+  return base
+})()
 
 // MUC Harness: MUC 版本唯一真实来源（resources/muc/release.json），与上游 OpenCode
 // workspace 版本解耦。extraMetadata.version 写进 Info.plist / asar package.json /
@@ -174,6 +181,12 @@ function getConfig() {
       // 凭据只走环境变量/Keychain/CI secrets，仓库内禁止出现任何证书或密钥文件。
       const macSigningIdentity = process.env.MUC_SIGN_IDENTITY ?? process.env.CSC_NAME ?? null
       const winCertificate = process.env.WIN_CSC_LINK ?? process.env.CSC_LINK ?? null
+      // MUC Harness: 目标平台/架构由 release 脚本经 MUC_PTY_PKG 注入（native 架构错配防线之一）
+      const ptyTarget = (process.env.MUC_PTY_PKG ?? `@lydell/node-pty-${process.platform}-${process.arch}`)
+        .replace("@lydell/node-pty-", "")
+        .split("-")
+      const ptyTargetPlatform = ptyTarget[0]!
+      const ptyTargetArch = ptyTarget[1]!
       return {
         ...base,
         appId,
@@ -189,6 +202,28 @@ function getConfig() {
           url: `${MUC_UPDATE_FEED_BASE}/\${os}/\${arch}`,
         },
         ...(mucVersion ? { extraMetadata: { ...base.extraMetadata, version: mucVersion } } : {}),
+        // MUC Harness: 目标平台/架构之外的原生平台包过滤（含唯一架构 .node，
+        // 运行期按平台惰性加载，排除不影响目标平台）。与 pruneNativePackages 双保险。
+        files: [
+          ...base.files,
+          ...(ptyTargetPlatform === "darwin"
+            ? [
+                `!node_modules/@lydell/node-pty-darwin-${ptyTargetArch === "arm64" ? "x64" : "arm64"}{,/**}`,
+                `!node_modules/@parcel/watcher-darwin-${ptyTargetArch === "arm64" ? "x64" : "arm64"}{,/**}`,
+                `!node_modules/@msgpackr-extract/msgpackr-extract-darwin-${ptyTargetArch === "arm64" ? "x64" : "arm64"}{,/**}`,
+                "!node_modules/@lydell/node-pty-linux-*{,/**}",
+                "!node_modules/@lydell/node-pty-win32-*{,/**}",
+                "!node_modules/@parcel/watcher-linux-*{,/**}",
+                "!node_modules/@parcel/watcher-win32-*{,/**}",
+                "!node_modules/@msgpackr-extract/msgpackr-extract-linux-*{,/**}",
+                "!node_modules/@msgpackr-extract/msgpackr-extract-win32-*{,/**}",
+              ]
+            : [
+                "!node_modules/@lydell/node-pty-darwin-*{,/**}",
+                "!node_modules/@parcel/watcher-darwin-*{,/**}",
+                "!node_modules/@msgpackr-extract/msgpackr-extract-darwin-*{,/**}",
+              ]),
+        ],
         // MUC Harness: mac 产物全版本化（26.x 的 mac 无 target 级 artifactName，dmg/zip 共用）；
         // zip 供 latest-mac.yml 引用（feed 内永不覆盖），dmg 由发布脚本写 /downloads 固定名别名。
         mac: {
@@ -214,6 +249,9 @@ function getConfig() {
                 signtoolOptions: {
                   certificateFile: winCertificate,
                   certificatePassword: process.env.WIN_CSC_KEY_PASSWORD ?? process.env.CSC_KEY_PASSWORD,
+                  // MUC Harness: publisherName 写入 latest.yml，electron-updater NSIS 路径
+                  // 安装前按此校验 Authenticode（同一 Publisher 全链一致）；未设则由证书主题推导
+                  ...(process.env.WIN_PUBLISHER_NAME ? { publisherName: process.env.WIN_PUBLISHER_NAME } : {}),
                 },
               }
             : { signAndEditExecutable: false }),

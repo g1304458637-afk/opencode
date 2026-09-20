@@ -15,7 +15,8 @@ export function setupAutoUpdater(stop: () => Promise<void>) {
   autoUpdater.logger = logger
   autoUpdater.channel = "latest"
   autoUpdater.allowPrerelease = false
-  autoUpdater.allowDowngrade = true
+  // MUC Harness: muc 渠道禁止降级（回滚策略=发更高修复版，非降级覆盖）；上游 prod/beta 维持 true
+  autoUpdater.allowDowngrade = CHANNEL !== "muc"
   autoUpdater.autoDownload = false
   // MUC Harness: muc 渠道"稍后"语义 = 正常退出后静默安装（Phase 6 UX）；上游 prod/beta 维持 false
   autoUpdater.autoInstallOnAppQuit = CHANNEL === "muc"

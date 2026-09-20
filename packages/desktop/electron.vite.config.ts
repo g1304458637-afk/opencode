@@ -22,7 +22,13 @@ const mucVersion = (() => {
   return release.version
 })()
 
-const nodePtyPkg = `@lydell/node-pty-${process.platform}-${process.arch}`
+const nodePtyPkg = (() => {
+  // MUC Harness: node-pty 平台包必须跟随【打包目标】平台+架构，而不是构建机的
+  // process.platform/process.arch——否则 arm64 机构建的 x64 包会 require darwin-arm64
+  // 包，在 x64 运行时找不到 prebuilds/darwin-x64 直接启动崩溃（实测）。
+  // release 脚本按 target 注入 MUC_PTY_PKG；未注入时回退构建机（dev/上游 CI 行为不变）。
+  return process.env.MUC_PTY_PKG ?? `@lydell/node-pty-${process.platform}-${process.arch}`
+})()
 
 const sentry =
   process.env.SENTRY_AUTH_TOKEN && process.env.SENTRY_ORG && process.env.SENTRY_PROJECT

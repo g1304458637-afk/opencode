@@ -184,7 +184,27 @@ Developer ID build:  designated requirement 稳定（Team ID 锚定）→ 首次
 
 处理原则：不为消除弹窗删除用户 Keychain 数据或弱化 safeStorage 策略；正式签名后复测。
 
-## 7. 回滚与坏版本（Phase 10）
+## 6.5 Native 依赖架构防线（node-pty 事件复盘）
+
+事故（2026-09-21 x64 Rosetta E2E 实测）：`mucode-x64.app` 启动即崩——
+`Failed to load native module: pty.node ... Cannot find module:
+./prebuilds/darwin-x64/pty.node`。x64 包内被打入 `@lydell/node-pty-darwin-arm64`，
+其 JS 在 x64 运行时找不到 darwin-x64 prebuild。
+
+根因链（两处叠加）：
+1. `electron.vite.config.ts` 把 node-pty 平台包按**构建机** `process.arch`
+   externalize 进主 bundle → arm64 机打的 x64 包 require 了 darwin-arm64 包。
+   修复：`MUC_PTY_PKG` 环境变量按打包目标注入（release 脚本设置）。
+2. bun 默认安装**全部**平台 optionalDependencies → electron-builder 的
+   files 过滤对自动收集的 node_modules 无效（实测）→ 各平台包全进包。
+   修复：`pruneNativePackages` 打包前物理裁剪非目标平台包（bun install 恢复）。
+
+防线：`verifyBuild` 的 **native arch gate**——遍历包内全部 `.node` +
+主执行档，`lipo/file` 判定架构：mac-arm64 要求 arm64、mac-x64 要求 x86_64
+（universal 允许）、win 要求 PE32+；并断言错误架构的 darwin 平台包目录为 0。
+任一不满足 → 构建判 FAILED，禁止进入发布。
+
+## 7. 回滚与坏版本（Phase 10)
 
 - electron-updater 版本判定**单调递增**：`2.0.1` 已发布后严禁覆盖重发同名版本（哈希变化
   会导致已装用户永远校验失败/或拒绝降级）。修复 = 发布 `2.0.2`。
