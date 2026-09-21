@@ -80,6 +80,7 @@ import { PromptDragOverlay } from "./prompt-input/drag-overlay"
 import { promptPlaceholder } from "./prompt-input/placeholder"
 import { createPromptInputTransientState } from "./prompt-input/transient-state"
 import { showToast } from "@/utils/toast"
+import { variantLabelText } from "@/utils/variant-label"
 import { ImagePreview } from "@opencode-ai/ui/image-preview"
 import type { ReferenceInfo } from "@opencode-ai/sdk/v2/client"
 
@@ -1767,7 +1768,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                             size="normal"
                             options={variants()}
                             current={props.controls.model.selection.variant.current() ?? "default"}
-                            label={(x) => (x === "default" ? language.t("common.default") : x)}
+                            label={(x) => variantLabelText(x)}
                             onSelect={(value) => {
                               props.controls.model.selection.variant.set(value === "default" ? undefined : value)
                               restoreFocus()
