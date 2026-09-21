@@ -231,7 +231,8 @@ const main = Effect.gen(function* () {
   app.commandLine.appendSwitch("proxy-bypass-list", "<-loopback>")
   const features = app.commandLine.getSwitchValue("enable-features")
   app.commandLine.appendSwitch("enable-features", features ? `${jsCallStackFeature},${features}` : jsCallStackFeature)
-  if (!app.isPackaged) app.commandLine.appendSwitch("remote-debugging-port", "9222")
+  // dev 调试端口可被环境变量覆盖（e2e 用；9222 常被本地浏览器占用）
+if (!app.isPackaged) app.commandLine.appendSwitch("remote-debugging-port", process.env.MUC_CDP_PORT ?? "9222")
 
   if (!app.requestSingleInstanceLock()) {
     app.quit()

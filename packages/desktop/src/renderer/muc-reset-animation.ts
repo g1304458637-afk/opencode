@@ -46,25 +46,28 @@ export function mucTween(options: {
     onDone?.()
     return { cancel: () => {} }
   }
-  let rafId = 0
+  // 用 setInterval 而非 rAF 驱动：遮挡/后台窗口 rAF 会停发导致动画冻结；
+  // 16ms interval 在前台平滑、后台被节流仍会推进直至完成，无常驻 CPU。
+  let timer = 0
   let start = 0
   let cancelled = false
-  const step = (ts: number) => {
+  const step = () => {
     if (cancelled) return
-    if (!start) start = ts
-    const progress = Math.min((ts - start) / durationMs, 1)
+    const now = performance.now()
+    if (!start) start = now
+    const progress = Math.min((now - start) / durationMs, 1)
     onUpdate(from + (to - from) * mucEase(progress))
-    if (progress < 1) {
-      rafId = requestAnimationFrame(step)
-    } else {
+    if (progress >= 1) {
+      clearInterval(timer)
+      timer = 0
       onDone?.()
     }
   }
-  rafId = requestAnimationFrame(step)
+  timer = window.setInterval(step, 16)
   return {
     cancel: () => {
       cancelled = true
-      if (rafId) cancelAnimationFrame(rafId)
+      if (timer) clearInterval(timer)
     },
   }
 }
