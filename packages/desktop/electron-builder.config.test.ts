@@ -16,6 +16,7 @@ for (const brand of ["muc", "hubu"]) {
         expect(JSON.stringify(config.publish)).toContain(`/${brand}-updates/stable/\${os}/\${arch}`)
         expect(config.mac?.artifactName).toContain(brand === "muc" ? "mucode-" : "hubu-ai-")
         expect(config.extraMetadata?.version).toBeTruthy()
+        expect(config.extraMetadata?.name).toBe(brand === "muc" ? "mucode" : "hubu-ai")
         expect(config.mac?.icon).toContain(`/${brand}/`)
         expect(config.win?.icon).toContain(`/${brand}/`)
         expect(config.afterSign).toBe("scripts/after-sign-mac.js")
