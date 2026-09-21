@@ -5,6 +5,7 @@ type Channel = "dev" | "beta" | "prod" | "muc" | "hubu"
 const raw = import.meta.env.OPENCODE_CHANNEL
 export const CHANNEL: Channel =
   raw === "dev" || raw === "beta" || raw === "prod" || raw === "muc" || raw === "hubu" ? raw : "dev"
+export const APP_VERSION = import.meta.env.MUC_VERSION || app.getVersion()
 
 // MUC Harness: muc 通道启用自有更新源（generic provider → admin.wuxuexi.top/downloads/muc-updates，
 // publish 配置见 electron-builder.config.ts），绝不指向上游 GitHub Releases/npm。

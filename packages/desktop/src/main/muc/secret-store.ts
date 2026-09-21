@@ -9,6 +9,7 @@ import { randomUUID } from "node:crypto"
 import { resolveBrand } from "@opencode-ai/brand"
 
 export type MucCredential = {
+  brand?: string
   gateway: string
   apiKey: string
   keyName: string
@@ -65,6 +66,7 @@ export class MucSecretStore {
     }
     const full: MucCredential = {
       ...credential,
+      brand: resolveBrand().credentialNamespace,
       deviceId: this.deviceId,
       connectedAt: new Date().toISOString(),
     }
@@ -81,6 +83,7 @@ export class MucSecretStore {
       const json = safeStorage.decryptString(raw)
       const parsed = JSON.parse(json) as MucCredential
       if (!parsed.apiKey || !parsed.gateway) return null
+      if (parsed.brand && parsed.brand !== resolveBrand().credentialNamespace) return null
       return parsed
     } catch {
       return null

@@ -1,3 +1,4 @@
+import { APP_VERSION } from "../constants"
 // MUC Harness: muc://connect 深链 + 凭据 IPC。
 // 渲染层通过这些通道查询连接状态、发起连接、断开账户、查询余额用量、
 // 查询新版本自检结果。新版本只"提示"不自动安装（manifest 源固定为官方网关）。
@@ -29,7 +30,7 @@ let updateInFlight: Promise<MucUpdateCheckResult> | null = null
 let announcementScheduled = false
 
 async function checkMucUpdateCached(): Promise<MucUpdateCheckResult> {
-  const localVersion = app.getVersion()
+  const localVersion = APP_VERSION
   if (updateCache && Date.now() - updateCache.at < MUC_UPDATE_CHECK_TTL_MS) {
     return updateCache.result
   }
@@ -122,7 +123,7 @@ export function registerMucIpcHandlers(userDataDir: string, deps: MucDeps): MucC
   ipcMain.handle("muc:get-usage", async () => {
     const cred = await store.get()
     if (!cred) return { ok: false as const, error: "not_connected" as const }
-    const usage = await fetchMucUsage(cred.gateway, cred.apiKey, app.getVersion())
+    const usage = await fetchMucUsage(cred.gateway, cred.apiKey, APP_VERSION)
     if (!usage) return { ok: false as const, error: "unavailable" as const }
     return { ok: true as const, usage }
   })
@@ -153,7 +154,7 @@ export function registerMucIpcHandlers(userDataDir: string, deps: MucDeps): MucC
       }
       return { available: false as const, status: result.status, localVersion: result.localVersion }
     } catch {
-      return { available: false as const, status: "unavailable" as const, localVersion: app.getVersion() }
+      return { available: false as const, status: "unavailable" as const, localVersion: APP_VERSION }
     }
   })
 
@@ -182,7 +183,7 @@ export function registerMucIpcHandlers(userDataDir: string, deps: MucDeps): MucC
   })
 
   ipcMain.handle("muc:get-brand", () => ({
-    id: brand.id, name: brand.productName, protocol: brand.protocolScheme, version: app.getVersion(),
+    id: brand.id, name: brand.productName, protocol: brand.protocolScheme, version: APP_VERSION,
   } satisfies Awaited<ReturnType<ElectronAPI["mucGetBrand"]>>))
 
   ipcMain.handle("muc:open-account", async () => {

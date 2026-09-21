@@ -1,6 +1,34 @@
 import { expect, test } from "bun:test"
 import type { Configuration } from "electron-builder"
 
+for (const brand of ["muc", "hubu"]) {
+  for (const target of ["darwin-arm64", "darwin-x64", "win32-x64"]) {
+    test(`${brand}/${target}: complete campus installer identity`, async () => {
+      const previous = { channel: process.env.OPENCODE_CHANNEL, local: process.env.CAMPUS_LOCAL_BUILD, pty: process.env.MUC_PTY_PKG }
+      process.env.OPENCODE_CHANNEL = brand
+      process.env.CAMPUS_LOCAL_BUILD = "1"
+      process.env.MUC_PTY_PKG = `@lydell/node-pty-${target}`
+      try {
+        const config = (await import(`./electron-builder.config.ts?brand=${brand}&target=${target}`)).default as Configuration
+        expect(config.appId).toBe(`cn.edu.${brand}.harness`)
+        expect(config.productName).toBe(brand === "muc" ? "mucode" : "HUBU AI")
+        expect(config.protocols).toEqual({ name: `${brand.toUpperCase()} Connect`, schemes: [brand] })
+        expect(JSON.stringify(config.publish)).toContain(`/${brand}-updates/stable/\${os}/\${arch}`)
+        expect(config.mac?.artifactName).toContain(brand === "muc" ? "mucode-" : "hubu-ai-")
+        expect(config.extraMetadata?.version).toBeTruthy()
+        expect(config.mac?.icon).toContain(`/${brand}/`)
+        expect(config.win?.icon).toContain(`/${brand}/`)
+        expect(config.afterSign).toBe("scripts/after-sign-mac.js")
+      } finally {
+        for (const [key, value] of [["OPENCODE_CHANNEL", previous.channel], ["CAMPUS_LOCAL_BUILD", previous.local], ["MUC_PTY_PKG", previous.pty]]) {
+          if (value === undefined) delete process.env[key!]
+          else process.env[key!] = value
+        }
+      }
+    })
+  }
+}
+
 const legacyDesktopEntry = "resources/linux/opencode-desktop.desktop"
 
 const channels = [

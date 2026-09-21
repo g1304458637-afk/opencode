@@ -52,8 +52,17 @@ export async function exchangeMucCode(gateway: string, code: string, deviceName:
   if (res.status === 401 || res.status === 403) {
     throw new MucExchangeError("invalid", "authorization rejected by server")
   }
-  if (!res.ok || !payload?.api_key || !payload?.gateway) {
+  if (!res.ok || typeof payload?.api_key !== "string" || !payload.api_key || typeof payload?.gateway !== "string") {
     throw new MucExchangeError("bad_response", "unexpected response from authorization server")
+  }
+
+  try {
+    const returned = new URL(payload.gateway)
+    if (returned.origin !== new URL(gateway).origin || returned.username || returned.password || returned.hash) {
+      throw new Error("gateway origin mismatch")
+    }
+  } catch {
+    throw new MucExchangeError("bad_response", "authorization gateway identity mismatch")
   }
 
   return {

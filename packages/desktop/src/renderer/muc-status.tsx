@@ -31,7 +31,7 @@ type Pos = { x: number; y: number }
 const MUC_TOKENS = `
   .muc-status-scope {
     --muc-red: ${brand.colors.primary};
-    --muc-red-bright: ${brand.colors.primary};
+    --muc-red-bright: color-mix(in srgb, ${brand.colors.primary}, white 55%);
     --muc-red-deep: ${brand.colors.primaryDark};
     --muc-red-soft: ${brand.colors.primary}2e;
     --muc-red-border: ${brand.colors.primary}73;
@@ -582,6 +582,8 @@ export function MucStatus() {
           width: `${BALL_SIZE}px`,
           height: `${BALL_SIZE}px`,
           background: "linear-gradient(to bottom, var(--muc-red), var(--muc-red-deep))",
+          color: brand.colors.onDark,
+          "border-color": brand.colors.gold,
         }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}

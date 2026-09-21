@@ -12,7 +12,11 @@ type Attempt = { key: string; createdAt: number; result?: Extract<ResetCardResul
 export class ResetCardClient {
   private flights = new Map<string, Promise<ResetCardResult>>()
 
-  constructor(private directory: string, private path: string, private request: typeof fetch = fetch) {}
+  constructor(
+    private directory: string,
+    private path: string,
+    private request: typeof fetch = fetch,
+  ) {}
 
   reset(gateway: string, apiKey: string, subscriptionID: number): Promise<ResetCardResult> {
     const file = this.file(gateway, apiKey, subscriptionID)
@@ -30,7 +34,9 @@ export class ResetCardClient {
   }
 
   private file(gateway: string, apiKey: string, id: number) {
-    const scope = createHash("sha256").update(JSON.stringify([gateway, apiKey, id])).digest("hex")
+    const scope = createHash("sha256")
+      .update(JSON.stringify([gateway, apiKey, id]))
+      .digest("hex")
     return join(this.directory, `${scope}.json`)
   }
 
@@ -62,16 +68,28 @@ export class ResetCardClient {
       this.write(file, attempt)
       const response = await this.request(`${gateway.replace(/\/+$/, "")}${this.path}/${id}`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json", "Idempotency-Key": attempt.key },
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+          "Idempotency-Key": attempt.key,
+        },
         body: "{}",
         signal: AbortSignal.timeout(10_000),
       })
       const body = await response.json().catch(() => null)
       const payload = body?.data ?? body
-      if (!response.ok || typeof payload?.weekly_period_ends_at !== "string" || !Number.isFinite(Date.parse(payload.weekly_period_ends_at))) {
+      if (
+        !response.ok ||
+        typeof payload?.weekly_period_ends_at !== "string" ||
+        !Number.isFinite(Date.parse(payload.weekly_period_ends_at))
+      ) {
         return { ok: false, error: String(body?.reason ?? payload?.reason ?? "unavailable") }
       }
-      const result = { ok: true as const, operationId: attempt.key, weeklyPeriodEndsAt: payload.weekly_period_ends_at as string }
+      const result = {
+        ok: true as const,
+        operationId: attempt.key,
+        weeklyPeriodEndsAt: payload.weekly_period_ends_at as string,
+      }
       this.write(file, { ...attempt, result })
       return result
     } catch {

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { parseMucUrl } from "./deep-link"
+import { parseMucUrl, parseCampusUrl } from "./deep-link"
 
 describe("MUC Harness: parseMucUrl", () => {
   test("accepts valid connect link", () => {
@@ -32,4 +32,11 @@ describe("MUC Harness: parseMucUrl", () => {
     expect(parseMucUrl("not a url")).toBeNull()
     expect(parseMucUrl("")).toBeNull()
   })
+})
+
+test("campus protocols reject the other brand", () => {
+  const code = "campus_code_123456789"
+  expect(parseCampusUrl(`hubu://connect?code=${code}`, "hubu")).toEqual({ kind: "connect", code })
+  expect(parseCampusUrl(`muc://connect?code=${code}`, "hubu")).toBeNull()
+  expect(parseCampusUrl(`hubu://connect?code=${code}`, "muc")).toBeNull()
 })

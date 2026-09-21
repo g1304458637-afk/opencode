@@ -1,6 +1,6 @@
 import { app, dialog, shell } from "electron"
 import pkg from "electron-updater"
-import { UPDATER_ENABLED, CHANNEL, MUC_UPDATE_MODE } from "./constants"
+import { UPDATER_ENABLED, CHANNEL, MUC_UPDATE_MODE, APP_VERSION } from "./constants"
 import { createUpdaterController, type UpdaterReadyRecord } from "./updater-controller"
 import { getLogger } from "./logging"
 import { getStore } from "./store"
@@ -36,13 +36,13 @@ export function setupAutoUpdater(stop: () => Promise<void>) {
     channel: autoUpdater.channel,
     allowPrerelease: autoUpdater.allowPrerelease,
     allowDowngrade: autoUpdater.allowDowngrade,
-    currentVersion: app.getVersion(),
+    currentVersion: APP_VERSION,
   })
 
   const store = getStore("opencode.updater")
   return createUpdaterController({
     enabled: UPDATER_ENABLED,
-    currentVersion: app.getVersion(),
+    currentVersion: APP_VERSION,
     // MUC Harness: 当前产品策略 = manual-install（签名后经 MUC_UPDATE_MODE=auto-install 一键切回）
     ...(MANUAL_INSTALL ? { manualInstall: true } : {}),
     backend: {
@@ -101,7 +101,7 @@ export async function showUpdaterDialog(controller: ReturnType<typeof setupAutoU
     if (!alertOnFail) return
     await dialog.showMessageBox({
       type: "info",
-      message: nativeT("desktop.updater.dialog.upToDate.message", { version: app.getVersion() }),
+      message: nativeT("desktop.updater.dialog.upToDate.message", { version: APP_VERSION }),
       title: nativeT("desktop.updater.dialog.upToDate.title"),
     })
     return
