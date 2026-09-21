@@ -1,4 +1,8 @@
 export const dict = {
+  "settings.updates.action.download": "Tải xuống",
+  "desktop.updater.dialog.download": "Tải xuống",
+  "desktop.updater.dialog.available.message": "Hiện đã có phiên bản mới của OpenCode để cài đặt.",
+  "desktop.updater.dialog.available.title": "Đã có bản cập nhật ({{version}})",
   "desktop.menu.app": "OpenCode",
   "desktop.menu.file": "Tệp",
   "desktop.menu.edit": "Chỉnh sửa",
@@ -47,7 +51,7 @@ export const dict = {
 
   "desktop.updater.dialog.checkFailed.message": "Không kiểm tra được bản cập nhật.",
   "desktop.updater.dialog.checkFailed.title": "Lỗi cập nhật",
-  "desktop.updater.dialog.upToDate.message": "Bạn đang dùng phiên bản mới nhất.",
+  "desktop.updater.dialog.upToDate.message": "Bạn đang dùng phiên bản mới nhất. ({{version}})",
   "desktop.updater.dialog.upToDate.title": "Không có bản cập nhật",
   "desktop.updater.dialog.ready.message": "Đã tải xuống bản cập nhật {{version}}. Khởi động lại ngay?",
   "desktop.updater.dialog.ready.title": "Bản cập nhật đã sẵn sàng",

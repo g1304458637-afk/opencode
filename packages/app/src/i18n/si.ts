@@ -1,4 +1,8 @@
 export const dict: Record<string, string> = {
+  "settings.updates.action.download": "බාගන්න",
+  "desktop.updater.dialog.download": "බාගන්න",
+  "desktop.updater.dialog.available.message": "OpenCode හි නව අනුවාදයක් ස්ථාපනය කිරීමට දැන් තිබේ.",
+  "desktop.updater.dialog.available.title": "යාවත්කාලීන ලබා ගත හැක ({{version}})",
   "desktop.menu.app": "OpenCode",
   "desktop.menu.file": "ගොනුව",
   "desktop.menu.edit": "සංස්කරණය කරන්න",
@@ -46,7 +50,7 @@ export const dict: Record<string, string> = {
   "desktop.menu.ariaLabel": "OpenCode මෙනුව",
   "desktop.updater.dialog.checkFailed.message": "යාවත්කාලීන පරීක්ෂාව අසාර්ථක විය.",
   "desktop.updater.dialog.checkFailed.title": "යාවත්කාලීන දෝෂයකි",
-  "desktop.updater.dialog.upToDate.message": "ඔබ යාවත්කාලීනයි.",
+  "desktop.updater.dialog.upToDate.message": "ඔබ යාවත්කාලීනයි. ({{version}})",
   "desktop.updater.dialog.upToDate.title": "යාවත්කාලීන නැත",
   "desktop.updater.dialog.ready.message": "යාවත්කාලීන {{version}} බාගන්නා ලදී. දැන් නැවත ආරම්භ කරන්නද?",
   "desktop.updater.dialog.ready.title": "යාවත්කාලීනය සූදානම්",

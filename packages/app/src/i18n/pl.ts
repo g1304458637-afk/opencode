@@ -1,4 +1,8 @@
 export const dict = {
+  "settings.updates.action.download": "Pobierz",
+  "desktop.updater.dialog.download": "Pobierz",
+  "desktop.updater.dialog.available.message": "Nowa wersja OpenCode jest teraz dostępna do instalacji.",
+  "desktop.updater.dialog.available.title": "Dostępna aktualizacja ({{version}})",
   "desktop.menu.app": "OpenCode",
   "desktop.menu.file": "Plik",
   "desktop.menu.edit": "Edycja",
@@ -47,7 +51,7 @@ export const dict = {
 
   "desktop.updater.dialog.checkFailed.message": "Nie udało się sprawdzić dostępności aktualizacji.",
   "desktop.updater.dialog.checkFailed.title": "Błąd aktualizacji",
-  "desktop.updater.dialog.upToDate.message": "Masz najnowszą wersję.",
+  "desktop.updater.dialog.upToDate.message": "Masz najnowszą wersję. ({{version}})",
   "desktop.updater.dialog.upToDate.title": "Brak aktualizacji",
   "desktop.updater.dialog.ready.message": "Pobrano aktualizację {{version}}. Uruchomić ponownie teraz?",
   "desktop.updater.dialog.ready.title": "Aktualizacja jest gotowa",

@@ -1,4 +1,8 @@
 export const dict = {
+  "settings.updates.action.download": "ޑައުންލޯޑް ކުރޭ",
+  "desktop.updater.dialog.download": "ޑައުންލޯޑް ކުރޭ",
+  "desktop.updater.dialog.available.message": "OpenCode ގެ އާ ވަރޝަނެއް މިހާރު އިންސްޓޯލް ކުރެވޭނެއެވެ.",
+  "desktop.updater.dialog.available.title": "އަޕްޑޭޓް ލިބެން ހުރެއެވެ ({{version}})",
   "desktop.menu.app": "OpenCode އެވެ",
   "desktop.menu.file": "ފައިލް",
   "desktop.menu.edit": "ބަދަލު ގެނައުން",
@@ -46,7 +50,7 @@ export const dict = {
   "desktop.menu.ariaLabel": "OpenCode މެނޫ",
   "desktop.updater.dialog.checkFailed.message": "އަޕްޑޭޓް ޗެކް ފެއިލްވެއްޖެއެވެ.",
   "desktop.updater.dialog.checkFailed.title": "އަޕްޑޭޓް އެރަރ",
-  "desktop.updater.dialog.upToDate.message": "ޔޫ އާ އަޕް ޓު ޑޭޓް.",
+  "desktop.updater.dialog.upToDate.message": "ޔޫ އާ އަޕް ޓު ޑޭޓް. ({{version}})",
   "desktop.updater.dialog.upToDate.title": "ނޯ އަޕްޑޭޓްސް",
   "desktop.updater.dialog.ready.message": "އަޕްޑޭޓް {{version}} ޑައުންލޯޑް ކޮށްފިއެވެ. މިހާރު ރީސްޓާޓް ކުރަންތަ؟",
   "desktop.updater.dialog.ready.title": "އަޕްޑޭޓް ރެޑީ",

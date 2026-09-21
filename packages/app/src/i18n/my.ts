@@ -1,4 +1,8 @@
 export const dict = {
+  "settings.updates.action.download": "ဒေါင်းလုဒ်လုပ်ရန်",
+  "desktop.updater.dialog.download": "ဒေါင်းလုဒ်လုပ်ရန်",
+  "desktop.updater.dialog.available.message": "OpenCode ၏ ဗားရှင်းအသစ်ကို ယခု ထည့်သွင်းနိုင်ပါပြီ။",
+  "desktop.updater.dialog.available.title": "အပ်ဒိတ် ရနိုင်ပါသည်။ ({{version}})",
   "desktop.menu.app": "OpenCode",
   "desktop.menu.file": "ဖိုင်",
   "desktop.menu.edit": "တည်းဖြတ်ပါ။",
@@ -46,7 +50,7 @@ export const dict = {
   "desktop.menu.ariaLabel": "OpenCode မီနူး",
   "desktop.updater.dialog.checkFailed.message": "အပ်ဒိတ်စစ်ဆေးမှု မအောင်မြင်ပါ။",
   "desktop.updater.dialog.checkFailed.title": "အပ်ဒိတ် အမှား",
-  "desktop.updater.dialog.upToDate.message": "သင်သည် ခေတ်မီနေပါသည်။",
+  "desktop.updater.dialog.upToDate.message": "သင်သည် ခေတ်မီနေပါသည်။ ({{version}})",
   "desktop.updater.dialog.upToDate.title": "အပ်ဒိတ်များမရှိပါ။",
   "desktop.updater.dialog.ready.message": "{{version}} အပ်ဒိတ်ကို ဒေါင်းလုဒ်လုပ်ထားသည်။ ယခု ပြန်စမလား။",
   "desktop.updater.dialog.ready.title": "အပ်ဒိတ်အဆင်သင့်ဖြစ်ပါပြီ။",

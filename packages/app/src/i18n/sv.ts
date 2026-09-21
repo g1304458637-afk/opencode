@@ -1,4 +1,8 @@
 export const dict = {
+  "settings.updates.action.download": "Hämta",
+  "desktop.updater.dialog.download": "Hämta",
+  "desktop.updater.dialog.available.message": "En ny version av OpenCode är nu tillgänglig att installera.",
+  "desktop.updater.dialog.available.title": "Uppdatering tillgänglig ({{version}})",
   "desktop.menu.app": "OpenCode",
   "desktop.menu.file": "Arkiv",
   "desktop.menu.edit": "Redigera",
@@ -46,7 +50,7 @@ export const dict = {
   "desktop.menu.ariaLabel": "OpenCode-meny",
   "desktop.updater.dialog.checkFailed.message": "Det gick inte att söka efter uppdateringar.",
   "desktop.updater.dialog.checkFailed.title": "Uppdateringsfel",
-  "desktop.updater.dialog.upToDate.message": "Du har den senaste versionen.",
+  "desktop.updater.dialog.upToDate.message": "Du har den senaste versionen. ({{version}})",
   "desktop.updater.dialog.upToDate.title": "Inga uppdateringar",
   "desktop.updater.dialog.ready.message": "Uppdateringen {{version}} har hämtats. Vill du starta om nu?",
   "desktop.updater.dialog.ready.title": "Uppdateringen är klar",

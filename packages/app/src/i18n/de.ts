@@ -3,6 +3,10 @@ import { dict as en } from "./en"
 type Keys = keyof typeof en
 
 export const dict = {
+  "settings.updates.action.download": "Herunterladen",
+  "desktop.updater.dialog.download": "Herunterladen",
+  "desktop.updater.dialog.available.message": "Eine neue Version von OpenCode ist zur Installation verfügbar.",
+  "desktop.updater.dialog.available.title": "Update verfügbar ({{version}})",
   "command.category.suggested": "Vorgeschlagen",
   "command.category.view": "Ansicht",
   "command.category.project": "Projekt",
@@ -1120,7 +1124,7 @@ export const dict = {
   "desktop.menu.ariaLabel": "OpenCode-Menü",
   "desktop.updater.dialog.checkFailed.message": "Die Suche nach Updates ist fehlgeschlagen.",
   "desktop.updater.dialog.checkFailed.title": "Updatefehler",
-  "desktop.updater.dialog.upToDate.message": "Sie sind auf dem neuesten Stand.",
+  "desktop.updater.dialog.upToDate.message": "Sie sind auf dem neuesten Stand. ({{version}})",
   "desktop.updater.dialog.upToDate.title": "Keine Updates",
   "desktop.updater.dialog.ready.message": "Update {{version}} wurde heruntergeladen. Jetzt neu starten?",
   "desktop.updater.dialog.ready.title": "Update bereit",

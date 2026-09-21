@@ -1,4 +1,8 @@
 export const dict = {
+  "settings.updates.action.download": "Heinta",
+  "desktop.updater.dialog.download": "Heinta",
+  "desktop.updater.dialog.available.message": "Ein nýggj útgáva av OpenCode er nú tøk at seta upp.",
+  "desktop.updater.dialog.available.title": "Dagføring er tøk ({{version}})",
   "desktop.menu.app": "OpenCode",
   "desktop.menu.file": "Skrá",
   "desktop.menu.edit": "Rætta",
@@ -46,7 +50,7 @@ export const dict = {
   "desktop.menu.ariaLabel": "OpenCode valmynd",
   "desktop.updater.dialog.checkFailed.message": "Dagføringarkanningin miseydnaðist.",
   "desktop.updater.dialog.checkFailed.title": "Dagføring feilur",
-  "desktop.updater.dialog.upToDate.message": "Tú ert dagførdur.",
+  "desktop.updater.dialog.upToDate.message": "Tú ert dagførdur. ({{version}})",
   "desktop.updater.dialog.upToDate.title": "Ongar dagføringar",
   "desktop.updater.dialog.ready.message": "Dagføring {{version}} heintað. Endurbyrja nú?",
   "desktop.updater.dialog.ready.title": "Dagføring klár",

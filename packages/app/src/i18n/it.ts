@@ -1,4 +1,8 @@
 export const dict = {
+  "settings.updates.action.download": "Scarica",
+  "desktop.updater.dialog.download": "Scarica",
+  "desktop.updater.dialog.available.message": "Una nuova versione di OpenCode è ora disponibile per l'installazione.",
+  "desktop.updater.dialog.available.title": "Aggiornamento disponibile ({{version}})",
   "command.category.suggested": "Suggeriti",
   "command.category.view": "Visualizzazione",
   "command.category.project": "Progetto",
@@ -1127,7 +1131,7 @@ export const dict = {
   "desktop.menu.ariaLabel": "Menu OpenCode",
   "desktop.updater.dialog.checkFailed.message": "Impossibile verificare la disponibilità di aggiornamenti.",
   "desktop.updater.dialog.checkFailed.title": "Errore di aggiornamento",
-  "desktop.updater.dialog.upToDate.message": "La versione è aggiornata.",
+  "desktop.updater.dialog.upToDate.message": "La versione è aggiornata. ({{version}})",
   "desktop.updater.dialog.upToDate.title": "Nessun aggiornamento",
   "desktop.updater.dialog.ready.message": "L'aggiornamento {{version}} è stato scaricato. Riavviare ora?",
   "desktop.updater.dialog.ready.title": "Aggiornamento pronto",

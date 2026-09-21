@@ -1,4 +1,8 @@
 export const dict = {
+  "settings.updates.action.download": "አውርድ",
+  "desktop.updater.dialog.download": "አውርድ",
+  "desktop.updater.dialog.available.message": "አዲሱ የOpenCode ስሪት አሁን ለመጫን አለ።",
+  "desktop.updater.dialog.available.title": "ዝማኔ አለ ({{version}})",
   "desktop.menu.app": "OpenCode",
   "desktop.menu.file": "ፋይል",
   "desktop.menu.edit": "አርትዕ",
@@ -46,7 +50,7 @@ export const dict = {
   "desktop.menu.ariaLabel": "OpenCodeምናሌ",
   "desktop.updater.dialog.checkFailed.message": "የዝማኔ ማረጋገጫ አልተሳካም።",
   "desktop.updater.dialog.checkFailed.title": "ስህተት ማዘመን",
-  "desktop.updater.dialog.upToDate.message": "ወቅታዊ ነዎት።",
+  "desktop.updater.dialog.upToDate.message": "ወቅታዊ ነዎት። ({{version}})",
   "desktop.updater.dialog.upToDate.title": "ምንም ማሻሻያ የለም",
   "desktop.updater.dialog.ready.message": "ዝማኔ {{version}} ወርዷል። አሁን እንደገና ይጀመር?",
   "desktop.updater.dialog.ready.title": "አዘምን ዝግጁ",

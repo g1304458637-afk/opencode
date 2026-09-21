@@ -1,4 +1,8 @@
 export const dict = {
+  "settings.updates.action.download": "Lejuplādēt",
+  "desktop.updater.dialog.download": "Lejuplādēt",
+  "desktop.updater.dialog.available.message": "Pieejama jauna OpenCode versija instalēšanai.",
+  "desktop.updater.dialog.available.title": "Pieejams atjauninājums ({{version}})",
   "desktop.menu.app": "OpenCode",
   "desktop.menu.file": "Fails",
   "desktop.menu.edit": "Rediģēt",
@@ -46,7 +50,7 @@ export const dict = {
   "desktop.menu.ariaLabel": "OpenCode izvēlne",
   "desktop.updater.dialog.checkFailed.message": "Neizdevās pārbaudīt atjauninājumus.",
   "desktop.updater.dialog.checkFailed.title": "Atjaunināšanas kļūda",
-  "desktop.updater.dialog.upToDate.message": "Jums ir jaunākā versija.",
+  "desktop.updater.dialog.upToDate.message": "Jums ir jaunākā versija. ({{version}})",
   "desktop.updater.dialog.upToDate.title": "Nav atjauninājumu",
   "desktop.updater.dialog.ready.message": "Atjauninājums {{version}} lejupielādēts. Vai pārstartēt tagad?",
   "desktop.updater.dialog.ready.title": "Atjauninājums gatavs",

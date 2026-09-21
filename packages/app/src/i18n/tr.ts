@@ -3,6 +3,10 @@ import { dict as en } from "./en"
 type Keys = keyof typeof en
 
 export const dict = {
+  "settings.updates.action.download": "İndir",
+  "desktop.updater.dialog.download": "İndir",
+  "desktop.updater.dialog.available.message": "OpenCode'un yeni bir sürümü yüklemeye hazır.",
+  "desktop.updater.dialog.available.title": "Güncelleme mevcut ({{version}})",
   "desktop.menu.app": "OpenCode",
   "desktop.menu.file": "Dosya",
   "desktop.menu.edit": "Düzen",
@@ -51,7 +55,7 @@ export const dict = {
 
   "desktop.updater.dialog.checkFailed.message": "Güncellemeler kontrol edilemedi.",
   "desktop.updater.dialog.checkFailed.title": "Güncelleme hatası",
-  "desktop.updater.dialog.upToDate.message": "En son sürümü kullanıyorsunuz.",
+  "desktop.updater.dialog.upToDate.message": "En son sürümü kullanıyorsunuz. ({{version}})",
   "desktop.updater.dialog.upToDate.title": "Güncelleme yok",
   "desktop.updater.dialog.ready.message": "{{version}} güncellemesi indirildi. Şimdi yeniden başlatılsın mı?",
   "desktop.updater.dialog.ready.title": "Güncelleme hazır",

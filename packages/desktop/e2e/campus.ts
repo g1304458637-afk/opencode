@@ -83,6 +83,17 @@ const fixture = Bun.serve({
     }
     if (path === "/v1/models") return Response.json({ data: [{ id: "gpt-5" }, { id: "glm-5-thinking" }] })
     if (path === "/v1/usage") return state.offline ? new Response("offline", { status: 503 }) : Response.json(usage())
+    if (path.endsWith("/prepare")) return Response.json({ data: { status: "pending" } })
+    if (path.endsWith("/reconcile")) {
+      const receipt = receipts.get(request.headers.get("Idempotency-Key")!) as
+        | { data: { weekly_period_ends_at: string } }
+        | undefined
+      return Response.json({
+        data: receipt
+          ? { status: "succeeded", weekly_period_ends_at: receipt.data.weekly_period_ends_at }
+          : { status: "cancelled" },
+      })
+    }
     if (path.startsWith("/v1/muc/reset-with-card/")) {
       const key = request.headers.get("Idempotency-Key")!
       if (receipts.has(key)) return Response.json(receipts.get(key))

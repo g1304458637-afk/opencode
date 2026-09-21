@@ -11,12 +11,7 @@ import { resolveBrand } from "@opencode-ai/brand"
 
 import { Show, createSignal, onCleanup, onMount, For } from "solid-js"
 import type { MucUpdateState, MucUsageSnapshot } from "../preload/types"
-import {
-  availableQuotaAfterReset,
-  mucTween,
-  MUC_SUCCESS_MS,
-  type MucTweenHandle,
-} from "./muc-reset-animation"
+import { availableQuotaAfterReset, mucTween, MUC_SUCCESS_MS, type MucTweenHandle } from "./muc-reset-animation"
 
 const brand = resolveBrand()
 const STORE_NAME = `${brand.credentialNamespace}-status`
@@ -130,7 +125,9 @@ export function MucStatus() {
     } catch {}
   }
   // 重置卡流程：confirming=确认层 / animating=成功动画层（先 API 成功再动画）
-  const [resetPhase, setResetPhase] = createSignal<"idle" | "confirming" | "submitting" | "success" | "failed" | "refreshing">("idle")
+  const [resetPhase, setResetPhase] = createSignal<
+    "idle" | "confirming" | "submitting" | "success" | "failed" | "refreshing"
+  >("idle")
   const resetConfirming = () => resetPhase() === "confirming" || resetPhase() === "submitting"
   const resetAnimating = () => resetPhase() === "success" || resetPhase() === "refreshing"
   const resetBusy = () => ["submitting", "success", "refreshing"].includes(resetPhase())
@@ -148,7 +145,10 @@ export function MucStatus() {
     try {
       const res = await window.api.mucGetUsage()
       if (disposed || sequence !== refreshSequence) return false
-      if (!res.ok) { setStale(true); return false }
+      if (!res.ok) {
+        setStale(true)
+        return false
+      }
       setUsage(res.usage)
       setFetchedAt(new Date().toISOString())
       setStale(false)
@@ -176,14 +176,25 @@ export function MucStatus() {
   const confirmResetCard = async () => {
     if (resetBusy()) return
     const target = subscriptionStatus()
-    if (!target || target.weeklyUsagePercent === null) { setResetPhase("idle"); return }
+    if (!target || target.weeklyUsagePercent === null) {
+      setResetPhase("idle")
+      return
+    }
     setResetPhase("submitting")
     ++refreshSequence
     setResetError("")
     try {
       const res = await window.api.mucResetCard(target.id)
       if (disposed) return
-      if (!res.ok) { setResetError(`重置失败：${res.error}`); setResetPhase("failed"); return }
+      if (!res.ok) {
+        setResetError(
+          res.error === "reconciliation_required"
+            ? "上次重置结果尚未确认。请重新核对；若持续无法确认，请联系站点管理员核查，勿重复用卡。"
+            : `重置失败：${res.error}`,
+        )
+        setResetPhase("failed")
+        return
+      }
       const { from, to } = availableQuotaAfterReset(target.weeklyUsagePercent)
       setResetPercent(from)
       setResetNextEnd(res.weeklyPeriodEndsAt)
@@ -195,12 +206,23 @@ export function MucStatus() {
       setResetPhase("success")
       resetTween?.cancel()
       resetTween = mucTween({
-        from, to, durationMs: MUC_SUCCESS_MS,
-        onUpdate: (v) => { if (!disposed) setResetPercent(Math.round(v)) },
-        onDone: () => { animationTimer = setTimeout(() => { if (!disposed) setResetPhase("idle") }, 600) },
+        from,
+        to,
+        durationMs: MUC_SUCCESS_MS,
+        onUpdate: (v) => {
+          if (!disposed) setResetPercent(Math.round(v))
+        },
+        onDone: () => {
+          animationTimer = setTimeout(() => {
+            if (!disposed) setResetPhase("idle")
+          }, 600)
+        },
       })
     } catch {
-      if (!disposed) { setResetError("网络异常，请重试同一次重置。"); setResetPhase("failed") }
+      if (!disposed) {
+        setResetError("网络异常，请重试同一次重置。")
+        setResetPhase("failed")
+      }
     }
   }
 
@@ -222,7 +244,10 @@ export function MucStatus() {
     })
     void refresh()
     void refreshUpdate()
-    const timer = setInterval(() => { if (!loading() && !resetBusy()) void refresh(); void refreshUpdate() }, REFRESH_MS)
+    const timer = setInterval(() => {
+      if (!loading() && !resetBusy()) void refresh()
+      void refreshUpdate()
+    }, REFRESH_MS)
     const onResize = () => setPos((p) => clampPos(p))
     window.addEventListener("resize", onResize)
     onCleanup(() => {
@@ -318,8 +343,12 @@ export function MucStatus() {
           </div>
 
           <div class="mb-2 flex justify-between text-[10px] text-white/60">
-            <span>{brand.shortName} · {update()?.localVersion ?? "—"}</span>
-            <button type="button" onClick={() => void window.api.mucOpenAccount()}>账户 ↗</button>
+            <span>
+              {brand.shortName} · {update()?.localVersion ?? "—"}
+            </span>
+            <button type="button" onClick={() => void window.api.mucOpenAccount()}>
+              账户 ↗
+            </button>
           </div>
           <Show when={update() && !update()!.available && (update() as { status?: string }).status === "unavailable"}>
             <p class="text-[10px] text-white/60">更新检查暂不可用</p>
@@ -342,7 +371,10 @@ export function MucStatus() {
             )}
           </Show>
 
-          <Show when={usage()} fallback={<div class="py-3 text-center text-white/50">{stale() ? "状态暂不可用，请重试" : "暂无数据"}</div>}>
+          <Show
+            when={usage()}
+            fallback={<div class="py-3 text-center text-white/50">{stale() ? "状态暂不可用，请重试" : "暂无数据"}</div>}
+          >
             {(u) => (
               <div class="flex flex-col gap-1.5">
                 {/* 订阅块：本周使用 / 状态 / 恢复日 / 继续使用 / 重置卡 */}
@@ -354,10 +386,7 @@ export function MucStatus() {
                     >
                       <div class="flex items-center justify-between">
                         <span class="text-[11px] text-white/60">本周使用</span>
-                        <span
-                          class="text-[13px] font-semibold"
-                          style={{ color: statusColor(ss().usageStatus) }}
-                        >
+                        <span class="text-[13px] font-semibold" style={{ color: statusColor(ss().usageStatus) }}>
                           {ss().weeklyUsagePercent === null ? "不限量" : `${ss().weeklyUsagePercent}%`}
                         </span>
                       </div>
@@ -408,6 +437,16 @@ export function MucStatus() {
                       <Show when={resetError()}>
                         <p class="mt-1 text-[10px]" style={{ color: "var(--muc-danger)" }}>
                           {resetError()}
+                          <Show when={!resetBusy() && !resetConfirming()}>
+                            <button
+                              type="button"
+                              class="ml-2 underline"
+                              disabled={resetBusy()}
+                              onClick={() => void confirmResetCard()}
+                            >
+                              重新核对
+                            </button>
+                          </Show>
                         </p>
                       </Show>
                     </div>

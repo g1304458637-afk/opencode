@@ -1,4 +1,8 @@
 export const dict = {
+  "settings.updates.action.download": "Боргирӣ кардан",
+  "desktop.updater.dialog.download": "Боргирӣ кардан",
+  "desktop.updater.dialog.available.message": "Версияи нави OpenCode ҳоло барои насб дастрас аст.",
+  "desktop.updater.dialog.available.title": "Навсозии дастрас ({{version}})",
   "desktop.menu.app": "OpenCode",
   "desktop.menu.file": "Файл",
   "desktop.menu.edit": "Таҳрир",
@@ -46,7 +50,7 @@ export const dict = {
   "desktop.menu.ariaLabel": "OpenCode меню",
   "desktop.updater.dialog.checkFailed.message": "Санҷиши навсозӣ ноком шуд.",
   "desktop.updater.dialog.checkFailed.title": "Хатои навсозӣ",
-  "desktop.updater.dialog.upToDate.message": "Шумо навсозӣ доред.",
+  "desktop.updater.dialog.upToDate.message": "Шумо навсозӣ доред. ({{version}})",
   "desktop.updater.dialog.upToDate.title": "Навсозиҳо нест",
   "desktop.updater.dialog.ready.message": "Навсозии {{version}} бор карда шуд. Ҳоло аз нав оғоз кунед?",
   "desktop.updater.dialog.ready.title": "Навсозӣ омода аст",

@@ -49,6 +49,7 @@ export default defineConfig({
     define: {
       "import.meta.env.OPENCODE_CHANNEL": JSON.stringify(channel),
       "import.meta.env.MUC_VERSION": JSON.stringify(mucVersion),
+      "import.meta.env.CAMPUS_LOCAL_BUILD": JSON.stringify(process.env.CAMPUS_LOCAL_BUILD ?? "0"),
       __CAMPUS_BRAND_CONFIG__: JSON.stringify(campus.brand),
     },
     build: {

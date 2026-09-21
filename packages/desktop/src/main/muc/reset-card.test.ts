@@ -16,16 +16,20 @@ test("concurrent clicks, lost response, restart and acknowledgement use one dura
   const path = directory()
   const requests: string[] = []
   let attempts = 0
-  const request: typeof fetch = Object.assign(async (_input: RequestInfo | URL, init?: RequestInit) => {
-    requests.push(new Headers(init?.headers).get("Idempotency-Key")!)
-    // Inspect the real journal before the network boundary; no plaintext credential is persisted.
-    const journal = readFileSync(join(path, readdirSync(path)[0]!), "utf8")
-    expect(journal).toContain(requests.at(-1)!)
-    expect(journal).not.toContain("secret-key")
-    await new Promise((resolve) => setTimeout(resolve, 20))
-    if (++attempts === 1) throw new Error("server committed, response lost")
-    return Response.json({ data: { weekly_period_ends_at: "2099-01-01T00:00:00Z" } })
-  }, { preconnect: fetch.preconnect })
+  const request: typeof fetch = Object.assign(
+    async (_input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(_input).endsWith("/prepare")) return Response.json({ data: { status: "pending" } })
+      requests.push(new Headers(init?.headers).get("Idempotency-Key")!)
+      // Inspect the real journal before the network boundary; no plaintext credential is persisted.
+      const journal = readFileSync(join(path, readdirSync(path)[0]!), "utf8")
+      expect(journal).toContain(requests.at(-1)!)
+      expect(journal).not.toContain("secret-key")
+      await new Promise((resolve) => setTimeout(resolve, 20))
+      if (++attempts === 1) throw new Error("server committed, response lost")
+      return Response.json({ data: { weekly_period_ends_at: "2099-01-01T00:00:00Z" } })
+    },
+    { preconnect: fetch.preconnect },
+  )
   const client = new ResetCardClient(path, "/v1/muc/reset-with-card", request)
   const first = await Promise.all(Array.from({ length: 20 }, () => client.reset("http://localhost", "secret-key", 1)))
   expect(first.every((r) => !r.ok)).toBe(true)
@@ -47,7 +51,13 @@ test("concurrent clicks, lost response, restart and acknowledgement use one dura
 test("expired uncertainty and corrupted journal fail closed instead of spending another card", async () => {
   const path = directory()
   let calls = 0
-  const request: typeof fetch = Object.assign(async () => { calls++; throw new Error("offline") }, { preconnect: fetch.preconnect })
+  const request: typeof fetch = Object.assign(
+    async () => {
+      calls++
+      throw new Error("offline")
+    },
+    { preconnect: fetch.preconnect },
+  )
   const client = new ResetCardClient(path, "/reset", request)
   await client.reset("http://localhost", "key", 1)
   const file = join(path, readdirSync(path)[0]!)
@@ -56,5 +66,39 @@ test("expired uncertainty and corrupted journal fail closed instead of spending 
   expect(await client.reset("http://localhost", "key", 1)).toEqual({ ok: false, error: "reconciliation_required" })
   writeFileSync(file, "corrupt")
   expect((await client.reset("http://localhost", "key", 1)).ok).toBe(false)
-  expect(calls).toBe(1)
+  expect(calls).toBe(2)
+})
+
+test("expired operations reconcile success or a cancellation fence before retry", async () => {
+  for (const status of ["succeeded", "cancelled", "unknown"]) {
+    const path = directory()
+    const calls: { url: string; key: string | null }[] = []
+    let online = false
+    const request: typeof fetch = Object.assign(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        if (String(input).endsWith("/prepare")) return Response.json({ data: { status: "pending" } })
+        calls.push({ url: String(input), key: new Headers(init?.headers).get("Idempotency-Key") })
+        if (!online) throw new Error("lost response")
+        if (String(input).endsWith("/reconcile"))
+          return Response.json({ data: { status, weekly_period_ends_at: "2099-01-01T00:00:00Z" } })
+        return Response.json({ data: { weekly_period_ends_at: "2099-01-01T00:00:00Z" } })
+      },
+      { preconnect: fetch.preconnect },
+    )
+    const client = new ResetCardClient(path, "/reset", request)
+    await client.reset("http://localhost", "key", 1)
+    const file = join(path, readdirSync(path)[0]!)
+    const original = JSON.parse(readFileSync(file, "utf8"))
+    writeFileSync(file, JSON.stringify({ ...original, createdAt: Date.now() - 24 * 3600_000 }))
+    online = true
+    const result = await new ResetCardClient(path, "/reset", request).reset("http://localhost", "key", 1)
+    expect(calls[1]?.url).toEndWith("/reconcile")
+    expect(calls[1]?.key).toBe(original.key)
+    expect(result.ok).toBe(status !== "unknown")
+    if (status === "cancelled") {
+      expect(calls).toHaveLength(3)
+      expect(calls[2]?.key).not.toBe(original.key)
+      expect(readdirSync(path).some((name) => name.endsWith(".resolved"))).toBe(true)
+    } else expect(calls).toHaveLength(2)
+  }
 })

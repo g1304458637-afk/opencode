@@ -1,4 +1,9 @@
 export const dict = {
+  "settings.updates.action.download": "Shkarkoje",
+  "desktop.updater.dialog.download": "Shkarkoje",
+  "desktop.updater.dialog.available.message":
+    "Një version i ri i OpenCode është tani i disponueshëm për t'u instaluar.",
+  "desktop.updater.dialog.available.title": "Ofrohet përditësim ({{version}})",
   "desktop.menu.app": "OpenCode",
   "desktop.menu.file": "Skedari",
   "desktop.menu.edit": "Redakto",
@@ -46,7 +51,7 @@ export const dict = {
   "desktop.menu.ariaLabel": "Menuja OpenCode",
   "desktop.updater.dialog.checkFailed.message": "Kontrolli i përditësimit dështoi.",
   "desktop.updater.dialog.checkFailed.title": "Gabim i përditësimit",
-  "desktop.updater.dialog.upToDate.message": "Ju jeni të përditësuar.",
+  "desktop.updater.dialog.upToDate.message": "Ju jeni të përditësuar. ({{version}})",
   "desktop.updater.dialog.upToDate.title": "Nuk ka përditësime",
   "desktop.updater.dialog.ready.message": "Përditësimi {{version}} u shkarkua. Të riniset tani?",
   "desktop.updater.dialog.ready.title": "Përditësimi gati",

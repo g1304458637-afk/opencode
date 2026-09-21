@@ -1,4 +1,8 @@
 export const dict = {
+  "settings.updates.action.download": "ڈاؤن لوڈ",
+  "desktop.updater.dialog.download": "ڈاؤن لوڈ",
+  "desktop.updater.dialog.available.message": "OpenCode کا ایک نیا ورژن اب انسٹال کرنے کے لیے دستیاب ہے۔",
+  "desktop.updater.dialog.available.title": "اپ ڈیٹ دستیاب ہے۔ ({{version}})",
   "desktop.menu.app": "OpenCode",
   "desktop.menu.file": "فائل",
   "desktop.menu.edit": "ترمیم",
@@ -47,7 +51,7 @@ export const dict = {
 
   "desktop.updater.dialog.checkFailed.message": "اپ ڈیٹ کی جانچ ناکام ہو گئی۔",
   "desktop.updater.dialog.checkFailed.title": "اپ ڈیٹ کی خرابی",
-  "desktop.updater.dialog.upToDate.message": "آپ کا سافٹ ویئر تازہ ترین ہے۔",
+  "desktop.updater.dialog.upToDate.message": "آپ کا سافٹ ویئر تازہ ترین ہے۔ ({{version}})",
   "desktop.updater.dialog.upToDate.title": "کوئی اپ ڈیٹ نہیں",
   "desktop.updater.dialog.ready.message": "اپ ڈیٹ {{version}} ڈاؤن لوڈ ہو گئی ہے۔ ابھی دوبارہ شروع کریں؟",
   "desktop.updater.dialog.ready.title": "اپ ڈیٹ تیار ہے",

@@ -1,4 +1,9 @@
 export const dict = {
+  "settings.updates.action.download": "Télécharger",
+  "desktop.updater.dialog.download": "Télécharger",
+  "desktop.updater.dialog.available.message":
+    "Une nouvelle version d'OpenCode est maintenant disponible pour installation.",
+  "desktop.updater.dialog.available.title": "Mise à jour disponible ({{version}})",
   "desktop.menu.app": "OpenCode",
   "desktop.menu.file": "Fichier",
   "desktop.menu.edit": "Édition",
@@ -47,7 +52,7 @@ export const dict = {
 
   "desktop.updater.dialog.checkFailed.message": "La recherche de mises à jour a échoué.",
   "desktop.updater.dialog.checkFailed.title": "Erreur de mise à jour",
-  "desktop.updater.dialog.upToDate.message": "Vous êtes à jour.",
+  "desktop.updater.dialog.upToDate.message": "Vous êtes à jour. ({{version}})",
   "desktop.updater.dialog.upToDate.title": "Aucune mise à jour",
   "desktop.updater.dialog.ready.message": "La mise à jour {{version}} a été téléchargée. Redémarrer maintenant ?",
   "desktop.updater.dialog.ready.title": "Mise à jour prête",

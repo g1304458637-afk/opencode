@@ -1,4 +1,8 @@
 export const dict = {
+  "settings.updates.action.download": "Λήψη",
+  "desktop.updater.dialog.download": "Λήψη",
+  "desktop.updater.dialog.available.message": "Μια νέα έκδοση του OpenCode είναι τώρα διαθέσιμη για εγκατάσταση.",
+  "desktop.updater.dialog.available.title": "Διαθέσιμη ενημέρωση ({{version}})",
   "desktop.menu.app": "OpenCode",
   "desktop.menu.file": "Αρχείο",
   "desktop.menu.edit": "Επεξεργασία",
@@ -46,7 +50,7 @@ export const dict = {
   "desktop.menu.ariaLabel": "OpenCode μενού",
   "desktop.updater.dialog.checkFailed.message": "Ο έλεγχος ενημέρωσης απέτυχε.",
   "desktop.updater.dialog.checkFailed.title": "Σφάλμα ενημέρωσης",
-  "desktop.updater.dialog.upToDate.message": "Είστε ενημερωμένοι.",
+  "desktop.updater.dialog.upToDate.message": "Είστε ενημερωμένοι. ({{version}})",
   "desktop.updater.dialog.upToDate.title": "Χωρίς ενημερώσεις",
   "desktop.updater.dialog.ready.message": "Η ενημέρωση {{version}} λήφθηκε. Επανεκκίνηση τώρα;",
   "desktop.updater.dialog.ready.title": "Έτοιμη ενημέρωση",

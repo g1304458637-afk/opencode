@@ -1,4 +1,8 @@
 export const dict = {
+  "settings.updates.action.download": "Unduh",
+  "desktop.updater.dialog.download": "Unduh",
+  "desktop.updater.dialog.available.message": "Versi baru OpenCode sekarang tersedia untuk diinstal.",
+  "desktop.updater.dialog.available.title": "Pembaruan tersedia ({{version}})",
   "desktop.menu.app": "OpenCode",
   "desktop.menu.file": "Berkas",
   "desktop.menu.edit": "Sunting",
@@ -47,7 +51,7 @@ export const dict = {
 
   "desktop.updater.dialog.checkFailed.message": "Pemeriksaan pembaruan gagal.",
   "desktop.updater.dialog.checkFailed.title": "Kesalahan pembaruan",
-  "desktop.updater.dialog.upToDate.message": "Versi Anda sudah terbaru.",
+  "desktop.updater.dialog.upToDate.message": "Versi Anda sudah terbaru. ({{version}})",
   "desktop.updater.dialog.upToDate.title": "Tidak ada pembaruan",
   "desktop.updater.dialog.ready.message": "Pembaruan {{version}} telah diunduh. Mulai ulang sekarang?",
   "desktop.updater.dialog.ready.title": "Pembaruan siap",

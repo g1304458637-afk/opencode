@@ -1,4 +1,8 @@
 export const dict = {
+  "settings.updates.action.download": "Преземи",
+  "desktop.updater.dialog.download": "Преземи",
+  "desktop.updater.dialog.available.message": "Новата верзија на OpenCode сега е достапна за инсталирање.",
+  "desktop.updater.dialog.available.title": "Достапно е ажурирање ({{version}})",
   "desktop.menu.app": "OpenCode",
   "desktop.menu.file": "Датотека",
   "desktop.menu.edit": "Уреди",
@@ -46,7 +50,7 @@ export const dict = {
   "desktop.menu.ariaLabel": "OpenCode мени",
   "desktop.updater.dialog.checkFailed.message": "Проверката за ажурирање не успеа.",
   "desktop.updater.dialog.checkFailed.title": "Грешка во ажурирањето",
-  "desktop.updater.dialog.upToDate.message": "Ажуриран си.",
+  "desktop.updater.dialog.upToDate.message": "Ажуриран си. ({{version}})",
   "desktop.updater.dialog.upToDate.title": "Нема ажурирања",
   "desktop.updater.dialog.ready.message": "Преземено е ажурирањето {{version}}. Да се ​​рестартира сега?",
   "desktop.updater.dialog.ready.title": "Подготвено за ажурирање",

@@ -1,4 +1,8 @@
 export const dict = {
+  "settings.updates.action.download": "Hent",
+  "desktop.updater.dialog.download": "Hent",
+  "desktop.updater.dialog.available.message": "En ny version af OpenCode er nu tilgængelig til installation.",
+  "desktop.updater.dialog.available.title": "Opdatering tilgængelig ({{version}})",
   "command.category.suggested": "Foreslået",
   "command.category.view": "Vis",
   "command.category.project": "Projekt",
@@ -1177,7 +1181,7 @@ export const dict = {
 
   "desktop.updater.dialog.checkFailed.message": "Søgningen efter opdateringer mislykkedes.",
   "desktop.updater.dialog.checkFailed.title": "Opdateringsfejl",
-  "desktop.updater.dialog.upToDate.message": "Du er opdateret.",
+  "desktop.updater.dialog.upToDate.message": "Du er opdateret. ({{version}})",
   "desktop.updater.dialog.upToDate.title": "Ingen opdateringer",
   "desktop.updater.dialog.ready.message": "Opdatering {{version}} er downloadet. Vil du genstarte nu?",
   "desktop.updater.dialog.ready.title": "Opdateringen er klar",

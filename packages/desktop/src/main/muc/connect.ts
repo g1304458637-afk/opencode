@@ -1,3 +1,4 @@
+import { validateCampusGateway } from "./gateway"
 // 校园 Harness: 一次性授权码交换客户端（MUC / HUBU 共用）。
 // 只与用户自己的网关通信；请求体不含任何管理员凭据。
 // 服务器返回的是该用户（per-device）自己的 API Key。
@@ -23,11 +24,12 @@ export class MucExchangeError extends Error {
 }
 
 export async function exchangeMucCode(gateway: string, code: string, deviceName: string): Promise<MucExchangeResult> {
-  const url = gateway.replace(/\/+$/, "") + brand.exchangePath
+  const url = validateCampusGateway(gateway) + brand.exchangePath
   let res: Response
   try {
     res = await fetch(url, {
       method: "POST",
+      redirect: "error",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ code, device_name: deviceName, brand: brand.id, audience: `${brand.id}:desktop` }),
       signal: AbortSignal.timeout(10_000),
@@ -85,7 +87,8 @@ export async function exchangeMucCode(gateway: string, code: string, deviceName:
 // 连接成功后立即同步 /v1/models，向用户反馈可用模型数量（失败不阻塞连接）
 export async function countGatewayModels(gateway: string, apiKey: string): Promise<number | undefined> {
   try {
-    const res = await fetch(gateway.replace(/\/+$/, "") + "/v1/models", {
+    const res = await fetch(validateCampusGateway(gateway) + "/v1/models", {
+      redirect: "error",
       headers: { Authorization: `Bearer ${apiKey}` },
       signal: AbortSignal.timeout(8_000),
     })

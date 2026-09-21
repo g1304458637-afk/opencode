@@ -1,4 +1,8 @@
 export const dict = {
+  "settings.updates.action.download": "Ýükle",
+  "desktop.updater.dialog.download": "Ýükle",
+  "desktop.updater.dialog.available.message": "Indi gurmak üçin OpenCode -iň täze wersiýasy bar.",
+  "desktop.updater.dialog.available.title": "Täzelenme elýeterli ({{version}})",
   "desktop.menu.app": "OpenCode",
   "desktop.menu.file": "Faýl",
   "desktop.menu.edit": "Redaktirläň",
@@ -46,7 +50,7 @@ export const dict = {
   "desktop.menu.ariaLabel": "OpenCode menýusy",
   "desktop.updater.dialog.checkFailed.message": "Täzelenme şowsuz boldy.",
   "desktop.updater.dialog.checkFailed.title": "Täzelenme säwligi",
-  "desktop.updater.dialog.upToDate.message": "Döwrebap",
+  "desktop.updater.dialog.upToDate.message": "Döwrebap ({{version}})",
   "desktop.updater.dialog.upToDate.title": "Täzelenme ýok",
   "desktop.updater.dialog.ready.message": "Göçürilen {{version}} täzeläň. Indi täzeden başlaň?",
   "desktop.updater.dialog.ready.title": "Täzelenme taýýar",

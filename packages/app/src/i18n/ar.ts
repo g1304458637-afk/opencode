@@ -1,4 +1,8 @@
 export const dict = {
+  "settings.updates.action.download": "نزّله",
+  "desktop.updater.dialog.download": "نزّله",
+  "desktop.updater.dialog.available.message": "يتوفر الآن إصدار جديد من OpenCode للتثبيت.",
+  "desktop.updater.dialog.available.title": "تحديث متاح ({{version}})",
   "desktop.menu.app": "OpenCode",
   "desktop.menu.file": "ملف",
   "desktop.menu.edit": "تحرير",
@@ -47,7 +51,7 @@ export const dict = {
 
   "desktop.updater.dialog.checkFailed.message": "فشل التحقق من وجود تحديثات.",
   "desktop.updater.dialog.checkFailed.title": "خطأ في التحديث",
-  "desktop.updater.dialog.upToDate.message": "لديك أحدث إصدار.",
+  "desktop.updater.dialog.upToDate.message": "لديك أحدث إصدار. ({{version}})",
   "desktop.updater.dialog.upToDate.title": "لا توجد تحديثات",
   "desktop.updater.dialog.ready.message": "تم تنزيل التحديث {{version}}. هل تريد إعادة التشغيل الآن؟",
   "desktop.updater.dialog.ready.title": "التحديث جاهز",

@@ -28,3 +28,17 @@ test("HUBU production never silently adopts a local or MUC feed", () => {
     "HTTPS",
   )
 })
+
+test("MUC release credentials use HTTPS on the first hop", () => {
+  expect(campusConfig({ OPENCODE_CHANNEL: "muc" }).brand.gatewayURL).toBe("https://admin.wuxuexi.top")
+  for (const local of [undefined, "1"]) {
+    expect(() =>
+      campusConfig({ OPENCODE_CHANNEL: "muc", CAMPUS_LOCAL_BUILD: local, MUC_GATEWAY_URL: "http://admin.wuxuexi.top" }),
+    ).toThrow("HTTPS")
+  }
+  expect(() => campusConfig({ OPENCODE_CHANNEL: "muc", MUC_GATEWAY_URL: "http://localhost:8081" })).toThrow("HTTPS")
+  expect(
+    campusConfig({ OPENCODE_CHANNEL: "muc", CAMPUS_LOCAL_BUILD: "1", MUC_GATEWAY_URL: "http://localhost:8081" }).brand
+      .gatewayURL,
+  ).toBe("http://localhost:8081")
+})

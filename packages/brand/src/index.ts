@@ -100,7 +100,7 @@ const MUC: BrandConfig = {
   appId: "cn.edu.muc.harness",
   appName: "mucode",
   protocolScheme: "muc",
-  gatewayURL: "http://admin.wuxuexi.top",
+  gatewayURL: "https://admin.wuxuexi.top",
   gatewayEnvVar: "MUC_GATEWAY_URL",
   apiKeyEnvVar: "MUC_API_KEY",
   exchangePath: "/api/v1/muc/exchange",

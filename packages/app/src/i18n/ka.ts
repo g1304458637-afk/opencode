@@ -1,4 +1,8 @@
 export const dict = {
+  "settings.updates.action.download": "ჩამოტვირთვა",
+  "desktop.updater.dialog.download": "ჩამოტვირთვა",
+  "desktop.updater.dialog.available.message": "OpenCode-ის ახალი ვერსია ახლა ხელმისაწვდომია დასაინსტალირებლად.",
+  "desktop.updater.dialog.available.title": "ხელმისაწვდომია განახლება ({{version}})",
   "desktop.menu.app": "OpenCode",
   "desktop.menu.file": "ფაილი",
   "desktop.menu.edit": "რედაქტირება",
@@ -46,7 +50,7 @@ export const dict = {
   "desktop.menu.ariaLabel": "OpenCode მენიუ",
   "desktop.updater.dialog.checkFailed.message": "განახლების შემოწმება ვერ მოხერხდა.",
   "desktop.updater.dialog.checkFailed.title": "განახლების შეცდომა",
-  "desktop.updater.dialog.upToDate.message": "თქვენ განახლებული ხართ.",
+  "desktop.updater.dialog.upToDate.message": "თქვენ განახლებული ხართ. ({{version}})",
   "desktop.updater.dialog.upToDate.title": "განახლების გარეშე",
   "desktop.updater.dialog.ready.message": "განახლება {{version}} ჩამოტვირთულია. გადატვირთვა ახლა?",
   "desktop.updater.dialog.ready.title": "განახლება მზად არის",

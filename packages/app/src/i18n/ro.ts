@@ -1,4 +1,8 @@
 export const dict = {
+  "settings.updates.action.download": "Descarcă",
+  "desktop.updater.dialog.download": "Descarcă",
+  "desktop.updater.dialog.available.message": "O nouă versiune OpenCode este disponibilă pentru instalare.",
+  "desktop.updater.dialog.available.title": "Actualizare disponibilă ({{version}})",
   "desktop.menu.app": "OpenCode",
   "desktop.menu.file": "Fișier",
   "desktop.menu.edit": "Editare",
@@ -46,7 +50,7 @@ export const dict = {
   "desktop.menu.ariaLabel": "Meniu OpenCode",
   "desktop.updater.dialog.checkFailed.message": "Verificarea actualizărilor a eșuat.",
   "desktop.updater.dialog.checkFailed.title": "Eroare actualizare",
-  "desktop.updater.dialog.upToDate.message": "Ai cea mai recentă versiune.",
+  "desktop.updater.dialog.upToDate.message": "Ai cea mai recentă versiune. ({{version}})",
   "desktop.updater.dialog.upToDate.title": "Nicio actualizare",
   "desktop.updater.dialog.ready.message": "Actualizarea {{version}} a fost descărcată. Repornești acum?",
   "desktop.updater.dialog.ready.title": "Actualizare pregătită",

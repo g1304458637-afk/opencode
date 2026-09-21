@@ -1,4 +1,8 @@
 export const dict = {
+  "settings.updates.action.download": "Stiahnuť",
+  "desktop.updater.dialog.download": "Stiahnuť",
+  "desktop.updater.dialog.available.message": "Je dostupná nová verzia OpenCode na inštaláciu.",
+  "desktop.updater.dialog.available.title": "Dostupná aktualizácia ({{version}})",
   "desktop.menu.app": "OpenCode",
   "desktop.menu.file": "Súbor",
   "desktop.menu.edit": "Upraviť",
@@ -46,7 +50,7 @@ export const dict = {
   "desktop.menu.ariaLabel": "Ponuka OpenCode",
   "desktop.updater.dialog.checkFailed.message": "Kontrola aktualizácií zlyhala.",
   "desktop.updater.dialog.checkFailed.title": "Chyba aktualizácie",
-  "desktop.updater.dialog.upToDate.message": "Máte najnovšiu verziu.",
+  "desktop.updater.dialog.upToDate.message": "Máte najnovšiu verziu. ({{version}})",
   "desktop.updater.dialog.upToDate.title": "Žiadne aktualizácie",
   "desktop.updater.dialog.ready.message": "Aktualizácia {{version}} stiahnutá. Reštartovať teraz?",
   "desktop.updater.dialog.ready.title": "Aktualizácia pripravená",

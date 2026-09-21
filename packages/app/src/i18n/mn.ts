@@ -1,4 +1,8 @@
 export const dict = {
+  "settings.updates.action.download": "Татаж авах",
+  "desktop.updater.dialog.download": "Татаж авах",
+  "desktop.updater.dialog.available.message": "OpenCode шинэ хувилбарыг одоо суулгах боломжтой.",
+  "desktop.updater.dialog.available.title": "Шинэчлэлт боломжтой ({{version}})",
   "desktop.menu.app": "OpenCode",
   "desktop.menu.file": "Файл",
   "desktop.menu.edit": "Засварлах",
@@ -46,7 +50,7 @@ export const dict = {
   "desktop.menu.ariaLabel": "OpenCode цэс",
   "desktop.updater.dialog.checkFailed.message": "Шинэчлэлтийг шалгаж чадсангүй.",
   "desktop.updater.dialog.checkFailed.title": "Шинэчлэлтийн алдаа",
-  "desktop.updater.dialog.upToDate.message": "Та шинэчлэгдсэн байна.",
+  "desktop.updater.dialog.upToDate.message": "Та шинэчлэгдсэн байна. ({{version}})",
   "desktop.updater.dialog.upToDate.title": "Шинэчлэлт байхгүй",
   "desktop.updater.dialog.ready.message": "Шинэчлэлтийг {{version}} татсан. Одоо дахин эхлүүлэх үү?",
   "desktop.updater.dialog.ready.title": "Шинэчлэлт бэлэн боллоо",

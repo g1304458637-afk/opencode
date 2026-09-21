@@ -30,14 +30,15 @@ export function campusConfig(env: NodeJS.ProcessEnv = process.env) {
     if (url.username || url.password || url.hash || !["http:", "https:"].includes(url.protocol)) {
       throw new Error("Invalid campus endpoint")
     }
-    // Retain the existing MUC gateway compatibility default; all downloads/feed require TLS.
-    const legacyMucGateway = brand.id === "muc" && value === brand.gatewayURL
-    if (url.protocol !== "https:" && !(local && loopback) && !legacyMucGateway) {
+    if (url.protocol !== "https:" && !(local && loopback)) {
       throw new Error("Campus endpoints require HTTPS (local builds may use loopback HTTP)")
     }
   }
   const release = JSON.parse(readFileSync(new URL(`../resources/${brand.id}/release.json`, import.meta.url), "utf8"))
-  if (typeof release.version !== "string" || !/^\d+\.\d+\.\d+(?:-[0-9A-Za-z]+(?:\.[0-9A-Za-z]+)*)?$/.test(release.version)) {
+  if (
+    typeof release.version !== "string" ||
+    !/^\d+\.\d+\.\d+(?:-[0-9A-Za-z]+(?:\.[0-9A-Za-z]+)*)?$/.test(release.version)
+  ) {
     throw new Error("Invalid campus release version")
   }
   return { brand: configured, version: release.version as string }

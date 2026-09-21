@@ -1,4 +1,8 @@
 export const dict = {
+  "settings.updates.action.download": "다운로드",
+  "desktop.updater.dialog.download": "다운로드",
+  "desktop.updater.dialog.available.message": "OpenCode의 새 버전을 설치할 수 있습니다.",
+  "desktop.updater.dialog.available.title": "업데이트 가능 ({{version}})",
   "command.category.suggested": "추천",
   "command.category.view": "보기",
   "command.category.project": "프로젝트",
@@ -1115,7 +1119,7 @@ export const dict = {
 
   "desktop.updater.dialog.checkFailed.message": "업데이트를 확인하지 못했습니다.",
   "desktop.updater.dialog.checkFailed.title": "업데이트 오류",
-  "desktop.updater.dialog.upToDate.message": "최신 버전을 사용 중입니다.",
+  "desktop.updater.dialog.upToDate.message": "최신 버전을 사용 중입니다. ({{version}})",
   "desktop.updater.dialog.upToDate.title": "업데이트 없음",
   "desktop.updater.dialog.ready.message": "업데이트 {{version}} 다운로드가 완료되었습니다. 지금 다시 시작할까요?",
   "desktop.updater.dialog.ready.title": "업데이트 준비 완료",

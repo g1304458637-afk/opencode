@@ -1,4 +1,8 @@
 export const dict = {
+  "settings.updates.action.download": "ダウンロード",
+  "desktop.updater.dialog.download": "ダウンロード",
+  "desktop.updater.dialog.available.message": "OpenCodeの新しいバージョン がインストール可能です。",
+  "desktop.updater.dialog.available.title": "アップデートが利用可能です ({{version}})",
   "desktop.menu.app": "OpenCode",
   "desktop.menu.file": "ファイル",
   "desktop.menu.edit": "編集",
@@ -47,7 +51,7 @@ export const dict = {
 
   "desktop.updater.dialog.checkFailed.message": "アップデートを確認できませんでした。",
   "desktop.updater.dialog.checkFailed.title": "アップデートエラー",
-  "desktop.updater.dialog.upToDate.message": "最新の状態です。",
+  "desktop.updater.dialog.upToDate.message": "最新の状態です。 ({{version}})",
   "desktop.updater.dialog.upToDate.title": "アップデートはありません",
   "desktop.updater.dialog.ready.message": "アップデート{{version}}をダウンロードしました。今すぐ再起動しますか？",
   "desktop.updater.dialog.ready.title": "アップデートの準備ができました",

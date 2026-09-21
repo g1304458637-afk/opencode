@@ -7,6 +7,7 @@ import fs from "node:fs"
 import path from "node:path"
 import { createCipheriv, createDecipheriv, randomBytes, randomUUID } from "node:crypto"
 import { resolveBrand } from "@opencode-ai/brand"
+import { validateCampusGateway } from "./gateway"
 
 export type MucCredential = {
   brand?: string
@@ -86,8 +87,11 @@ export class MucSecretStore {
       const parsed = JSON.parse(json) as MucCredential
       if (!parsed.apiKey || !parsed.gateway) return null
       if (parsed.brand && parsed.brand !== resolveBrand().credentialNamespace) return null
-      // Upgrade only this brand's legacy file, preserving device identity and connection timestamp.
-      if (!current) this.write({ ...parsed, brand: this.namespace })
+      // Upgrade the historical official origin without sending a credential over HTTP.
+      const legacyHTTP = this.namespace === "muc" && /^http:\/\/admin\.wuxuexi\.top\/?$/.test(parsed.gateway)
+      parsed.gateway = validateCampusGateway(legacyHTTP ? "https://admin.wuxuexi.top" : parsed.gateway)
+      // Preserve device identity and connection timestamp while migrating the envelope/origin.
+      if (!current || legacyHTTP) this.write({ ...parsed, brand: this.namespace })
       return parsed
     } catch {
       return null

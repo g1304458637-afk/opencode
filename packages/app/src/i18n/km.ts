@@ -1,4 +1,8 @@
 export const dict = {
+  "settings.updates.action.download": "ទាញយក",
+  "desktop.updater.dialog.download": "ទាញយក",
+  "desktop.updater.dialog.available.message": "កំណែថ្មីនៃ OpenCode ឥឡូវនេះមានសម្រាប់ដំឡើងហើយ។",
+  "desktop.updater.dialog.available.title": "មានបច្ចុប្បន្នភាព ({{version}})",
   "desktop.menu.app": "OpenCode",
   "desktop.menu.file": "ឯកសារ",
   "desktop.menu.edit": "កែសម្រួល",
@@ -46,7 +50,7 @@ export const dict = {
   "desktop.menu.ariaLabel": "ម៉ឺនុយ OpenCode",
   "desktop.updater.dialog.checkFailed.message": "ការត្រួតពិនិត្យការអាប់ដេតបានបរាជ័យ។",
   "desktop.updater.dialog.checkFailed.title": "កំហុសក្នុងការអាប់ដេត",
-  "desktop.updater.dialog.upToDate.message": "អ្នកទាន់សម័យហើយ។",
+  "desktop.updater.dialog.upToDate.message": "អ្នកទាន់សម័យហើយ។ ({{version}})",
   "desktop.updater.dialog.upToDate.title": "គ្មានការអាប់ដេតទេ។",
   "desktop.updater.dialog.ready.message": "អាប់ដេត {{version}} ត្រូវបានទាញយក។ ចាប់ផ្តើមឡើងវិញឥឡូវនេះ?",
   "desktop.updater.dialog.ready.title": "ធ្វើបច្ចុប្បន្នភាពរួចរាល់",

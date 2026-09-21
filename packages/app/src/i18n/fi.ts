@@ -1,4 +1,8 @@
 export const dict = {
+  "settings.updates.action.download": "Lataa",
+  "desktop.updater.dialog.download": "Lataa",
+  "desktop.updater.dialog.available.message": "OpenCoden uusi versio on nyt saatavana asennettavaksi.",
+  "desktop.updater.dialog.available.title": "Päivitys saatavilla ({{version}})",
   "command.category.suggested": "Ehdotetut",
   "command.category.view": "Näytä",
   "command.category.project": "Projekti",
@@ -1103,7 +1107,7 @@ export const dict = {
   "desktop.menu.ariaLabel": "OpenCode-valikko",
   "desktop.updater.dialog.checkFailed.message": "Päivitysten tarkistus epäonnistui.",
   "desktop.updater.dialog.checkFailed.title": "Päivitysvirhe",
-  "desktop.updater.dialog.upToDate.message": "Olet ajan tasalla.",
+  "desktop.updater.dialog.upToDate.message": "Olet ajan tasalla. ({{version}})",
   "desktop.updater.dialog.upToDate.title": "Ei päivityksiä",
   "desktop.updater.dialog.ready.message": "Päivitys {{version}} on ladattu. Käynnistetäänkö nyt uudelleen?",
   "desktop.updater.dialog.ready.title": "Päivitys valmis",

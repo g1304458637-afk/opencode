@@ -24,7 +24,7 @@ describe("parseMucVersion / compareMucVersions", () => {
     expect(parseMucVersion("1.18.31-muc.5")).toEqual({ major: 1, minor: 18, patch: 31, muc: 5 })
     expect(parseMucVersion("v1.18.31")).toEqual({ major: 1, minor: 18, patch: 31, muc: null })
     expect(parseMucVersion("1.18")).toBeNull()
-    expect(parseMucVersion("1.18.31-beta.1")).toBeNull()
+    expect(parseMucVersion("1.18.31-beta.1")).not.toBeNull()
   })
 
   test("muc 序号数字比较（muc.9 < muc.10）", () => {
@@ -94,9 +94,7 @@ describe("evaluateMucUpdate", () => {
   })
 
   test("低于 minSupported → forced（优先于 update-available）", () => {
-    expect(
-      evaluateMucUpdate("1.18.30-muc.1", manifest({ minSupported: "1.18.31-muc.1" })).status,
-    ).toBe("forced")
+    expect(evaluateMucUpdate("1.18.30-muc.1", manifest({ minSupported: "1.18.31-muc.1" })).status).toBe("forced")
   })
 
   test("已是最新 → up-to-date", () => {
@@ -118,4 +116,20 @@ describe("fetchMucUpdateManifest", () => {
     }) as unknown as typeof fetch
     expect(await fetchMucUpdateManifest(throws)).toBeNull()
   })
+})
+
+test("RC installations can update through prereleases to stable", () => {
+  const versions = ["2.0.6-rc.1", "2.0.6-rc.2", "2.0.6", "2.0.7"]
+  for (const [index, version] of versions.entries()) {
+    for (const newer of versions.slice(index + 1)) {
+      expect(compareMucVersions(version, newer)).toBeLessThan(0)
+      expect(evaluateMucUpdate(version, manifest({ version: newer })).status).toBe("update-available")
+    }
+  }
+  expect(compareMucVersions("2.0.6-hubu.9", "2.0.6-hubu.10")).toBeLessThan(0)
+  expect(compareMucVersions("2.0.6+build.1", "2.0.6+build.2")).toBe(0)
+  for (const version of ["2.0.6-garbage!", "2.0.6-rc.01", "2.0.6suffix"]) {
+    expect(parseMucUpdateManifest({ version })).toBeNull()
+    expect(compareMucVersions(version, "2.0.7")).toBeNull()
+  }
 })

@@ -1,4 +1,8 @@
 export const dict = {
+  "settings.updates.action.download": "ດາວໂຫຼດ",
+  "desktop.updater.dialog.download": "ດາວໂຫຼດ",
+  "desktop.updater.dialog.available.message": "ເວີຊັນໃໝ່ຂອງ OpenCode ມີໃຫ້ຕິດຕັ້ງແລ້ວ.",
+  "desktop.updater.dialog.available.title": "ມີອັບເດດ ({{version}})",
   "desktop.menu.app": "OpenCode",
   "desktop.menu.file": "ໄຟລ໌",
   "desktop.menu.edit": "ແກ້ໄຂ",
@@ -46,7 +50,7 @@ export const dict = {
   "desktop.menu.ariaLabel": "ເມນູ OpenCode",
   "desktop.updater.dialog.checkFailed.message": "ກວດສອບການອັບເດດບໍ່ສຳເລັດ.",
   "desktop.updater.dialog.checkFailed.title": "ອັບເດດຜິດພາດ",
-  "desktop.updater.dialog.upToDate.message": "ທ່ານອັບເດດແລ້ວ.",
+  "desktop.updater.dialog.upToDate.message": "ທ່ານອັບເດດແລ້ວ. ({{version}})",
   "desktop.updater.dialog.upToDate.title": "ບໍ່ມີການອັບເດດ",
   "desktop.updater.dialog.ready.message": "ດາວໂຫຼດອັບເດດ {{version}} ແລ້ວ. ຣີສະຕາດດຽວນີ້ບໍ?",
   "desktop.updater.dialog.ready.title": "ອັບເດດພ້ອມແລ້ວ",

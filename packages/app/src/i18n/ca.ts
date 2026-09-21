@@ -1,4 +1,8 @@
 export const dict = {
+  "settings.updates.action.download": "Baixa",
+  "desktop.updater.dialog.download": "Baixa",
+  "desktop.updater.dialog.available.message": "Una nova versió de OpenCode ja està disponible per instal·lar-la.",
+  "desktop.updater.dialog.available.title": "Actualització disponible ({{version}})",
   "desktop.menu.app": "OpenCode",
   "desktop.menu.file": "Fitxer",
   "desktop.menu.edit": "Edita",
@@ -46,7 +50,7 @@ export const dict = {
   "desktop.menu.ariaLabel": "menú OpenCode.",
   "desktop.updater.dialog.checkFailed.message": "La comprovació d'actualització ha fallat.",
   "desktop.updater.dialog.checkFailed.title": "Error d'actualització",
-  "desktop.updater.dialog.upToDate.message": "Estàs al dia.",
+  "desktop.updater.dialog.upToDate.message": "Estàs al dia. ({{version}})",
   "desktop.updater.dialog.upToDate.title": "No hi ha actualitzacions",
   "desktop.updater.dialog.ready.message": "Actualització {{version}} baixada. Reiniciar ara?",
   "desktop.updater.dialog.ready.title": "Actualització llesta",

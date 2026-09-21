@@ -3,6 +3,10 @@ import { dict as en } from "./en"
 type Keys = keyof typeof en
 
 export const dict = {
+  "settings.updates.action.download": "下載",
+  "desktop.updater.dialog.download": "下載",
+  "desktop.updater.dialog.available.message": "OpenCode 有新版本 可安裝。",
+  "desktop.updater.dialog.available.title": "有可用更新 ({{version}})",
   "desktop.menu.app": "OpenCode",
   "desktop.menu.file": "檔案",
   "desktop.menu.edit": "編輯",
@@ -51,7 +55,7 @@ export const dict = {
 
   "desktop.updater.dialog.checkFailed.message": "檢查更新失敗。",
   "desktop.updater.dialog.checkFailed.title": "更新錯誤",
-  "desktop.updater.dialog.upToDate.message": "目前已是最新版本。",
+  "desktop.updater.dialog.upToDate.message": "目前已是最新版本。 ({{version}})",
   "desktop.updater.dialog.upToDate.title": "沒有更新",
   "desktop.updater.dialog.ready.message": "已下載更新 {{version}}。要立即重新啟動嗎？",
   "desktop.updater.dialog.ready.title": "更新已就緒",

@@ -22,7 +22,7 @@ jobs:
       - uses: actions/checkout@v6
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version-file: .bun-version
+          bun-version-file: package.json
       - run: bun install --frozen-lockfile
       - name: Brand registry gate
         working-directory: packages/brand
@@ -30,6 +30,11 @@ jobs:
       - name: Desktop identity gates
         working-directory: packages/desktop
         run: bun test electron-builder.config.test.ts scripts/campus-config.test.ts scripts/muc-version.test.ts
+      - name: RC logic hotfix gates
+        working-directory: packages/desktop
+        env:
+          OPENCODE_CHANNEL: muc
+        run: bun test src/main/muc
       - name: Require canonical branch
         run: |
           candidate="${GITHUB_REF_NAME}"
@@ -54,17 +59,17 @@ jobs:
             os: macos-15
             platform: mac
             arch: arm64
-            pty: '@lydell/node-pty-darwin-arm64'
+            pty: "@lydell/node-pty-darwin-arm64"
           - target: mac-x64
             os: macos-15-intel
             platform: mac
             arch: x64
-            pty: '@lydell/node-pty-darwin-x64'
+            pty: "@lydell/node-pty-darwin-x64"
           - target: win-x64
             os: windows-2025
             platform: win
             arch: x64
-            pty: '@lydell/node-pty-win32-x64'
+            pty: "@lydell/node-pty-win32-x64"
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -74,7 +79,7 @@ jobs:
       - uses: actions/checkout@v6
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version-file: .bun-version
+          bun-version-file: package.json
       - name: Install dependencies
         working-directory: .
         run: bun install --frozen-lockfile
@@ -82,7 +87,7 @@ jobs:
         env:
           OPENCODE_CHANNEL: ${{ matrix.brand }}
           BRAND: ${{ matrix.brand }}
-          CAMPUS_LOCAL_BUILD: '1'
+          CAMPUS_LOCAL_BUILD: "1"
           CAMPUS_BUILD_OUTPUT: dist/${{ matrix.brand }}-${{ matrix.target }}
           MUC_PTY_PKG: ${{ matrix.pty }}
         run: |
@@ -92,7 +97,7 @@ jobs:
         env:
           OPENCODE_CHANNEL: ${{ matrix.brand }}
           BRAND: ${{ matrix.brand }}
-          CAMPUS_LOCAL_BUILD: '1'
+          CAMPUS_LOCAL_BUILD: "1"
           CAMPUS_BUILD_OUTPUT: dist/${{ matrix.brand }}-${{ matrix.target }}
           CAMPUS_TARGET: ${{ matrix.target }}
         run: bun e2e/package-smoke.ts

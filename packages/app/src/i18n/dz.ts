@@ -1,4 +1,8 @@
 export const dict: Record<string, string> = {
+  "settings.updates.action.download": "ཕབ་ལེན་འབད།",
+  "desktop.updater.dialog.download": "ཕབ་ལེན་འབད།",
+  "desktop.updater.dialog.available.message": "OpenCode གི་ཐོན་རིམ་གསརཔ་ཅིག་ ད་ལྟོ་གཞི་བཙུགས་འབད་ནི་ལུ་འཐོབ་ཚུགས།",
+  "desktop.updater.dialog.available.title": "དུས་མཐུན་བཟོ་ཚུགས། ({{version}})",
   "desktop.menu.app": "OpenCode",
   "desktop.menu.file": "ཡིག༌སྣོད",
   "desktop.menu.edit": "ཞུན༌དག",
@@ -46,7 +50,7 @@ export const dict: Record<string, string> = {
   "desktop.menu.ariaLabel": "OpenCode དཀར་ཆག།",
   "desktop.updater.dialog.checkFailed.message": "དུས་མཐུན་ཞིབ་དཔྱད་འཐུས་ཤོར་འབྱུང་ཡོདཔ།",
   "desktop.updater.dialog.checkFailed.title": "དུས་མཐུན་འཛོལ་བ།",
-  "desktop.updater.dialog.upToDate.message": "ཁྱོད་དུས་དང་བསྟུན།",
+  "desktop.updater.dialog.upToDate.message": "ཁྱོད་དུས་དང་བསྟུན། ({{version}})",
   "desktop.updater.dialog.upToDate.title": "དུས་མཐུན་མེད།",
   "desktop.updater.dialog.ready.message": "དུས་མཐུན་ {{version}} ཕབ་ལེན་འབད་ཡོདཔ། ད་ལྟོ་ལོག་འགོ་བཙུགས?",
   "desktop.updater.dialog.ready.title": "དུས་མཐུན་བཟོ་ནི་གྲ་སྒྲིག།",

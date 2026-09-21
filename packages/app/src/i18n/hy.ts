@@ -1,4 +1,8 @@
 export const dict = {
+  "settings.updates.action.download": "Ներբեռնել",
+  "desktop.updater.dialog.download": "Ներբեռնել",
+  "desktop.updater.dialog.available.message": "OpenCode-ի նոր տարբերակը այժմ հասանելի է տեղադրման համար:",
+  "desktop.updater.dialog.available.title": "Թարմացումը հասանելի է ({{version}})",
   "desktop.menu.app": "OpenCode",
   "desktop.menu.file": "Ֆայլ",
   "desktop.menu.edit": "Խմբագրել",
@@ -46,7 +50,7 @@ export const dict = {
   "desktop.menu.ariaLabel": "OpenCode մենյու",
   "desktop.updater.dialog.checkFailed.message": "Թարմացման ստուգումը ձախողվեց։",
   "desktop.updater.dialog.checkFailed.title": "Թարմացման սխալ",
-  "desktop.updater.dialog.upToDate.message": "Դուք արդիական եք",
+  "desktop.updater.dialog.upToDate.message": "Դուք արդիական եք ({{version}})",
   "desktop.updater.dialog.upToDate.title": "Թարմացումներ չկան",
   "desktop.updater.dialog.ready.message": "Թարմացումը {{version}} ներբեռնվել է։ Վերագործարկե՞լ հիմա:",
   "desktop.updater.dialog.ready.title": "Թարմացումը պատրաստ է",

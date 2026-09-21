@@ -1,4 +1,8 @@
 export const dict: Record<string, string> = {
+  "settings.updates.action.download": "ডাউনলোড করুন",
+  "desktop.updater.dialog.download": "ডাউনলোড করুন",
+  "desktop.updater.dialog.available.message": "OpenCode এর একটি নতুন সংস্করণ এখন ইনস্টল করার জন্য উপলব্ধ৷",
+  "desktop.updater.dialog.available.title": "আপডেট উপলব্ধ ({{version}})",
   "desktop.menu.app": "OpenCode",
   "desktop.menu.file": "ফাইল",
   "desktop.menu.edit": "সম্পাদনা করুন",
@@ -46,7 +50,7 @@ export const dict: Record<string, string> = {
   "desktop.menu.ariaLabel": "OpenCode মেনু",
   "desktop.updater.dialog.checkFailed.message": "আপডেট চেক ব্যর্থ হয়েছে.",
   "desktop.updater.dialog.checkFailed.title": "আপডেট ত্রুটি",
-  "desktop.updater.dialog.upToDate.message": "আপনি আপ টু ডেট.",
+  "desktop.updater.dialog.upToDate.message": "আপনি আপ টু ডেট. ({{version}})",
   "desktop.updater.dialog.upToDate.title": "কোন আপডেট নেই",
   "desktop.updater.dialog.ready.message": "আপডেট {{version}} ডাউনলোড করা হয়েছে। এখন রিস্টার্ট করবেন?",
   "desktop.updater.dialog.ready.title": "আপডেট প্রস্তুত",

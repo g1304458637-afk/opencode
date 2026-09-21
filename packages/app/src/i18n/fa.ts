@@ -1,4 +1,8 @@
 export const dict = {
+  "settings.updates.action.download": "دانلود",
+  "desktop.updater.dialog.download": "دانلود",
+  "desktop.updater.dialog.available.message": "نسخه جدیدی از OpenCode اکنون برای نصب در دسترس است.",
+  "desktop.updater.dialog.available.title": "به روز رسانی موجود است ({{version}})",
   "desktop.menu.app": "OpenCode",
   "desktop.menu.file": "فایل",
   "desktop.menu.edit": "ویرایش کنید",
@@ -46,7 +50,7 @@ export const dict = {
   "desktop.menu.ariaLabel": "منوی OpenCode",
   "desktop.updater.dialog.checkFailed.message": "بررسی به‌روزرسانی انجام نشد.",
   "desktop.updater.dialog.checkFailed.title": "خطای آپدیت",
-  "desktop.updater.dialog.upToDate.message": "شما به روز هستید.",
+  "desktop.updater.dialog.upToDate.message": "شما به روز هستید. ({{version}})",
   "desktop.updater.dialog.upToDate.title": "بدون به روز رسانی",
   "desktop.updater.dialog.ready.message": "به روز رسانی {{version}} دانلود شد. اکنون دوباره راه اندازی شود؟",
   "desktop.updater.dialog.ready.title": "به روز رسانی آماده است",

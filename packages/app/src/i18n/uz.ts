@@ -1,4 +1,8 @@
 export const dict = {
+  "settings.updates.action.download": "Yuklab olish",
+  "desktop.updater.dialog.download": "Yuklab olish",
+  "desktop.updater.dialog.available.message": "OpenCode yangi versiyasi endi oʻrnatish mumkin.",
+  "desktop.updater.dialog.available.title": "Yangilanish mavjud ({{version}})",
   "desktop.menu.app": "OpenCode",
   "desktop.menu.file": "Fayl",
   "desktop.menu.edit": "Tahrirlash",
@@ -46,7 +50,7 @@ export const dict = {
   "desktop.menu.ariaLabel": "OpenCode menyusi",
   "desktop.updater.dialog.checkFailed.message": "Yangilanish tekshiruvi amalga oshmadi.",
   "desktop.updater.dialog.checkFailed.title": "Yangilash xatosi",
-  "desktop.updater.dialog.upToDate.message": "Siz yangilangansiz.",
+  "desktop.updater.dialog.upToDate.message": "Siz yangilangansiz. ({{version}})",
   "desktop.updater.dialog.upToDate.title": "Yangilanishlar yoʻq",
   "desktop.updater.dialog.ready.message": "{{version}} yangilanishi yuklab olindi. Hozir qayta ishga tushirilsinmi?",
   "desktop.updater.dialog.ready.title": "Yangilanish tayyor",

@@ -1,4 +1,8 @@
 export const dict = {
+  "settings.updates.action.download": "Laadi alla",
+  "desktop.updater.dialog.download": "Laadi alla",
+  "desktop.updater.dialog.available.message": "Rakenduse OpenCode uus versioon on nüüd installimiseks saadaval.",
+  "desktop.updater.dialog.available.title": "Värskendus saadaval ({{version}})",
   "desktop.menu.app": "OpenCode",
   "desktop.menu.file": "Fail",
   "desktop.menu.edit": "Muuda",
@@ -46,7 +50,7 @@ export const dict = {
   "desktop.menu.ariaLabel": "OpenCode menüü",
   "desktop.updater.dialog.checkFailed.message": "Värskenduskontroll ebaõnnestus.",
   "desktop.updater.dialog.checkFailed.title": "Värskendusviga",
-  "desktop.updater.dialog.upToDate.message": "Oled kursis.",
+  "desktop.updater.dialog.upToDate.message": "Oled kursis. ({{version}})",
   "desktop.updater.dialog.upToDate.title": "Värskendusi pole",
   "desktop.updater.dialog.ready.message": "Värskendus {{version}} on alla laaditud. Kas alustada kohe uuesti?",
   "desktop.updater.dialog.ready.title": "Värskendus valmis",
