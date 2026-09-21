@@ -4294,7 +4294,7 @@ describe("ProviderTransform.variants", () => {
     })
   })
 
-  test("glm returns empty object", () => {
+  test("non-glm-5.2 glm returns low/high/max effort variants for openai-compatible providers", () => {
     const model = createMockModel({
       id: "glm/glm-4",
       providerID: "glm",
@@ -4302,6 +4302,24 @@ describe("ProviderTransform.variants", () => {
         id: "glm-4",
         url: "https://api.glm.com",
         npm: "@ai-sdk/openai-compatible",
+      },
+    })
+    const result = ProviderTransform.variants(model)
+    expect(result).toEqual({
+      low: { reasoningEffort: "low" },
+      high: { reasoningEffort: "high" },
+      max: { reasoningEffort: "max" },
+    })
+  })
+
+  test("non-glm-5.2 glm keeps empty variants for non-openai-compatible providers", () => {
+    const model = createMockModel({
+      id: "glm/glm-4",
+      providerID: "glm",
+      api: {
+        id: "glm-4",
+        url: "https://api.glm.com",
+        npm: "@ai-sdk/deepinfra",
       },
     })
     const result = ProviderTransform.variants(model)

@@ -811,6 +811,20 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
       max: { reasoningEffort: "max" },
     }
   }
+  // MUC: 动态模型思考强度档位 —— glm* 经 openai-compatible 统一走 reasoning_effort。
+  // glm-5.2 保留上方原有 high/max 档位名，避免破坏已有用户配置；
+  // 其余 glm（如 glm-5.3-flash）暴露 low/high/max 三档（非 glm-5.3 的 low 会被
+  // 网关归一化为 high，档位名保持不变）。非 openai-compatible 的 glm 维持原行为。
+  if (
+    (id.includes("glm") || model.api.id.toLowerCase().includes("glm")) &&
+    model.api.npm === "@ai-sdk/openai-compatible"
+  ) {
+    return {
+      low: { reasoningEffort: "low" },
+      high: { reasoningEffort: "high" },
+      max: { reasoningEffort: "max" },
+    }
+  }
   if (glm52 && model.api.npm === "@ai-sdk/anthropic") {
     return {
       high: { effort: "high" },

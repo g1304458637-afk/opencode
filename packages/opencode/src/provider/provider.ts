@@ -38,7 +38,10 @@ const OPENAI_HEADER_TIMEOUT_DEFAULT = 300_000
 // MUC harness: 为网关动态发现的模型构造安全默认元数据（已知家族给更大上下文）
 function mucDynamicModel(providerID: string, modelID: string, baseURL: string, npm?: string): Model {
   const context = modelID.startsWith("claude") ? 200_000 : 128_000
-  return {
+  // MUC: 动态模型思考强度档位 —— 按 ID 推断 reasoning 能力（glm 家族 / deepseek-r* / thinking，均大小写不敏感）
+  const lower = modelID.toLowerCase()
+  const reasoning = lower.includes("glm") || lower.startsWith("deepseek-r") || lower.includes("thinking")
+  const model: Model = {
     id: ModelV2.ID.make(modelID),
     providerID: ProviderV2.ID.make(providerID),
     name: modelID,
@@ -51,7 +54,7 @@ function mucDynamicModel(providerID: string, modelID: string, baseURL: string, n
     limit: { context, output: 32_000 },
     capabilities: {
       temperature: true,
-      reasoning: false,
+      reasoning,
       attachment: false,
       toolcall: true,
       interleaved: false,
@@ -61,6 +64,11 @@ function mucDynamicModel(providerID: string, modelID: string, baseURL: string, n
     release_date: "",
     variants: {},
   }
+  // MUC: 动态模型思考强度档位 —— 动态发现的模型不经过 models.dev/config 的
+  // variants 推导路径（且这里已是空对象而非 undefined），需在此主动计算一次，
+  // UI 的思考强度选择器依赖 model.variants 非空才显示。
+  model.variants = mapValues(ProviderTransform.variants(model), (v) => v)
+  return model
 }
 
 function wrapSSE(res: Response, ms: number, ctl: AbortController) {
