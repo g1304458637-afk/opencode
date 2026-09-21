@@ -1,3 +1,4 @@
+import { campusConfig } from "./scripts/campus-config"
 import { sentryVitePlugin } from "@sentry/vite-plugin"
 import { defineConfig } from "electron-vite"
 import appPlugin from "@opencode-ai/app/vite"
@@ -15,12 +16,8 @@ const channel = (() => {
 
 // MUC Harness: muc 渠道渲染层版本注入（只读 release.json，绝不写回 package.json）。
 // 其余渠道不定义该宏，渲染层回退到自身 package.json 版本（上游 prod/beta 行为不变）。
-const mucVersion = (() => {
-  if (channel !== "muc") return null
-  const release = JSON.parse(readFileSync(new URL("./resources/muc/release.json", import.meta.url), "utf8"))
-  if (typeof release.version !== "string") throw new Error("resources/muc/release.json: missing version")
-  return release.version
-})()
+const campus = campusConfig()
+const mucVersion = campus.version
 
 const nodePtyPkg = (() => {
   // MUC Harness: node-pty 平台包必须跟随【打包目标】平台+架构，而不是构建机的
@@ -51,6 +48,7 @@ export default defineConfig({
   main: {
     define: {
       "import.meta.env.OPENCODE_CHANNEL": JSON.stringify(channel),
+      __CAMPUS_BRAND_CONFIG__: JSON.stringify(campus.brand),
     },
     build: {
       rollupOptions: {
@@ -96,6 +94,7 @@ const require = __cjs_mod__.createRequire(import.meta.url);
     ],
   },
   preload: {
+    define: { __CAMPUS_BRAND_CONFIG__: JSON.stringify(campus.brand) },
     build: {
       rollupOptions: {
         input: { index: "src/preload/index.ts" },
@@ -110,6 +109,7 @@ const require = __cjs_mod__.createRequire(import.meta.url);
     define: {
       // MUC Harness: 渲染层通道（titlebar 徽标按此判断；muc 不显示 DEV 徽标）
       "import.meta.env.VITE_OPENCODE_CHANNEL": JSON.stringify(channel),
+      __CAMPUS_BRAND_CONFIG__: JSON.stringify(campus.brand),
       // MUC Harness: muc 渠道版本（与 Info.plist / latest*.yml 同源于 release.json）
       ...(mucVersion ? { "import.meta.env.MUC_VERSION": JSON.stringify(mucVersion) } : {}),
     },

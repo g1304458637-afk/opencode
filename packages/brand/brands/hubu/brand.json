@@ -1,5 +1,19 @@
 {
   "id": "hubu",
+  "credentialNamespace": "hubu",
+  "storageNamespace": "cn.edu.hubu.harness",
+  "artifactPrefix": "hubu-ai",
+  "assets": {
+    "hero": "hubu-hero.png",
+    "iconDirectory": "hubu"
+  },
+  "updates": {
+    "feed": "http://localhost:8081/downloads/hubu-updates/stable",
+    "manifest": "http://localhost:8081/downloads/latest-hubu-ai.json",
+    "downloadPage": "http://localhost:8081/hubu",
+    "downloadBase": "http://localhost:8081/downloads"
+  },
+  "resetPath": "/v1/muc/reset-with-card",
   "campus": true,
   "name": "湖北大学",
   "englishName": "Hubei University",

@@ -4,7 +4,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs"
 import { homedir } from "node:os"
 import { join } from "node:path"
 import { CHANNEL } from "./constants"
-import { BRANDS } from "@opencode-ai/brand"
+import { BRANDS, resolveBrand } from "@opencode-ai/brand"
 import { getStore } from "./store"
 
 const TAURI_MIGRATED_KEY = "tauriMigrated"
@@ -31,7 +31,7 @@ const TAURI_APP_IDS: Record<string, string> = {
   hubu: BRANDS.hubu.appId,
 }
 function tauriAppId() {
-  return app.isPackaged ? TAURI_APP_IDS[CHANNEL] : "ai.opencode.desktop.dev"
+  return resolveBrand().campus ? resolveBrand().appId : app.isPackaged ? TAURI_APP_IDS[CHANNEL] : "ai.opencode.desktop.dev"
 }
 
 // Migrate a single Tauri .dat file into the corresponding electron-store.

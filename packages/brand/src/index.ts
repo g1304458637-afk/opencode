@@ -28,7 +28,15 @@ export interface BrandColors {
   onDarkSoft: string
 }
 
+declare const __CAMPUS_BRAND_CONFIG__: BrandConfig | undefined
+
 export interface BrandConfig {
+  credentialNamespace: string
+  storageNamespace: string
+  artifactPrefix: string
+  assets: { hero: string; iconDirectory: string }
+  updates: { feed: string; manifest: string; downloadPage: string; downloadBase: string }
+  resetPath: string
   /** 稳定标识："muc" / "hubu"；基础品牌 "opencode"（campus=false） */
   id: string
   /** 是否校园品牌（决定是否显示品牌门/启动页） */
@@ -68,6 +76,19 @@ export interface BrandConfig {
 
 const MUC: BrandConfig = {
   id: "muc",
+  credentialNamespace: "muc",
+  storageNamespace: "cn.edu.muc.harness",
+  artifactPrefix: "mucode",
+  assets: { hero: "muc-campus.png", iconDirectory: "muc" },
+  updates: {
+    feed: "https://admin.wuxuexi.top/downloads/muc-updates/stable",
+    manifest: "https://admin.wuxuexi.top/downloads/latest-mucode.json",
+    downloadPage: "https://admin.wuxuexi.top/muc",
+    downloadBase: "https://admin.wuxuexi.top/downloads",
+  },
+  // Phase 3 shared API-key transport; the route name is historical, not a credential namespace.
+  resetPath: "/v1/muc/reset-with-card",
+
   campus: true,
   name: "中央民族大学",
   englishName: "Minzu University of China",
@@ -111,6 +132,19 @@ const MUC: BrandConfig = {
 
 const HUBU: BrandConfig = {
   id: "hubu",
+  credentialNamespace: "hubu",
+  storageNamespace: "cn.edu.hubu.harness",
+  artifactPrefix: "hubu-ai",
+  assets: { hero: "hubu-hero.png", iconDirectory: "hubu" },
+  updates: {
+    feed: "http://localhost:8081/downloads/hubu-updates/stable",
+    manifest: "http://localhost:8081/downloads/latest-hubu-ai.json",
+    downloadPage: "http://localhost:8081/hubu",
+    downloadBase: "http://localhost:8081/downloads",
+  },
+  // Phase 3 shared API-key transport; the route name is historical, not a credential namespace.
+  resetPath: "/v1/muc/reset-with-card",
+
   campus: true,
   name: "湖北大学",
   englishName: "Hubei University",
@@ -158,6 +192,19 @@ const HUBU: BrandConfig = {
 /** 基础品牌：dev/beta/prod 通道回退到 OpenCode 上游品牌（无校园门/主题） */
 const OPENCODE: BrandConfig = {
   id: "opencode",
+  credentialNamespace: "opencode",
+  storageNamespace: "ai.opencode.desktop",
+  artifactPrefix: "opencode-desktop",
+  assets: { hero: "muc-campus.png", iconDirectory: "opencode" },
+  updates: {
+    feed: "",
+    manifest: "",
+    downloadPage: "",
+    downloadBase: "",
+  },
+  // Phase 3 shared API-key transport; the route name is historical, not a credential namespace.
+  resetPath: "/v1/muc/reset-with-card",
+
   campus: false,
   name: "OpenCode",
   englishName: "OpenCode",
@@ -207,6 +254,7 @@ export function resolveBrandId(env?: { BRAND?: string; OPENCODE_CHANNEL?: string
 }
 
 export function resolveBrand(env?: { BRAND?: string; OPENCODE_CHANNEL?: string }): BrandConfig {
+  if (!env && typeof __CAMPUS_BRAND_CONFIG__ !== "undefined") return __CAMPUS_BRAND_CONFIG__
   return BRANDS[resolveBrandId(env)] ?? MUC
 }
 

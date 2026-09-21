@@ -1,5 +1,19 @@
 {
   "id": "opencode",
+  "credentialNamespace": "opencode",
+  "storageNamespace": "ai.opencode.desktop",
+  "artifactPrefix": "opencode-desktop",
+  "assets": {
+    "hero": "muc-campus.png",
+    "iconDirectory": "opencode"
+  },
+  "updates": {
+    "feed": "",
+    "manifest": "",
+    "downloadPage": "",
+    "downloadBase": ""
+  },
+  "resetPath": "/v1/muc/reset-with-card",
   "campus": false,
   "name": "OpenCode",
   "englishName": "OpenCode",

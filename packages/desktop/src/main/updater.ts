@@ -6,19 +6,21 @@ import { getLogger } from "./logging"
 import { getStore } from "./store"
 import { setAppQuitting } from "./windows"
 import { nativeT } from "./native-translations"
+import { resolveBrand } from "@opencode-ai/brand"
 
 const { autoUpdater } = pkg
 const key = "ready"
 
 // MUC Harness: manual-install 模式的官方下载地址映射（平台+架构 → /downloads 固定别名）
 export function mucDownloadUrl(): string {
-  const base = "https://admin.wuxuexi.top/downloads"
-  if (process.platform === "darwin") return process.arch === "arm64" ? `${base}/mucode-mac-arm64.dmg` : `${base}/mucode-mac-x64.dmg`
-  if (process.platform === "win32") return `${base}/mucode-win-x64.exe`
-  return `${base}/muc`
+  const brand = resolveBrand()
+  const base = brand.updates.downloadBase.replace(/\/+$/, "")
+  if (process.platform === "darwin") return `${base}/${process.arch === "arm64" ? brand.downloads.macArm : brand.downloads.macIntel}`
+  if (process.platform === "win32") return `${base}/${brand.downloads.win}`
+  return brand.updates.downloadPage
 }
 
-const MANUAL_INSTALL = CHANNEL === "muc" && MUC_UPDATE_MODE === "manual-install"
+const MANUAL_INSTALL = resolveBrand().campus && MUC_UPDATE_MODE === "manual-install"
 
 export function setupAutoUpdater(stop: () => Promise<void>) {
   const logger = getLogger()
@@ -26,10 +28,10 @@ export function setupAutoUpdater(stop: () => Promise<void>) {
   autoUpdater.channel = "latest"
   autoUpdater.allowPrerelease = false
   // MUC Harness: muc 渠道禁止降级（回滚策略=发更高修复版，非降级覆盖）；上游 prod/beta 维持 true
-  autoUpdater.allowDowngrade = CHANNEL !== "muc"
+  autoUpdater.allowDowngrade = !resolveBrand().campus
   autoUpdater.autoDownload = false
   // MUC Harness: muc 渠道"稍后"语义 = 正常退出后静默安装（Phase 6 UX）；上游 prod/beta 维持 false
-  autoUpdater.autoInstallOnAppQuit = CHANNEL === "muc"
+  autoUpdater.autoInstallOnAppQuit = false
   logger.log("auto updater configured", {
     channel: autoUpdater.channel,
     allowPrerelease: autoUpdater.allowPrerelease,

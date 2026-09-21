@@ -4,7 +4,7 @@ import { execSync } from "node:child_process"
 
 export default async function (context) {
   if (context.electronPlatformName !== "darwin") return
-  if (process.env.OPENCODE_CHANNEL !== "muc") return
+  if (!["muc", "hubu"].includes(process.env.OPENCODE_CHANNEL)) return
   const appPath = `${context.appOutDir}/${context.packager.appInfo.productFilename}.app`
   console.log(`MUC Harness: after-sign v3 (xattr+codesign retry) -> ${appPath}`)
 

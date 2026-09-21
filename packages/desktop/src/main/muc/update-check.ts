@@ -3,9 +3,10 @@
 // 防第三方网关劫持下载源）。只做"提示"，不自动下载安装——muc 通道关闭
 // electron-updater 的初始动机（自有分发 + ad-hoc 签名）保持不变。
 
-export const MUC_OFFICIAL_GATEWAY = "https://admin.wuxuexi.top"
-export const MUC_MANIFEST_URL = `${MUC_OFFICIAL_GATEWAY}/downloads/latest-mucode.json`
-export const MUC_DOWNLOAD_PAGE = `${MUC_OFFICIAL_GATEWAY}/muc`
+import { resolveBrand } from "@opencode-ai/brand"
+export const MUC_OFFICIAL_GATEWAY = new URL(resolveBrand().updates.downloadPage || "https://opencode.ai").origin
+export const MUC_MANIFEST_URL = resolveBrand().updates.manifest
+export const MUC_DOWNLOAD_PAGE = resolveBrand().updates.downloadPage
 export const MUC_UPDATE_CHECK_TIMEOUT_MS = 6_000
 // 渲染层轮询/启动检查共用同一缓存，避免频繁拉取
 export const MUC_UPDATE_CHECK_TTL_MS = 30 * 60 * 1000
@@ -67,6 +68,7 @@ type ParsedVersion = { major: number; minor: number; patch: number; muc: number 
 
 export function parseMucVersion(input: string): ParsedVersion | null {
   const raw = input.trim().replace(/^v/, "")
+  if (!/^\d+\.\d+\.\d+(?:-(?:muc|hubu)\.\d+)?$/.test(raw)) return null
   const [core, prerelease] = raw.split("-", 2)
   const parts = (core ?? "").split(".")
   if (parts.length !== 3) return null
@@ -75,7 +77,7 @@ export function parseMucVersion(input: string): ParsedVersion | null {
 
   let muc: number | null = null
   if (prerelease !== undefined) {
-    const m = /^muc\.(\d+)$/.exec(prerelease)
+    const m = /^(?:muc|hubu)\.(\d+)$/.exec(prerelease)
     if (!m) return null
     muc = Number.parseInt(m[1]!, 10)
   }

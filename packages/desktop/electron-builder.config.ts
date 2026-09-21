@@ -1,3 +1,4 @@
+import { campusConfig } from "./scripts/campus-config"
 import { execFile } from "node:child_process"
 import { readFileSync } from "node:fs"
 import path from "node:path"
@@ -39,37 +40,11 @@ const channel = (() => {
 // MUC Harness: 更新 feed 基址可被环境变量覆盖（本地 E2E 指向 127.0.0.1 的临时 feed）。
 // 只影响 muc 渠道；prod/beta 的 GitHub publish 不受影响。
 // #5 HTTPS 守卫：正式 feed 强制 https；仅允许 localhost/127.0.0.1 用 http（测试 feed）。
-const MUC_UPDATE_FEED_BASE = (() => {
-  const base = process.env.MUC_UPDATE_FEED_URL ?? "https://admin.wuxuexi.top/downloads/muc-updates/stable"
-  const isLocalHttp = base.startsWith("http://") && /\/\/(127\.0\.0\.1|localhost|\[::1\])[:/]/.test(base)
-  if (base.startsWith("http://") && !isLocalHttp) {
-    throw new Error(`MUC update feed must use https (got ${base}); localhost http is allowed for E2E only`)
-  }
-  return base
-})()
-
-// MUC Harness: MUC 版本唯一真实来源（resources/muc/release.json），与上游 OpenCode
-// workspace 版本解耦。extraMetadata.version 写进 Info.plist / asar package.json /
-// latest.yml / 产物文件名，保证 app.getVersion()（= electron-updater currentVersion）、
-// macOS CFBundleShortVersionString、UI 显示版本、update feed 版本四方一致。
-const mucVersion = (() => {
-  if (channel !== "muc") return null
-  const release = JSON.parse(
-    readFileSync(path.join(packageDir, "resources", "muc", "release.json"), "utf8"),
-  ) as { version?: unknown }
-  if (typeof release.version !== "string") throw new Error("resources/muc/release.json: missing version")
-  return release.version
-})()
-
-// 校园品牌档案镜像（node 侧 fs 读取，避免 TS 模块解析差异）
-const brandOf = (id: string) =>
-  JSON.parse(readFileSync(path.join(packageDir, "../brand/brands", id, "brand.json"), "utf-8")) as {
-    appId: string
-    appName: string
-    protocolScheme: string
-    downloads: { macArm: string; macIntel: string; win: string }
-  }
-const HUBU = brandOf("hubu")
+const campus = campusConfig()
+const brand = campus.brand
+const MUC_UPDATE_FEED_BASE = brand.updates.feed
+const mucVersion = campus.version
+const HUBU = brand
 
 const APP_IDS = {
   dev: "ai.opencode.desktop.dev",
@@ -81,13 +56,9 @@ const APP_IDS = {
 
 const getBase = (appId: string): Configuration => ({
   artifactName:
-    channel === "muc"
-      ? "mucode-${os}-${arch}.${ext}"
-      : channel === "hubu"
-        ? "hubu-ai-${os}-${arch}.${ext}"
-        : "opencode-desktop-${os}-${arch}.${ext}",
+    brand.campus ? `${brand.artifactPrefix}-\${os}-\${arch}.\${ext}` : "opencode-desktop-${os}-${arch}.${ext}",
   directories: {
-    output: "dist",
+    output: process.env.CAMPUS_BUILD_OUTPUT || "dist",
     buildResources: "resources",
   },
   // Linux launchers are .desktop files, so this is the desktop file name,
@@ -186,6 +157,7 @@ function getConfig() {
         rpm: { packageName: "opencode-beta", fpm: [metainfoFpm(appId)] },
       }
     }
+    case "hubu":
     case "muc": {
       // MUC Harness: 双模式签名。
       // - 默认（无凭据）：ad-hoc（identity:null + afterSign 钩子做 ad-hoc 签名），
@@ -195,7 +167,7 @@ function getConfig() {
       //   + notarize（公证凭据经 APPLE_ID/APPLE_APP_SPECIFIC_PASSWORD/APPLE_TEAM_ID 或
       //   App Store Connect API key 环境注入），不跑 ad-hoc afterSign 钩子。
       // 凭据只走环境变量/Keychain/CI secrets，仓库内禁止出现任何证书或密钥文件。
-      const macSigningIdentity = process.env.MUC_SIGN_IDENTITY ?? process.env.CSC_NAME ?? null
+      const macSigningIdentity = process.env[`${brand.id.toUpperCase()}_SIGN_IDENTITY`] ?? process.env.CSC_NAME ?? null
       const winCertificate = process.env.WIN_CSC_LINK ?? process.env.CSC_LINK ?? null
       // MUC Harness: 目标平台/架构由 release 脚本经 MUC_PTY_PKG 注入（native 架构错配防线之一）
       const ptyTarget = (process.env.MUC_PTY_PKG ?? `@lydell/node-pty-${process.platform}-${process.arch}`)
@@ -206,11 +178,11 @@ function getConfig() {
       return {
         ...base,
         appId,
-        productName: "mucode",
+        productName: brand.appName,
         // MUC Harness: 打包版本注入 1.18.31-muc.N（app.getVersion() 供更新自检与 UA 上报使用）
         extraMetadata: { ...base.extraMetadata, ...(mucVersion ? { version: mucVersion } : {}) },
-        icon: "resources/muc/icon.icns",
-        protocols: { name: "MUC Connect", schemes: ["muc", "opencode"] },
+        icon: `resources/${brand.assets.iconDirectory}/icon.icns`,
+        protocols: { name: `${brand.shortName} Connect`, schemes: [brand.protocolScheme] },
         // MUC Harness: muc 自有更新源（generic provider，无账号 token）。
         // 注意必须用 ${os}（目标平台键 mac/win，electron-builder 按产物展开）——
         // ${platform} 展开的是构建机 platform，交叉打包会带错 feed 目录。
@@ -246,17 +218,17 @@ function getConfig() {
         // zip 供 latest-mac.yml 引用（feed 内永不覆盖），dmg 由发布脚本写 /downloads 固定名别名。
         mac: {
           ...base.mac,
-          icon: "resources/muc/icon.icns",
+          icon: `resources/${brand.assets.iconDirectory}/icon.icns`,
           hardenedRuntime: true,
           entitlements: "resources/entitlements.plist",
           entitlementsInherit: "resources/entitlements.plist",
-          artifactName: "mucode-\${version}-mac-\${arch}.\${ext}",
+          artifactName: `${brand.artifactPrefix}-\${version}-mac-\${arch}.\${ext}`,
           ...(macSigningIdentity
             ? { identity: macSigningIdentity, notarize: true }
             : { identity: null, notarize: false }),
         },
         ...(macSigningIdentity ? {} : { afterSign: "scripts/after-sign-mac.js" }),
-        dmg: { ...base.dmg, icon: "resources/muc/icon.icns" },
+        dmg: { ...base.dmg, icon: `resources/${brand.assets.iconDirectory}/icon.icns` },
         // MUC Harness: 跨平台构建免 wine（exe 不内嵌图标/版本信息，v1 可接受）。
         // 正式 Windows 签名：设 WIN_CSC_LINK(.pfx) + WIN_CSC_KEY_PASSWORD（或 CSC_LINK/CSC_KEY_PASSWORD）
         // 后启用 signtool 签名与 exe 元数据编辑；无凭据时保持 unsigned（WAITING_FOR_WINDOWS_SIGNING_CERT）。
@@ -274,37 +246,14 @@ function getConfig() {
               }
             : { signAndEditExecutable: false }),
           target: [{ target: "nsis", arch: ["x64"] }],
-          icon: "resources/muc/icon.ico",
+          icon: `resources/${brand.assets.iconDirectory}/icon.ico`,
         },
         nsis: {
           oneClick: true,
-          installerIcon: "resources/muc/icon.ico",
-          uninstallerIcon: "resources/muc/icon.ico",
+          installerIcon: `resources/${brand.assets.iconDirectory}/icon.ico`,
+          uninstallerIcon: `resources/${brand.assets.iconDirectory}/icon.ico`,
           // MUC Harness: 更新 feed 引用版本化 exe；/downloads/mucode-win-x64.exe 由发布脚本写别名
-          artifactName: "mucode-\${version}-win-\${arch}.\${ext}",
-        },
-      }
-    }
-    case "hubu": {
-      return {
-        ...base,
-        appId,
-        productName: HUBU.appName,
-        icon: "resources/hubu/icon.icns",
-        protocols: { name: "HUBU Connect", schemes: [HUBU.protocolScheme, "opencode"] },
-        mac: { ...base.mac, icon: "resources/hubu/icon.icns", identity: null },
-        afterSign: "scripts/after-sign-mac.js",
-        dmg: { ...base.dmg, icon: "resources/hubu/icon.icns" },
-        // 与 muc 一致：跨平台构建免 wine（exe 不内嵌图标/版本信息，v1 可接受）
-        win: {
-          signAndEditExecutable: false,
-          target: [{ target: "nsis", arch: ["x64"] }],
-          icon: "resources/hubu/icon.ico",
-        },
-        nsis: {
-          oneClick: true,
-          installerIcon: "resources/hubu/icon.ico",
-          uninstallerIcon: "resources/hubu/icon.ico",
+          artifactName: `${brand.artifactPrefix}-\${version}-win-\${arch}.\${ext}`,
         },
       }
     }

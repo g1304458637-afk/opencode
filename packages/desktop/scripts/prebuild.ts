@@ -13,7 +13,7 @@ await $`bun ./scripts/copy-metainfo.ts ${channel}`
 
 await $`cd ../opencode && bun script/build-node.ts`
 // MUC Harness: v1 sidecar 不执行该 CLI（仅 v2 路径使用）；网络不通时复用已有副本
-if (channel === "dev" || channel === "muc" || channel === "hubu") {
+if (channel === "dev") {
   try {
     await downloadCliToResources()
   } catch (error) {

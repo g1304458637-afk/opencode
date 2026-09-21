@@ -1,3 +1,4 @@
+import { resolveBrand, BRANDS } from "@opencode-ai/brand"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { app, utilityProcess } from "electron"
@@ -51,6 +52,17 @@ export function preferAppEnv(userDataPath: string) {
     OPENCODE_CLIENT: "desktop",
     XDG_STATE_HOME: process.env.XDG_STATE_HOME ?? userDataPath,
   })
+  const brand = resolveBrand()
+  if (brand.campus) {
+    process.env.BRAND = brand.id
+    process.env.OPENCODE_CHANNEL = brand.id
+    for (const [key, dir] of Object.entries({ XDG_DATA_HOME: "data", XDG_CONFIG_HOME: "config", XDG_CACHE_HOME: "cache", XDG_STATE_HOME: "state" })) {
+      process.env[key] = `${userDataPath}/runtime/${dir}`
+    }
+    for (const other of Object.values(BRANDS)) {
+      if (other.campus && other.id !== brand.id) delete process.env[other.apiKeyEnvVar]
+    }
+  }
   return shellEnv
 }
 

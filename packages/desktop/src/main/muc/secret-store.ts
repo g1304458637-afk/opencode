@@ -34,7 +34,7 @@ export class MucSecretStore {
 
   constructor(userDataDir: string) {
     // 各品牌凭据文件隔离（muc 保持历史文件名，老用户凭据不失效）
-    const prefix = resolveBrand().id === "muc" ? "muc" : resolveBrand().id
+    const prefix = resolveBrand().credentialNamespace
     this.file = path.join(userDataDir, `${prefix}-credential.bin`)
     // 设备 ID 非机密，明文存放，用于 per-device Key 撤销对账
     const idFile = path.join(userDataDir, `${prefix}-device-id`)

@@ -40,13 +40,13 @@ export async function exchangeMucCode(gateway: string, code: string, deviceName:
   // 服务端（sub2api）以 {code,message,data} 包装响应；裸字段为兼容不带包装的网关。
   const payload = body?.data ?? body
 
-  if (res.status === 404 || body?.error === "code_not_found") {
+  if (res.status === 404 || (body?.error ?? payload?.error ?? body?.reason ?? payload?.reason) === "code_not_found") {
     throw new MucExchangeError("invalid", "authorization code not found")
   }
-  if (res.status === 410 || body?.error === "code_expired") {
+  if (res.status === 410 || (body?.error ?? payload?.error ?? body?.reason ?? payload?.reason) === "code_expired") {
     throw new MucExchangeError("expired", "authorization code expired, please reconnect from the website")
   }
-  if (res.status === 409 || body?.error === "code_used") {
+  if (res.status === 409 || (body?.error ?? payload?.error ?? body?.reason ?? payload?.reason) === "code_used") {
     throw new MucExchangeError("used", "authorization code already used, please request a new one")
   }
   if (res.status === 401 || res.status === 403) {

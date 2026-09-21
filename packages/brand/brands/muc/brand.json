@@ -1,5 +1,19 @@
 {
   "id": "muc",
+  "credentialNamespace": "muc",
+  "storageNamespace": "cn.edu.muc.harness",
+  "artifactPrefix": "mucode",
+  "assets": {
+    "hero": "muc-campus.png",
+    "iconDirectory": "muc"
+  },
+  "updates": {
+    "feed": "https://admin.wuxuexi.top/downloads/muc-updates/stable",
+    "manifest": "https://admin.wuxuexi.top/downloads/latest-mucode.json",
+    "downloadPage": "https://admin.wuxuexi.top/muc",
+    "downloadBase": "https://admin.wuxuexi.top/downloads"
+  },
+  "resetPath": "/v1/muc/reset-with-card",
   "campus": true,
   "name": "中央民族大学",
   "englishName": "Minzu University of China",

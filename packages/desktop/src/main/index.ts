@@ -74,7 +74,7 @@ const TEST_ONBOARDING = process.env.OPENCODE_TEST_ONBOARDING === "1"
 // MUC Harness: muc 渠道强制 v1 sidecar（内联源码构建、含 gateway-only 模型过滤）。
 // v2 路径执行官方下载版 CLI，不含过滤逻辑，绝不能在校园分发版启用。
 const SIDECAR_VERSION =
-  CHANNEL === "muc" ? "v1" : process.env.OPENCODE_SIDECAR_V2 === "1" ? "v2" : "v1"
+  BRAND.campus ? "v1" : process.env.OPENCODE_SIDECAR_V2 === "1" ? "v2" : "v1"
 const jsCallStackFeature = "DocumentPolicyIncludeJSCallStacksInCrashReports"
 
 let logger: ReturnType<typeof initLogging>
@@ -166,7 +166,7 @@ const main = Effect.gen(function* () {
 
   process.env.OPENCODE_DISABLE_EMBEDDED_WEB_UI = "true"
 
-  const appId = app.isPackaged ? APP_IDS[CHANNEL] : "ai.opencode.desktop.dev"
+  const appId = BRAND.campus ? BRAND.appId : app.isPackaged ? APP_IDS[CHANNEL] : "ai.opencode.desktop.dev"
   const onboardingTestRoot = ((): string | undefined => {
     if (!TEST_ONBOARDING) return
 
@@ -182,13 +182,22 @@ const main = Effect.gen(function* () {
     process.env.XDG_STATE_HOME = join(root, "state")
     return root
   })()
-  app.setName(app.isPackaged ? APP_NAMES[CHANNEL] : "OpenCode Dev")
+  app.setName(BRAND.campus ? BRAND.appName : app.isPackaged ? APP_NAMES[CHANNEL] : "OpenCode Dev")
   app.setAppUserModelId(appId)
   app.setPath(
     "userData",
     onboardingTestRoot ? join(onboardingTestRoot, "desktop") : join(app.getPath("appData"), appId),
   )
   if (onboardingTestRoot) app.setPath("sessionData", join(onboardingTestRoot, "session"))
+  if (BRAND.campus) {
+    // Runtime auth/config caches must never fall back to the other campus or upstream CLI profile.
+    process.env.BRAND = BRAND.id
+    process.env.OPENCODE_CHANNEL = BRAND.id
+    for (const [key, dir] of Object.entries({ XDG_DATA_HOME: "data", XDG_CONFIG_HOME: "config", XDG_CACHE_HOME: "cache", XDG_STATE_HOME: "state" })) {
+      process.env[key] = join(app.getPath("userData"), "runtime", dir)
+      mkdirSync(process.env[key]!, { recursive: true })
+    }
+  }
   initializeOldLayoutEligibility(app.getPath("userData"))
   logger = initLogging()
   initCrashReporter()
@@ -275,7 +284,7 @@ if (!app.isPackaged) app.commandLine.appendSwitch("remote-debugging-port", proce
   // 首实例 argv 传入（macOS 走 open-url 事件不受影响）。窗口尚未创建时
   // emitDeepLinks 只入 pendingDeepLinks 队列，由渲染层 consumeInitialDeepLinks 统一消费。
   {
-    const startupUrls = process.argv.filter((arg) => arg.startsWith("opencode://") || arg.startsWith("muc://"))
+    const startupUrls = process.argv.filter((arg) => arg.startsWith("opencode://") || arg.startsWith(`${BRAND.protocolScheme}://`))
     if (startupUrls.length) {
       logger.log("deep link received via startup argv", { count: startupUrls.length, kinds: startupUrls.map((u) => u.split("?")[0]) })
       emitDeepLinks(startupUrls)
@@ -329,7 +338,7 @@ if (!app.isPackaged) app.commandLine.appendSwitch("remote-debugging-port", proce
       }),
     ),
   )
-  app.setAsDefaultProtocolClient("opencode")
+  if (!BRAND.campus) app.setAsDefaultProtocolClient("opencode")
   // 校园 Harness: 注册品牌深链协议（muc:// / hubu://）
   if (BRAND.campus) app.setAsDefaultProtocolClient(BRAND.protocolScheme)
   // 校园 Harness: 把品牌传给内嵌 opencode sidecar（核心按 BRAND 解析网关/凭据变量）
@@ -388,14 +397,12 @@ if (!app.isPackaged) app.commandLine.appendSwitch("remote-debugging-port", proce
   // MUC Harness: 启动时恢复已存凭据到进程内存（MUC_API_KEY）。
   // 限时 2.5s 且不阻塞主流程：Keychain 首次访问可能弹授权对话框，
   // 若超时则本次启动未注入（模型列表回退），下次启动重试。
-  void mucController.restoreToProcessEnv().catch((e) =>
-    writeLog("main", "muc credential restore failed", { e: String(e) }, "error"),
-  )
+  yield* Effect.promise(() => mucController.restoreToProcessEnv()).pipe(Effect.catch(() => Effect.void))
   // MUC Harness: muc 渠道首检延迟 15s——更新器网络探测不得阻塞启动（历史曾致新 profile 挂死）。
   // manual-install：发现新版本 → available → 原生提示 [下载安装][稍后]（会话内同版本只弹一次）。
   // auto-install（未来签名后）：下载完成 → ready → [重启更新][稍后]。
   // 手动"检查更新"仍走菜单/设置入口（showUpdaterDialog）。仅 muc 门控，不改变 prod/beta 行为。
-  if (CHANNEL === "muc") {
+  if (BRAND.campus) {
     const firstCheck = setTimeout(() => void updater.start(), 15_000)
     firstCheck.unref?.()
     let lastPromptedVersion: string | null = null
