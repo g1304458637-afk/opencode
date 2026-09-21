@@ -1,6 +1,6 @@
 import { app, dialog, shell } from "electron"
 import pkg from "electron-updater"
-import { UPDATER_ENABLED, CHANNEL, MUC_UPDATE_MODE, APP_VERSION } from "./constants"
+import { UPDATER_ENABLED, MUC_UPDATE_MODE, APP_VERSION } from "./constants"
 import { createUpdaterController, type UpdaterReadyRecord } from "./updater-controller"
 import { getLogger } from "./logging"
 import { getStore } from "./store"

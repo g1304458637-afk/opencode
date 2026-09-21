@@ -3,7 +3,7 @@ import { APP_VERSION } from "../constants"
 // 渲染层通过这些通道查询连接状态、发起连接、断开账户、查询余额用量、
 // 查询新版本自检结果。新版本只"提示"不自动安装（manifest 源固定为官方网关）。
 
-import { app, dialog, ipcMain, Notification, shell } from "electron"
+import { dialog, ipcMain, Notification, shell } from "electron"
 import { join } from "node:path"
 import { ResetCardClient } from "./reset-card"
 import type { ElectronAPI } from "../../preload/types"

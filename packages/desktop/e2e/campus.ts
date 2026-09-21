@@ -1,5 +1,5 @@
 import { _electron, expect } from "@playwright/test"
-import { mkdtempSync, mkdirSync, readFileSync, existsSync, readdirSync, writeFileSync } from "node:fs"
+import { mkdtempSync, mkdirSync, readFileSync, existsSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
 

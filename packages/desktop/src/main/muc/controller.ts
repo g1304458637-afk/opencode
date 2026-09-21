@@ -40,7 +40,10 @@ export class MucConnectController {
   // 启动时恢复：把已存凭据注入本进程内存（供内嵌 opencode server 读取）
   async restoreToProcessEnv(): Promise<MucConnectionState> {
     const cred = await this.store.get()
-    if (!cred) return { connected: false }
+    if (!cred) {
+      delete process.env[brand.apiKeyEnvVar]
+      return { connected: false }
+    }
     this.applyToProcessEnv(cred.apiKey)
     return this.store.getState()
   }
