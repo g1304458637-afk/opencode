@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test"
 import { campusConfig } from "./campus-config"
+import { campusNativePackages } from "./campus-native"
 
 for (const brand of ["muc", "hubu"]) {
   for (const target of ["mac-arm64", "mac-x64", "win-x64"]) {
@@ -12,6 +13,10 @@ for (const brand of ["muc", "hubu"]) {
       expect(configured.brand.updates.manifest).toContain(configured.brand.artifactPrefix)
       expect(Object.values(configured.brand.downloads).some((name) => name.includes(target))).toBe(true)
       expect(configured.version).toBeTruthy()
+      const native = campusNativePackages(target)
+      expect(native.packages).toContain(
+        `@lydell/node-pty-${target.startsWith("mac") ? "darwin" : "win32"}-${target.split("-")[1]}`,
+      )
     })
   }
 }
@@ -19,5 +24,7 @@ for (const brand of ["muc", "hubu"]) {
 test("HUBU production never silently adopts a local or MUC feed", () => {
   expect(() => campusConfig({ OPENCODE_CHANNEL: "hubu" })).toThrow("HUBU production build requires")
   expect(() => campusConfig({ OPENCODE_CHANNEL: "muc", BRAND: "hubu" })).toThrow("conflicts")
-  expect(() => campusConfig({ OPENCODE_CHANNEL: "muc", MUC_UPDATE_FEED_URL: "http://untrusted.example/feed" })).toThrow("HTTPS")
+  expect(() => campusConfig({ OPENCODE_CHANNEL: "muc", MUC_UPDATE_FEED_URL: "http://untrusted.example/feed" })).toThrow(
+    "HTTPS",
+  )
 })

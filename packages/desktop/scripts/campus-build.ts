@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 import { campusConfig } from "./campus-config"
 import { resolve } from "node:path"
+import { campusNativePackages, prepareCampusNative } from "./campus-native"
 
 const [brand, target] = process.argv.slice(2)
 if (!["muc", "hubu"].includes(brand ?? "") || !["mac-arm64", "mac-x64", "win-x64"].includes(target ?? "")) {
@@ -46,15 +47,30 @@ console.log(
       feed: config.brand.updates.feed,
       output: env.CAMPUS_BUILD_OUTPUT,
       commands,
+      native: campusNativePackages(target!),
     },
     null,
     2,
   ),
 )
 if (!process.argv.includes("--dry-run")) {
-  for (const command of commands) {
-    const child = Bun.spawn(command, { cwd: resolve(import.meta.dir, ".."), env, stdout: "inherit", stderr: "inherit" })
-    const result = await child.exited
-    if (result) process.exit(result)
+  try {
+    for (const command of commands) {
+      if (command.includes("electron-builder")) await prepareCampusNative(target!)
+      const child = Bun.spawn(command, {
+        cwd: resolve(import.meta.dir, ".."),
+        env,
+        stdout: "inherit",
+        stderr: "inherit",
+      })
+      if (await child.exited) throw new Error(`Campus build failed: ${command.join(" ")}`)
+    }
+  } finally {
+    const restore = Bun.spawn(["bun", "install", "--frozen-lockfile"], {
+      cwd: resolve(import.meta.dir, "../../.."),
+      stdout: "inherit",
+      stderr: "inherit",
+    })
+    if (await restore.exited) throw new Error("Could not restore host development dependencies")
   }
 }

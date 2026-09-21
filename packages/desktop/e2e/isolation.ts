@@ -54,22 +54,36 @@ try {
       writeFileSync(ownFile, foreign)
       expect(await page.evaluate(() => window.api.mucGetState())).toEqual({ connected: false })
       writeFileSync(ownFile, own)
-      expect(await page.evaluate(() => window.api.mucGetState())).toMatchObject({ connected: true, keyName: `${brand}-device` })
+      expect(await page.evaluate(() => window.api.mucGetState())).toMatchObject({
+        connected: true,
+        keyName: `${brand}-device`,
+      })
       let independentKeys: boolean | null = null
       const ownKey = readFileSync(join(profile, `cn.edu.${brand}.harness`, `${brand}-vault-key.bin`)).toString("base64")
       const otherKeyFile = join(profile, `cn.edu.${other}.harness`, `${other}-vault-key.bin`)
       if (existsSync(otherKeyFile)) {
         const foreignKey = readFileSync(otherKeyFile).toString("base64")
-        independentKeys = await application.evaluate(({ safeStorage }, wrapped) => {
-          const own = JSON.parse(safeStorage.decryptString(Buffer.from(wrapped.ownKey, "base64")))
-          const other = JSON.parse(safeStorage.decryptString(Buffer.from(wrapped.foreignKey, "base64")))
-          return own.key !== other.key && own.brand !== other.brand
-        }, { ownKey, foreignKey })
+        independentKeys = await application.evaluate(
+          ({ safeStorage }, wrapped) => {
+            const own = JSON.parse(safeStorage.decryptString(Buffer.from(wrapped.ownKey, "base64")))
+            const other = JSON.parse(safeStorage.decryptString(Buffer.from(wrapped.foreignKey, "base64")))
+            return own.key !== other.key && own.brand !== other.brand
+          },
+          { ownKey, foreignKey },
+        )
         expect(independentKeys).toBe(true)
       }
-      results.push({ brand, connected: true, deviceId: state.connected ? state.deviceId : null, migrated, crossCredentialRejected: true, independentKeys })
-      console.log(`PASS ${brand}: own credential retained; foreign credential rejected; independent vault keys=${independentKeys}`)
-
+      results.push({
+        brand,
+        connected: true,
+        deviceId: state.connected ? state.deviceId : null,
+        migrated,
+        crossCredentialRejected: true,
+        independentKeys,
+      })
+      console.log(
+        `PASS ${brand}: own credential retained; foreign credential rejected; independent vault keys=${independentKeys}`,
+      )
     } finally {
       await application.close()
     }
