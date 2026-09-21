@@ -1,7 +1,8 @@
 import { _electron, expect } from "@playwright/test"
-import { readFileSync, writeFileSync, existsSync } from "node:fs"
+import { readFileSync, writeFileSync, existsSync, mkdtempSync } from "node:fs"
+import { tmpdir } from "node:os"
 import { resolve, join } from "node:path"
-const profile = "/private/tmp/campus-phase4-dual-profile"
+const profile = mkdtempSync(join(tmpdir(), "campus-isolation-"))
 const artifacts = process.env.CAMPUS_E2E_ARTIFACTS!
 const fixture = Bun.serve({
   hostname: "127.0.0.1",
@@ -22,6 +23,17 @@ const fixture = Bun.serve({
 })
 const results: object[] = []
 try {
+  // Seed the real legacy format in a fresh profile using Electron's OS-backed safeStorage.
+  const seed = await _electron.launch({
+    args: [resolve("e2e/seed-legacy.mjs")],
+    timeout: 30000,
+    env: { ...process.env, CAMPUS_E2E_PROFILE: profile },
+  })
+  try {
+    await seed.firstWindow()
+  } finally {
+    await seed.close()
+  }
   for (const brand of ["muc", "hubu", "muc"]) {
     const application = await _electron.launch({
       args: [resolve("e2e/launch.mjs")],
@@ -39,6 +51,7 @@ try {
       await page.waitForFunction(() => !!window.api?.mucGetState)
       const state = await page.evaluate(() => window.api.mucGetState())
       expect(state).toMatchObject({ connected: true, keyName: `${brand}-device` })
+      expect(state).toMatchObject({ connectedAt: "2026-09-21T00:00:00Z" })
       expect(await page.evaluate(() => window.api.mucGetUsage())).toMatchObject({
         ok: true,
         usage: { wallet: { balance: brand === "hubu" ? "22.00000000" : "11.00000000" } },
@@ -51,13 +64,20 @@ try {
       // First pass may encounter the other brand's legacy file; the next launch migrates it.
       const migrated = own.subarray(0, 8).toString() === "CAMPUS2:"
       expect(migrated).toBe(true)
-      writeFileSync(ownFile, foreign)
-      expect(await page.evaluate(() => window.api.mucGetState())).toEqual({ connected: false })
-      writeFileSync(ownFile, own)
-      expect(await page.evaluate(() => window.api.mucGetState())).toMatchObject({
-        connected: true,
-        keyName: `${brand}-device`,
-      })
+      let crossCredentialRejected: boolean | null = null
+      if (foreign.subarray(0, 8).toString() === "CAMPUS2:") {
+        try {
+          writeFileSync(ownFile, foreign)
+          expect(await page.evaluate(() => window.api.mucGetState())).toEqual({ connected: false })
+          crossCredentialRejected = true
+        } finally {
+          writeFileSync(ownFile, own)
+        }
+        expect(await page.evaluate(() => window.api.mucGetState())).toMatchObject({
+          connected: true,
+          keyName: `${brand}-device`,
+        })
+      }
       let independentKeys: boolean | null = null
       const ownKey = readFileSync(join(profile, `cn.edu.${brand}.harness`, `${brand}-vault-key.bin`)).toString("base64")
       const otherKeyFile = join(profile, `cn.edu.${other}.harness`, `${other}-vault-key.bin`)
@@ -78,11 +98,11 @@ try {
         connected: true,
         deviceId: state.connected ? state.deviceId : null,
         migrated,
-        crossCredentialRejected: true,
+        crossCredentialRejected,
         independentKeys,
       })
       console.log(
-        `PASS ${brand}: own credential retained; foreign credential rejected; independent vault keys=${independentKeys}`,
+        `PASS ${brand}: legacy credential retained; foreign credential rejected=${crossCredentialRejected}; independent vault keys=${independentKeys}`,
       )
     } finally {
       await application.close()
@@ -91,7 +111,20 @@ try {
   expect(readFileSync(join(profile, "cn.edu.muc.harness", "muc-device-id"), "utf8")).not.toBe(
     readFileSync(join(profile, "cn.edu.hubu.harness", "hubu-device-id"), "utf8"),
   )
-  writeFileSync(artifacts, JSON.stringify({ results, credentialIsolation: "PASS", deviceIsolation: "PASS" }, null, 2))
+  writeFileSync(
+    artifacts,
+    JSON.stringify(
+      {
+        profile,
+        legacyFormat: "safeStorage without brand field",
+        results,
+        credentialIsolation: "PASS",
+        deviceIsolation: "PASS",
+      },
+      null,
+      2,
+    ),
+  )
 } finally {
   fixture.stop(true)
 }
