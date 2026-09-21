@@ -9,15 +9,15 @@
 //
 // 产物相关用例在 dist/ 缺失时自动跳过（CI 在 build 步骤之后运行即可全量生效）。
 
-import { existsSync, readFileSync, mkdtempSync, rmSync } from "node:fs"
+import { existsSync, readFileSync, mkdtempSync, rmSync, readdirSync } from "node:fs"
 import { execFileSync } from "node:child_process"
 import { tmpdir } from "node:os"
-import { join } from "node:path"
+import { join, resolve } from "node:path"
 import { test, expect } from "bun:test"
 import { getMucVersion, MUC_VERSION_SOURCE } from "./utils"
 
 const DESKTOP_DIR = import.meta.dir.replace(/\/scripts$/, "")
-const DIST = `${DESKTOP_DIR}/dist`
+const DIST = resolve(DESKTOP_DIR, process.env.CAMPUS_BUILD_OUTPUT || "dist")
 const REPO_ROOT = `${DESKTOP_DIR}/../..`
 
 const macAppCandidates = [`${DIST}/mac-arm64/mucode.app`, `${DIST}/mac/mucode.app`]
@@ -49,11 +49,8 @@ function asarPackageVersion(asarPath: string): string {
     asar = require("@electron/asar")
   } catch {
     const store = join(REPO_ROOT, "node_modules/.bun")
-    const entry = execFileSync(
-      "bash",
-      ["-c", `ls -d ${store}/@electron+asar@*/node_modules/@electron/asar 2>/dev/null | head -1`],
-      { encoding: "utf8" },
-    ).trim()
+    const name = readdirSync(store).find((entry) => entry.startsWith("@electron+asar@"))
+    const entry = name ? join(store, name, "node_modules/@electron/asar") : ""
     if (!entry) throw new Error("@electron/asar not available")
     asar = require(entry)
   }

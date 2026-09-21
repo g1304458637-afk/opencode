@@ -23,7 +23,7 @@ const application = await _electron.launch({
     MUC_GATEWAY_URL: base,
     MUC_CDP_PORT: "0",
     CAMPUS_E2E_PROFILE: profile,
-    CAMPUS_E2E_MAIN: resolve("out/main/index.js"),
+    CAMPUS_E2E_MAIN: process.env.CAMPUS_E2E_MAIN || resolve("out/main/index.js"),
   },
   timeout: 60000,
 })
