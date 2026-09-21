@@ -1,7 +1,8 @@
-# MUC Harness: 上游同步 Runbook
+# MUC Desktop: 上游同步 Runbook
 
-muc-harness 分支基于上游 anomalyco/opencode 的 `dev` 分支定制。本文档描述如何
-持续、无损地拉取上游更新。
+`muc-main` 是 MUC 的受保护长期主线；`hubu-main` 与它共享代码，并通过 BrandConfig
+区分品牌。上游同步必须在短期 `chore/*` 分支完成，经完整双品牌检查和 PR 合并，
+不得直接改写两条长期主线。
 
 ## 分歧面速览（2026-09-19 盘点）
 
@@ -25,6 +26,7 @@ muc-harness 分支基于上游 anomalyco/opencode 的 `dev` 分支定制。本�
 
 ```bash
 git fetch upstream
+git switch -c chore/sync-upstream-YYYYMMDD muc-main
 git rebase upstream/dev
 ```
 
@@ -46,7 +48,7 @@ git rebase upstream/dev
 4. **桌面 deep link / muc IPC**：跑一遍既有测试
    `packages/desktop/src/main/muc/deep-link.test.ts`，并做一次深链端到端。
 
-### rebase 后必检（全部通过才能 push）
+### rebase 后必检（全部通过才能提交 PR）
 
 ```bash
 bun turbo typecheck          # 或分别跑各包 typecheck
@@ -59,10 +61,12 @@ cd packages/desktop && OPENCODE_CHANNEL=muc bun run build && bun run package:mac
 ### push 与发版
 
 ```bash
-git push origin muc-harness --force-with-lease   # rebase 改写历史后必须 force-with-lease
+git push fork chore/sync-upstream-YYYYMMDD
+# PR base: muc-main；合并后把同一已验证提交同步到 hubu-main
 ```
 
-然后按 `docs/PRODUCTION_DEPLOYMENT_REPORT.md` 重建三平台安装包并部署。
+两条主线禁止 force push。合并后按 `docs/PRODUCTION_DEPLOYMENT_REPORT.md` 重建双品牌、
+三平台安装包；生产部署仍须独立 release gate。
 
 ## 编码约定（降低未来冲突面）
 
