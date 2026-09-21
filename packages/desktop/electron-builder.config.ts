@@ -68,15 +68,6 @@ const APP_IDS = {
   muc: "cn.edu.muc.harness",
 } as const
 
-// MUC Harness: mucode 版本号 = <package.json 版本>-muc.<构建序号>，发版时递增 MUC_BUILD。
-// 该序号需与 latest-mucode.json（scripts/muc-manifest.mjs 生成）及 /muc 页展示保持一致。
-const MUC_BUILD = 1
-const mucVersion = (() => {
-  if (channel !== "muc") return undefined
-  const pkg = JSON.parse(readFileSync(path.join(packageDir, "package.json"), "utf8")) as { version?: string }
-  return `${pkg.version ?? "0.0.0"}-muc.${MUC_BUILD}`
-})()
-
 const getBase = (appId: string): Configuration => ({
   artifactName: channel === "muc" ? "mucode-${os}-${arch}.${ext}" : "opencode-desktop-${os}-${arch}.${ext}",
   directories: {
