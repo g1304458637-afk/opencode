@@ -24,6 +24,7 @@
 
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { createHash } from "node:crypto"
+import * as path from "node:path"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { $ } from "bun"
@@ -428,22 +429,20 @@ function verifyLocalManifest(manifestPath: string) {
   console.log(`local manifest integrity OK: ${manifestPath} (${cm.files.length} files @ ${cm.version})`)
 }
 
-/** #7 同版本重复发布保护：stable 中该版本 payload 已存在 → 硬拒（immutable releases） */
-async function ensureVersionNotPublished(host: string, remoteDir: string, payloadFiles: string[]) {
-  const paths = payloadFiles.map((f) => `'${remoteDir}/${f}'`).join(" ")
+/** #7 同版本重复发布保护：stable 中该版本的 channel manifest 已存在 → 硬拒（immutable releases）。
+ *  payload 残缺（无 manifest）视为未发布，允许断点续传补齐。 */
+async function ensureVersionNotPublished(host: string, remoteDir: string, manifestFile: string, version: string) {
   const probe = Bun.spawnSync(
-    ["ssh", host, `for f in ${paths}; do [ -e "$f" ] && echo "EXISTS $f"; done`],
+    ["ssh", host, `if [ -e '${remoteDir}/${manifestFile}' ]; then echo YES_ALREADY_PUBLISHED; else echo NO_NOT_PUBLISHED; fi`],
     { stdout: "pipe", stderr: "pipe" },
   )
-  const out = probe.stdout.toString()
-  const existing = out.split("\n").filter((l) => l.startsWith("EXISTS"))
-  if (existing.length > 0) {
+  if (probe.stdout.toString().includes("YES_ALREADY_PUBLISHED")) {
     throw new Error(
-      `IMMUTABLE_RELEASE: 该版本 payload 已存在于 stable，禁止覆盖重发：\n${existing.join("\n")}\n` +
-        `请 bump 新版本（如 2.0.3）后重新 build + upload。`,
+      `IMMUTABLE_RELEASE: ${version} 的 ${manifestFile} 已发布至 stable，禁止覆盖重发。\n` +
+        `请 bump 新版本（如 2.0.5）后重新 build + upload。`,
     )
   }
-  console.log("version-not-published probe OK（stable 中无同版本 payload）")
+  console.log(`version-not-published probe OK（stable 无 ${version} 的 ${manifestFile}）`)
 }
 
 /** #6 签名安全门（macOS）：ad-hoc / 未公证 → 直接失败，错误信息指明缺失的凭据类别。 */
@@ -531,7 +530,7 @@ async function upload(execute: boolean, host: string, testFeed: boolean) {
       console.log("manual-install 模式：允许 unsigned 产物进 stable（用户手动下载安装）；")
       console.log("切换 MUC_UPDATE_MODE=auto-install 后签名门将强制生效。")
     }
-    await ensureVersionNotPublished(host, remoteDir, payloadFiles)
+    await ensureVersionNotPublished(host, remoteDir, channelFile, version)
   } else {
     console.log("=== --test-feed：跳过签名门（测试 feed，不入 stable）===")
   }
@@ -550,8 +549,21 @@ async function upload(execute: boolean, host: string, testFeed: boolean) {
     return
   }
 
-  // 1) payload（版本化文件名，永不覆盖已发布版本）
-  await sh(["rsync", "-av", "--partial", ...payloadFiles.map((f) => localOf(f)), `${host}:${remoteDir}/`])
+  // 1) 两阶段上传：/downloads 属主 www:www（admin 无写权限），先 rsync 到家目录 staging，
+  //    再 sudo 提交到最终路径 + chown www:www。版本化文件名，永不覆盖已发布版本。
+  const stageDir = `/home/admin/mucode-release/${path.posix.relative("/srv/sub2api/data/downloads", remoteDir)}`
+  await sh(["ssh", host, `mkdir -p '${stageDir}'`])
+  await sh([
+    "rsync", "-av", "--partial", "--append",
+    "-e", "ssh -o ServerAliveInterval=30 -o ServerAliveCountMax=10",
+    ...payloadFiles.map((f) => localOf(f)), `${host}:${stageDir}/`,
+  ])
+  const finalDir = remoteDir
+  await sh([
+    "ssh",
+    host,
+    `sudo mkdir -p '${finalDir}' && for f in ${payloadFiles.map((f) => `'${stageDir}/${f}'`).join(" ")}; do sudo cp -f "$f" '${finalDir}/'; done && sudo chown www:www ${payloadFiles.map((f) => `'${finalDir}/${f}'`).join(" ")}`,
+  ])
 
   // 2) 远端校验：sha256/大小 + #8 manifest 引用完整性（sha512/size 必须与 latest*.yml 一致）
   const cm = parseChannelManifest(`${DIST}/${channelFile}`)
@@ -559,7 +571,7 @@ async function upload(execute: boolean, host: string, testFeed: boolean) {
     [
       "ssh",
       host,
-      `cd ${remoteDir} && sha256sum ${payloadFiles.join(" ")} && sha512sum ${payloadFiles.join(" ")} && stat -c '%n %s' ${payloadFiles.join(" ")}`,
+      `cd ${finalDir} && sha256sum ${payloadFiles.join(" ")} && sha512sum ${payloadFiles.join(" ")} && stat -c '%n %s' ${payloadFiles.join(" ")}`,
     ],
     { stdout: "pipe", stderr: "inherit" },
   )
@@ -581,46 +593,52 @@ async function upload(execute: boolean, host: string, testFeed: boolean) {
   console.log("remote payload verify OK（sha256/manifest + sha512/size vs latest*.yml）")
 
   // 3) manifest 最后发布
-  await sh(["scp", `${DIST}/${channelFile}`, `${host}:${remoteDir}/${channelFile}`])
+  await sh(["scp", `${DIST}/${channelFile}`, `${host}:${stageDir}/${channelFile}`])
+  await sh([
+    "ssh",
+    host,
+    `sudo cp -f '${stageDir}/${channelFile}' '${finalDir}/${channelFile}' && sudo chown www:www '${finalDir}/${channelFile}'`,
+  ])
 
   // 4) 人工下载别名（固定文件名，仅首装入口，不参与自动更新；test-feed 不动 /downloads）
   //    #7：别名与本次正式 release 同 commit/同版本/同一次 build——上传后立刻
   //    重生成 SHA256SUMS.txt 并做公网验证（HTTP 200 + Content-Length + SHA256）。
   if (!testFeed) {
+    // 别名 = feed 内同一文件的 server 端拷贝（同一次 build 的同一字节，零二次传输）
     const alias = isMac ? `mucode-mac-${arch}.dmg` : `mucode-win-x64.exe`
-    const aliasLocal = isMac ? `${DIST}/mucode-${version}-mac-${arch}.dmg` : `${DIST}/mucode-${version}-win-x64.exe`
-    await sh(["scp", aliasLocal, `${host}:${REMOTE_ROOT}/${alias}`])
+    const aliasSrc = isMac ? `${finalDir}/mucode-${version}-mac-${arch}.dmg` : `${finalDir}/mucode-${version}-win-x64.exe`
+    await sh(["ssh", host, `sudo cp -f '${aliasSrc}' '${REMOTE_ROOT}/${alias}' && sudo chown www:www '${REMOTE_ROOT}/${alias}'`])
     await sh([
       "ssh",
       host,
-      `cd ${REMOTE_ROOT} && sha256sum mucode-mac-arm64.dmg mucode-mac-x64.dmg mucode-win-x64.exe > SHA256SUMS.txt`,
+      `cd ${REMOTE_ROOT} && sudo sha256sum mucode-mac-arm64.dmg mucode-mac-x64.dmg mucode-win-x64.exe > /tmp/SHA256SUMS.txt && sudo cp /tmp/SHA256SUMS.txt SHA256SUMS.txt && sudo chown www:www SHA256SUMS.txt`,
     ])
-    await verifyPublicAliases(host, [alias])
+    const aliasLocalSrc = isMac
+      ? `${DIST}/mucode-${version}-mac-${arch}.dmg`
+      : `${DIST}/mucode-${version}-win-x64.exe`
+    await verifyPublicAliases(host, [[alias, aliasLocalSrc]])
   }
   console.log("发布完成（manifest 已最后上线）")
 }
 
-/** #7 公网验证：/downloads 固定别名 HTTP 200 + Content-Length 一致 + 服务器 SHA256 一致 */
-async function verifyPublicAliases(host: string, aliases: string[]) {
+/** #7 公网验证：/downloads 固定别名 HTTP 200 + Content-Length 一致 + 服务器 SHA256 一致。
+ *  alias 仅存在于服务器端（由 feed 内同字节文件 server 端拷贝生成），本地对比对象 = 版本化源文件。 */
+async function verifyPublicAliases(host: string, pairs: Array<[string, string]>) {
   const base = "https://admin.wuxuexi.top/downloads"
-  for (const alias of aliases) {
+  for (const [alias, localSrc] of pairs) {
     const head = Bun.spawnSync(["curl", "-sI", `${base}/${alias}`], { stdout: "pipe" })
     const headers = head.stdout.toString()
     if (!headers.includes(" 200")) throw new Error(`PUBLIC VERIFY FAIL: ${alias} HTTP 非 200`)
-    const localSize = (await Bun.file(`${DIST}/${alias}`).size).toString()
+    const localSize = (await Bun.file(localSrc).size).toString()
     const remoteLen = headers.match(/content-length:\s*(\d+)/i)?.[1]
     if (remoteLen !== localSize) throw new Error(`PUBLIC VERIFY FAIL: ${alias} Content-Length ${remoteLen} != 本地 ${localSize}`)
-    console.log(`public verify OK: ${alias} (200, ${localSize} bytes)`)
-  }
-  const sums = Bun.spawnSync(["ssh", host, `cat ${REMOTE_ROOT}/SHA256SUMS.txt`], { stdout: "pipe" })
-  if (sums.exitCode !== 0) throw new Error("PUBLIC VERIFY FAIL: 无法读取服务器 SHA256SUMS.txt")
-  for (const alias of aliases) {
-    const localHash = sha256(`${DIST}/${alias}`)
-    if (!sums.stdout.toString().includes(localHash)) {
+    const localHash = sha256(localSrc)
+    const sums = Bun.spawnSync(["ssh", host, `cat ${REMOTE_ROOT}/SHA256SUMS.txt`], { stdout: "pipe" })
+    if (sums.exitCode !== 0 || !sums.stdout.toString().includes(localHash)) {
       throw new Error(`PUBLIC VERIFY FAIL: ${alias} 的 SHA256 不在服务器 SHA256SUMS.txt 中`)
     }
+    console.log(`public verify OK: ${alias} (200, ${localSize} bytes, sha256 ✓)`)
   }
-  console.log("public verify OK: SHA256SUMS.txt 与本地构建一致")
 }
 
 const cmd = process.argv[2]
