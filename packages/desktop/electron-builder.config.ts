@@ -1,5 +1,5 @@
 import { campusConfig } from "./scripts/campus-config"
-import { execFile } from "node:child_process"
+import { execFile, execFileSync } from "node:child_process"
 import { readFileSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
@@ -68,7 +68,16 @@ const getBase = (appId: string): Configuration => ({
   // https://www.electron.build/docs/linux/
   extraMetadata: {
     desktopName: `${appId}.desktop`,
-    ...(brand.campus ? { name: brand.artifactPrefix } : {}),
+    ...(brand.campus ? {
+      name: brand.artifactPrefix,
+      campusBuild: {
+        sourceSha: execFileSync("git", ["rev-parse", "HEAD"], { cwd: rootDir, encoding: "utf8" }).trim(),
+        brand: brand.id,
+        localBuild: process.env.CAMPUS_LOCAL_BUILD === "1",
+        gateway: brand.gatewayURL,
+        updates: brand.updates,
+      },
+    } : {}),
   },
   files: ["out/**/*", "resources/**/*", "!resources/opencode-cli*"],
   extraResources: [

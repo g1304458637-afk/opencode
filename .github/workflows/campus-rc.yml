@@ -71,6 +71,14 @@ jobs:
             arch: x64
             pty: "@lydell/node-pty-win32-x64"
     runs-on: ${{ matrix.os }}
+    env:
+      CAMPUS_LOCAL_BUILD: ${{ matrix.brand == 'hubu' && '1' || '0' }}
+      MUC_UPDATE_FEED_URL: https://admin.wuxuexi.top/downloads/muc-updates/rc
+      MUC_MANIFEST_URL: https://admin.wuxuexi.top/downloads/muc-updates/rc/latest-mucode.json
+      MUC_DOWNLOAD_BASE_URL: https://admin.wuxuexi.top/downloads/muc-updates/rc
+      HUBU_UPDATE_FEED_URL: http://localhost:8081/downloads/hubu-updates/rc
+      HUBU_MANIFEST_URL: http://localhost:8081/downloads/hubu-updates/rc/latest-hubu-ai.json
+      HUBU_DOWNLOAD_BASE_URL: http://localhost:8081/downloads/hubu-updates/rc
     defaults:
       run:
         shell: bash
@@ -87,7 +95,6 @@ jobs:
         env:
           OPENCODE_CHANNEL: ${{ matrix.brand }}
           BRAND: ${{ matrix.brand }}
-          CAMPUS_LOCAL_BUILD: "1"
           CAMPUS_BUILD_OUTPUT: dist/${{ matrix.brand }}-${{ matrix.target }}
           MUC_PTY_PKG: ${{ matrix.pty }}
         run: |
@@ -97,7 +104,6 @@ jobs:
         env:
           OPENCODE_CHANNEL: ${{ matrix.brand }}
           BRAND: ${{ matrix.brand }}
-          CAMPUS_LOCAL_BUILD: "1"
           CAMPUS_BUILD_OUTPUT: dist/${{ matrix.brand }}-${{ matrix.target }}
           CAMPUS_TARGET: ${{ matrix.target }}
         run: bun e2e/package-smoke.ts
