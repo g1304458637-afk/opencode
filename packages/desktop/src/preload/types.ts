@@ -55,6 +55,8 @@ export type ElectronAPI = {
   mucDisconnect: () => Promise<MucConnectionState>
   mucPendingCode: () => Promise<string | null>
   mucGetUsage: () => Promise<MucUsageResult>
+  mucResetCard: (subscriptionId: number) => Promise<MucResetCardResult>
+  mucOpenPricing: () => Promise<void>
   getDefaultServerUrl: () => Promise<string | null>
   setDefaultServerUrl: (url: string | null) => Promise<void>
   isFirstLaunchOnboardingPending: () => Promise<boolean>
@@ -178,3 +180,8 @@ export type MucUsageSnapshot = {
 export type MucUsageResult =
   | { ok: true; usage: MucUsageSnapshot }
   | { ok: false; error: "not_connected" | "unavailable" }
+
+// 重置卡消费结果（POST /api/v1/muc/reset-with-card/:id 的归一化返回）
+export type MucResetCardResult =
+  | { ok: true; weeklyPeriodEndsAt: string }
+  | { ok: false; error: "not_connected" | "invalid_subscription" | "network" | "unavailable" | string }
