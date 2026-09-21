@@ -29,7 +29,7 @@ export async function exchangeMucCode(gateway: string, code: string, deviceName:
     res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code, device_name: deviceName }),
+      body: JSON.stringify({ code, device_name: deviceName, brand: brand.id, audience: `${brand.id}:desktop` }),
       signal: AbortSignal.timeout(10_000),
     })
   } catch {
@@ -54,6 +54,15 @@ export async function exchangeMucCode(gateway: string, code: string, deviceName:
   }
   if (!res.ok || typeof payload?.api_key !== "string" || !payload.api_key || typeof payload?.gateway !== "string") {
     throw new MucExchangeError("bad_response", "unexpected response from authorization server")
+  }
+
+  // MUC may still connect to its legacy server; HUBU has no deployed legacy service.
+  if (
+    (payload.brand !== undefined && payload.brand !== brand.id) ||
+    (payload.audience !== undefined && payload.audience !== `${brand.id}:desktop`) ||
+    (brand.id === "hubu" && (payload.brand !== brand.id || payload.audience !== `${brand.id}:desktop`))
+  ) {
+    throw new MucExchangeError("bad_response", "authorization brand identity mismatch")
   }
 
   try {

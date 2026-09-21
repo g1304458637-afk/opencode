@@ -54,6 +54,7 @@ console.log(
   ),
 )
 if (!process.argv.includes("--dry-run")) {
+  let failure: unknown
   try {
     for (const command of commands) {
       if (command.includes("electron-builder")) await prepareCampusNative(target!)
@@ -65,12 +66,19 @@ if (!process.argv.includes("--dry-run")) {
       })
       if (await child.exited) throw new Error(`Campus build failed: ${command.join(" ")}`)
     }
-  } finally {
+  } catch (error) {
+    failure = error
+  }
+  {
     const restore = Bun.spawn(["bun", "install", "--frozen-lockfile"], {
       cwd: resolve(import.meta.dir, "../../.."),
       stdout: "inherit",
       stderr: "inherit",
     })
-    if (await restore.exited) throw new Error("Could not restore host development dependencies")
+    if (await restore.exited) {
+      const error = new Error("Could not restore host development dependencies")
+      throw failure ? new AggregateError([failure, error], "Build and dependency restore failed") : error
+    }
   }
+  if (failure) throw failure
 }

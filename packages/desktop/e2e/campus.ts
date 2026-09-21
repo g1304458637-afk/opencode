@@ -8,7 +8,9 @@ if (brand !== "muc" && brand !== "hubu") throw new Error("Set OPENCODE_CHANNEL=m
 const profile = process.env.CAMPUS_E2E_PROFILE || mkdtempSync(join(tmpdir(), `campus-${brand}-e2e-`))
 const artifacts = resolve(process.env.CAMPUS_E2E_ARTIFACTS || `e2e/artifacts/${brand}`)
 mkdirSync(artifacts, { recursive: true })
-const eventOffset = existsSync(join(profile, "events.jsonl")) ? readFileSync(join(profile, "events.jsonl"), "utf8").trim().split("\n").length : 0
+const eventOffset = existsSync(join(profile, "events.jsonl"))
+  ? readFileSync(join(profile, "events.jsonl"), "utf8").trim().split("\n").length
+  : 0
 const calls: Array<{ path: string; key?: string; brand: string }> = []
 const receipts = new Map<string, object>()
 const state = {
@@ -57,11 +59,22 @@ const fixture = Bun.serve({
     calls.push({ path, key: request.headers.get("Idempotency-Key") || undefined, brand })
     if (path.endsWith("/exchange")) {
       expect(path).toBe(`/api/v1/${brand}/exchange`)
+      if (state.exchange === "wrong-brand")
+        return Response.json({
+          data: {
+            gateway: fixture.url.origin,
+            brand: brand === "muc" ? "hubu" : "muc",
+            audience: `${brand}:desktop`,
+            api_key: "foreign-fixture-key",
+          },
+        })
       if (state.exchange !== "ok")
         return Response.json({ reason: state.exchange }, { status: state.exchange === "expired" ? 410 : 404 })
       return Response.json({
         data: {
           gateway: fixture.url.origin,
+          brand,
+          audience: `${brand}:desktop`,
           api_key: `test-${brand}-device-key`,
           key_name: `${brand}-device`,
           user: "isolated-fixture",
@@ -146,6 +159,13 @@ try {
     JSON.parse(readFileSync(`resources/${brand}/release.json`, "utf8")).version,
   )
   pass("cold start, missing credentials, built brand")
+  state.exchange = "wrong-brand"
+  expect(await page.evaluate(() => window.api.mucConnect("wrong_brand_code_123456789"))).toMatchObject({
+    ok: false,
+    error: "bad_response",
+  })
+  expect(await page.evaluate(() => window.api.mucGetState())).toEqual({ connected: false })
+  pass("same-origin foreign brand response rejected before credential save")
   state.exchange = "expired"
   expect(await page.evaluate(() => window.api.mucConnect("expired_code_123456789"))).toMatchObject({
     ok: false,
@@ -250,7 +270,9 @@ try {
   await panel(page)
   await expect(page.getByText("有新版本 99.0.0")).toBeVisible()
   await page.getByText("有新版本 99.0.0").click()
-  expect(readFileSync(join(profile, "events.jsonl"), "utf8")).toContain(`/${brand}`)
+  expect(readFileSync(join(profile, "events.jsonl"), "utf8")).toContain(
+    process.env.CAMPUS_E2E_DOWNLOAD_PAGE || `/${brand}`,
+  )
   pass("update available and manual download action")
   state.update = "bad"
   await close()
@@ -266,7 +288,12 @@ try {
     .trim()
     .split("\n")
     .map((line) => JSON.parse(line))
-  expect(events.slice(eventOffset).filter((e) => e.kind === "protocol").every((e) => e.value === brand)).toBe(true)
+  expect(
+    events
+      .slice(eventOffset)
+      .filter((e) => e.kind === "protocol")
+      .every((e) => e.value === brand),
+  ).toBe(true)
   pass("runtime name, isolated data path and protocol registration boundary")
   await page.screenshot({ path: join(artifacts, "status.png") })
   await page.evaluate(() => window.api.mucDisconnect())
