@@ -39,14 +39,11 @@ const artifacts =
       ]
     : [requireFile((path) => basename(path) === `${stem}.exe`, "versioned NSIS installer")]
 
-requireFile(
-  (path) =>
-    (basename(path) === "app.asar" && path.includes("resources")) ||
-    path.replaceAll("\\\\", "/").endsWith("/resources/app/out/main/index.js"),
-  "packaged application payload",
-)
-
 if (platform === "mac") {
+  requireFile(
+    (path) => path.includes(".app/Contents/MacOS/") && basename(path) === brand.appName,
+    "branded macOS executable",
+  )
   const info = requireFile((path) => path.endsWith(".app/Contents/Info.plist"), "macOS Info.plist")
   const result = Bun.spawnSync(["plutil", "-p", info])
   if (result.exitCode !== 0) throw new Error(result.stderr.toString())

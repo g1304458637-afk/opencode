@@ -97,6 +97,7 @@ jobs:
           CAMPUS_TARGET: ${{ matrix.target }}
         run: bun e2e/package-smoke.ts
       - uses: actions/upload-artifact@v7
+        if: always()
         with:
           name: campus-${{ matrix.brand }}-${{ matrix.target }}-${{ github.sha }}
           path: packages/desktop/dist/${{ matrix.brand }}-${{ matrix.target }}/
