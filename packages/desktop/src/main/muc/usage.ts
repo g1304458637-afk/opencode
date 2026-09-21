@@ -16,10 +16,29 @@ export type MucUsageModelStat = {
   cost: number
 }
 
+export type MucWalletStatus = {
+  /** users.balance（USD 账本，8 位小数字符串） */
+  balance: string
+  canonicalCurrency: string
+}
+
+export type MucSubscriptionStatus = {
+  id: number
+  groupId: number
+  displayName: string
+  /** 服务端计算并钳制的整数 0..100；unmetered 时为 null */
+  weeklyUsagePercent: number | null
+  usageStatus: string // unmetered/normal/high/near_limit/exhausted
+  weeklyPeriodStartedAt?: string
+  weeklyPeriodEndsAt?: string
+  expiresAt: string
+  paygFallback: boolean
+}
+
 export type MucUsageSnapshot = {
   // 展示用归一化字段
   planName: string
-  remaining: number | null // null = 无限额/未知
+  remaining: number | null // null = 无限额/未知（legacy 字段；新合同下保留以兼容）
   unit: string
   mode: "quota_limited" | "subscription" | "wallet" | "unknown"
   todayCost: number
@@ -27,6 +46,10 @@ export type MucUsageSnapshot = {
   totalCost: number
   totalRequests: number
   expiresAt?: string
+  // Phase 4 新合同（优先消费；缺失时回退 legacy）
+  wallet: MucWalletStatus | null
+  subscriptionStatus: MucSubscriptionStatus | null
+  resetCardsAvailable: number | null // null = 服务端未提供
   // 明细（展开面板）
   quota?: { limit: number; used: number; remaining: number; unit: string }
   rateWindows: MucUsageRateWindow[]
@@ -91,10 +114,45 @@ export function parseMucUsage(body: unknown): MucUsageSnapshot {
     todayRequests: today.requests,
     totalCost: total.cost,
     totalRequests: total.requests,
+    wallet: null,
+    subscriptionStatus: null,
+    resetCardsAvailable: null,
     rateWindows: parseRateWindows(d.rate_limits),
     topModels: parseTopModels(d.model_stats),
   }
   if (typeof d.expires_at === "string" && d.expires_at) snapshot.expiresAt = d.expires_at
+
+  // Phase 4 新合同优先：wallet / reset_cards / subscription_status
+  const wallet = (d.wallet ?? {}) as Record<string, unknown>
+  if (typeof wallet.balance === "string") {
+    snapshot.wallet = {
+      balance: wallet.balance,
+      canonicalCurrency: str(wallet.canonical_currency) || "USD",
+    }
+  }
+  const resetCards = (d.reset_cards ?? {}) as Record<string, unknown>
+  if (typeof resetCards.available === "number" && Number.isFinite(resetCards.available)) {
+    snapshot.resetCardsAvailable = resetCards.available
+  }
+  const subStatus = (d.subscription_status ?? {}) as Record<string, unknown>
+  if (subStatus && typeof subStatus === "object" && "id" in subStatus) {
+    snapshot.subscriptionStatus = {
+      id: num(subStatus.id),
+      groupId: num(subStatus.group_id),
+      displayName: str(subStatus.display_name),
+      weeklyUsagePercent:
+        typeof subStatus.weekly_usage_percent === "number" ? subStatus.weekly_usage_percent : null,
+      usageStatus: str(subStatus.usage_status) || "normal",
+      weeklyPeriodStartedAt:
+        typeof subStatus.weekly_period_started_at === "string" ? subStatus.weekly_period_started_at : undefined,
+      weeklyPeriodEndsAt:
+        typeof subStatus.weekly_period_ends_at === "string" ? subStatus.weekly_period_ends_at : undefined,
+      expiresAt: str(subStatus.expires_at),
+      paygFallback: subStatus.payg_fallback === true,
+    }
+    snapshot.mode = "subscription"
+    snapshot.planName = snapshot.subscriptionStatus.displayName
+  }
 
   if (mode === "quota_limited") {
     snapshot.mode = "quota_limited"
@@ -111,15 +169,20 @@ export function parseMucUsage(body: unknown): MucUsageSnapshot {
   }
 
   // unrestricted：订阅分组（planName=分组名）或钱包（planName="钱包余额"）
+  // 新合同（subscription_status/wallet）已解析时，legacy 字段不再覆盖归一化结果
   const remaining = d.remaining
-  if (typeof remaining === "number" && Number.isFinite(remaining)) snapshot.remaining = remaining
-  snapshot.planName = str(d.plan_name)
-  if (str(d.plan_name) === "钱包余额" || d.balance !== undefined) {
-    snapshot.mode = "wallet"
-    if (snapshot.planName === "") snapshot.planName = "钱包余额"
-  } else {
-    snapshot.mode = "subscription"
-    if (snapshot.planName === "") snapshot.planName = "订阅"
+  if (!snapshot.subscriptionStatus && typeof remaining === "number" && Number.isFinite(remaining)) {
+    snapshot.remaining = remaining
+  }
+  if (!snapshot.subscriptionStatus) {
+    snapshot.planName = str(d.plan_name)
+    if (str(d.plan_name) === "钱包余额" || d.balance !== undefined) {
+      snapshot.mode = "wallet"
+      if (snapshot.planName === "") snapshot.planName = "钱包余额"
+    } else {
+      snapshot.mode = "subscription"
+      if (snapshot.planName === "") snapshot.planName = "订阅"
+    }
   }
   return snapshot
 }

@@ -57,6 +57,8 @@ export type ElectronAPI = {
   mucGetUsage: () => Promise<MucUsageResult>
   mucGetUpdate: () => Promise<MucUpdateState>
   mucOpenDownloadPage: () => Promise<void>
+  mucResetCard: (subscriptionId: number) => Promise<MucResetCardResult>
+  mucOpenPricing: () => Promise<void>
   getDefaultServerUrl: () => Promise<string | null>
   setDefaultServerUrl: (url: string | null) => Promise<void>
   isFirstLaunchOnboardingPending: () => Promise<boolean>
@@ -142,6 +144,23 @@ export type MucConnectResult =
 // 余额/用量快照（主进程 /v1/usage 聚合结果，不含任何凭据）
 export type MucUsageRateWindow = { window: string; limit: number; used: number; remaining: number; resetAt?: string }
 export type MucUsageModelStat = { model: string; requests: number; cost: number }
+export type MucWalletStatus = {
+  balance: string
+  canonicalCurrency: string
+}
+
+export type MucSubscriptionStatus = {
+  id: number
+  groupId: number
+  displayName: string
+  weeklyUsagePercent: number | null
+  usageStatus: string
+  weeklyPeriodStartedAt?: string
+  weeklyPeriodEndsAt?: string
+  expiresAt: string
+  paygFallback: boolean
+}
+
 export type MucUsageSnapshot = {
   planName: string
   remaining: number | null
@@ -152,6 +171,9 @@ export type MucUsageSnapshot = {
   totalCost: number
   totalRequests: number
   expiresAt?: string
+  wallet: MucWalletStatus | null
+  subscriptionStatus: MucSubscriptionStatus | null
+  resetCardsAvailable: number | null
   quota?: { limit: number; used: number; remaining: number; unit: string }
   rateWindows: MucUsageRateWindow[]
   topModels: MucUsageModelStat[]
@@ -165,3 +187,7 @@ export type MucUsageResult =
 export type MucUpdateState =
   | { available: false }
   | { available: true; forced: boolean; version: string; notes?: string; releasedAt?: string }
+// 重置卡消费结果（POST /api/v1/muc/reset-with-card/:id 的归一化返回）
+export type MucResetCardResult =
+  | { ok: true; weeklyPeriodEndsAt: string }
+  | { ok: false; error: "not_connected" | "invalid_subscription" | "network" | "unavailable" | string }
