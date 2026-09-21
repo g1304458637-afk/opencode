@@ -215,7 +215,11 @@ export function desktopNativePluralCategories(locale: DesktopNativeLocale) {
 
 function locale(value: string) {
   try {
-    return new Intl.Locale(value).maximize()
+    const result = new Intl.Locale(value).maximize()
+    // ISO 15924 Aran is the Nastaliq style of Arabic, using the same encoded script.
+    // Newer ICU likely-subtag data can return it for Punjabi in Pakistan.
+    // https://www.unicode.org/faq/arabic.html
+    return result.script === "Aran" ? new Intl.Locale(result, { script: "Arab" }) : result
   } catch {
     return undefined
   }

@@ -504,10 +504,8 @@
 
 /* ── MUC Harness: mucode campus palette ──
    覆盖 oc-2 默认中性色：暖米色底 + 民大红 accent（非分层规则优先于 @layer） */
-:root,
-:root:not([data-theme="light"]),
-[data-color-scheme="light"],
-[data-color-scheme="dark"] {
+:root[data-brand="muc"],
+:root[data-brand="hubu"] {
   --v2-background-bg-base: #fbf6ed;
   --v2-background-bg-deep: #f4ecdd;
   --v2-background-bg-layer-01: #f6efe2;
@@ -527,7 +525,6 @@
   --v2-border-border-focus: #ac0e0f;
   --v2-border-border-strong: #b39b7d;
 }
-
 
 /* ── HUBU: 湖北大学 campus palette ──
    仅当渲染层在 <html> 上设置 data-brand="hubu" 时生效；

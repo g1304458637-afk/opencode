@@ -1,3 +1,4 @@
+import { resolveBrand } from "@opencode-ai/brand"
 import { readFileSync } from "node:fs"
 import solidPlugin from "vite-plugin-solid"
 import tailwindcss from "@tailwindcss/vite"
@@ -18,7 +19,7 @@ const channel = (() => {
 export default [
   {
     name: "opencode-desktop:config",
-    config() {
+    config(config) {
       return {
         resolve: {
           alias: {
@@ -27,6 +28,13 @@ export default [
         },
         define: {
           "import.meta.env.VITE_OPENCODE_CHANNEL": JSON.stringify(channel),
+          ...(config.define?.__CAMPUS_BRAND_CONFIG__
+            ? {}
+            : {
+                __CAMPUS_BRAND_CONFIG__: JSON.stringify(
+                  resolveBrand({ BRAND: process.env.BRAND, OPENCODE_CHANNEL: channel }),
+                ),
+              }),
         },
         worker: {
           format: "es",
