@@ -57,7 +57,10 @@ export type ElectronAPI = {
   mucGetUsage: () => Promise<MucUsageResult>
   mucGetUpdate: () => Promise<MucUpdateState>
   mucOpenDownloadPage: () => Promise<void>
-  mucResetCard: (subscriptionId: number) => Promise<MucResetCardResult>
+  mucResetCard: (subscriptionId: number) => Promise<ResetCardResult>
+  mucGetBrand: () => Promise<{ id: string; name: string; protocol: string; version: string }>
+  mucOpenAccount: () => Promise<void>
+  mucAcknowledgeReset: (subscriptionId: number, operationId: string) => Promise<void>
   mucOpenPricing: () => Promise<void>
   getDefaultServerUrl: () => Promise<string | null>
   setDefaultServerUrl: (url: string | null) => Promise<void>
@@ -141,53 +144,16 @@ export type MucConnectResult =
   | { ok: true; state: MucConnectionState; modelCount?: number }
   | { ok: false; error: "invalid_code" | "invalid" | "expired" | "used" | "network" | "bad_response" | "unknown" }
 
-// 余额/用量快照（主进程 /v1/usage 聚合结果，不含任何凭据）
-export type MucUsageRateWindow = { window: string; limit: number; used: number; remaining: number; resetAt?: string }
-export type MucUsageModelStat = { model: string; requests: number; cost: number }
-export type MucWalletStatus = {
-  balance: string
-  canonicalCurrency: string
-}
-
-export type MucSubscriptionStatus = {
-  id: number
-  groupId: number
-  displayName: string
-  weeklyUsagePercent: number | null
-  usageStatus: string
-  weeklyPeriodStartedAt?: string
-  weeklyPeriodEndsAt?: string
-  expiresAt: string
-  paygFallback: boolean
-}
-
-export type MucUsageSnapshot = {
-  planName: string
-  remaining: number | null
-  unit: string
-  mode: "quota_limited" | "subscription" | "wallet" | "unknown"
-  todayCost: number
-  todayRequests: number
-  totalCost: number
-  totalRequests: number
-  expiresAt?: string
-  wallet: MucWalletStatus | null
-  subscriptionStatus: MucSubscriptionStatus | null
-  resetCardsAvailable: number | null
-  quota?: { limit: number; used: number; remaining: number; unit: string }
-  rateWindows: MucUsageRateWindow[]
-  topModels: MucUsageModelStat[]
-}
-
+// IPC types reuse the actual main-process parser and reset result (type-only; no runtime import).
+export type { MucUsageSnapshot, MucSubscriptionStatus, MucWalletStatus, MucUsageRateWindow, MucUsageModelStat } from "../main/muc/usage"
+import type { MucUsageSnapshot } from "../main/muc/usage"
+export type { ResetCardResult as MucResetCardResult } from "../main/muc/reset-card"
+import type { ResetCardResult } from "../main/muc/reset-card"
 export type MucUsageResult =
   | { ok: true; usage: MucUsageSnapshot }
   | { ok: false; error: "not_connected" | "unavailable" }
 
 // 新版本自检结果（主进程拉 /downloads/latest-mucode.json 后的聚合结论）
 export type MucUpdateState =
-  | { available: false }
-  | { available: true; forced: boolean; version: string; notes?: string; releasedAt?: string }
-// 重置卡消费结果（POST /api/v1/muc/reset-with-card/:id 的归一化返回）
-export type MucResetCardResult =
-  | { ok: true; weeklyPeriodEndsAt: string }
-  | { ok: false; error: "not_connected" | "invalid_subscription" | "network" | "unavailable" | string }
+  | { available: false; status: "up-to-date" | "unavailable"; localVersion: string }
+  | { available: true; forced: boolean; localVersion: string; version: string; notes?: string; releasedAt?: string }

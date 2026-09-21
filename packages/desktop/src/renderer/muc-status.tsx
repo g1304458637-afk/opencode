@@ -1,3 +1,4 @@
+import { resolveBrand } from "@opencode-ai/brand"
 // MUC Harness: sub2api 余额/用量悬浮球。
 // 可自由拖动的圆形悬浮球（位置持久化），点击展开用量详情面板（吸附在球上方）。
 // 数据经主进程 IPC 拉取（凭据不出主进程）。本文件为 mucode 新增文件。
@@ -17,25 +18,25 @@ import {
   type MucTweenHandle,
 } from "./muc-reset-animation"
 
-const STORE_NAME = "muc-status"
+const brand = resolveBrand()
+const STORE_NAME = `${brand.credentialNamespace}-status`
 const REFRESH_MS = 5 * 60 * 1000
 const BALL_SIZE = 56
 const PANEL_WIDTH = 280
 const EDGE = 8
 
 type Pos = { x: number; y: number }
-type Cached = { usage: MucUsageSnapshot; fetchedAt: string }
 
 // 民大红黑金 tokens（局部作用域：悬浮球 + 面板）
 const MUC_TOKENS = `
   .muc-status-scope {
-    --muc-red: #c82433;
-    --muc-red-bright: #e23848;
-    --muc-red-deep: #7f1622;
-    --muc-red-soft: rgba(200, 36, 51, 0.18);
-    --muc-red-border: rgba(238, 56, 72, 0.45);
-    --muc-red-glow: rgba(238, 56, 72, 0.28);
-    --muc-gold: #d6b46a;
+    --muc-red: ${brand.colors.primary};
+    --muc-red-bright: ${brand.colors.primary};
+    --muc-red-deep: ${brand.colors.primaryDark};
+    --muc-red-soft: ${brand.colors.primary}2e;
+    --muc-red-border: ${brand.colors.primary}73;
+    --muc-red-glow: ${brand.colors.primary}47;
+    --muc-gold: ${brand.colors.gold};
     --muc-glass-border: rgba(255, 255, 255, 0.12);
     --muc-text-primary: #ffffff;
     --muc-text-secondary: rgba(255, 255, 255, 0.68);
@@ -124,42 +125,39 @@ export function MucStatus() {
 
   const refreshUpdate = async () => {
     try {
-      setUpdate(await window.api.mucGetUpdate())
+      const result = await window.api.mucGetUpdate()
+      if (!disposed) setUpdate(result)
     } catch {}
   }
   // 重置卡流程：confirming=确认层 / animating=成功动画层（先 API 成功再动画）
-  const [resetConfirming, setResetConfirming] = createSignal(false)
-  const [resetAnimating, setResetAnimating] = createSignal(false)
+  const [resetPhase, setResetPhase] = createSignal<"idle" | "confirming" | "submitting" | "success" | "failed" | "refreshing">("idle")
+  const resetConfirming = () => resetPhase() === "confirming" || resetPhase() === "submitting"
+  const resetAnimating = () => resetPhase() === "success" || resetPhase() === "refreshing"
+  const resetBusy = () => ["submitting", "success", "refreshing"].includes(resetPhase())
+  let disposed = false
+  let refreshSequence = 0
+  let animationTimer: ReturnType<typeof setTimeout> | undefined
   const [resetPercent, setResetPercent] = createSignal(0)
   const [resetNextEnd, setResetNextEnd] = createSignal("")
   const [resetError, setResetError] = createSignal("")
   let resetTween: MucTweenHandle | null = null
 
   const refresh = async () => {
+    const sequence = ++refreshSequence
     setLoading(true)
     try {
       const res = await window.api.mucGetUsage()
-      if (res.ok) {
-        setUsage(res.usage)
-        const now = new Date().toISOString()
-        setFetchedAt(now)
-        setStale(false)
-        void window.api.storeSet(STORE_NAME, "last", JSON.stringify({ usage: res.usage, fetchedAt: now }))
-      } else {
-        const raw = await window.api.storeGet(STORE_NAME, "last")
-        if (raw && !usage()) {
-          try {
-            const parsed = JSON.parse(raw) as Cached
-            setUsage(parsed.usage)
-            setFetchedAt(parsed.fetchedAt)
-            setStale(true)
-          } catch {}
-        } else {
-          setStale(true)
-        }
-      }
+      if (disposed || sequence !== refreshSequence) return false
+      if (!res.ok) { setStale(true); return false }
+      setUsage(res.usage)
+      setFetchedAt(new Date().toISOString())
+      setStale(false)
+      return true
+    } catch {
+      if (!disposed && sequence === refreshSequence) setStale(true)
+      return false
     } finally {
-      setLoading(false)
+      if (!disposed && sequence === refreshSequence) setLoading(false)
     }
   }
 
@@ -176,34 +174,34 @@ export function MucStatus() {
 
   // 重置卡：确认 → API 成功 → 播放 AVAILABLE QUOTA 动画
   const confirmResetCard = async () => {
+    if (resetBusy()) return
     const target = subscriptionStatus()
-    if (!target || target.weeklyUsagePercent === null) {
-      setResetConfirming(false)
-      return
-    }
-    const res = await window.api.mucResetCard(target.id)
-    setResetConfirming(false)
-    if (!res.ok) {
-      setResetError(`重置失败：${res.error}`)
-      return
-    }
+    if (!target || target.weeklyUsagePercent === null) { setResetPhase("idle"); return }
+    setResetPhase("submitting")
+    ++refreshSequence
     setResetError("")
-    const { from, to } = availableQuotaAfterReset(target.weeklyUsagePercent)
-    setResetPercent(from)
-    setResetNextEnd(res.weeklyPeriodEndsAt)
-    setResetAnimating(true)
-    await refresh()
-    resetTween?.cancel()
-    resetTween = mucTween({
-      from,
-      to,
-      durationMs: MUC_SUCCESS_MS,
-      onUpdate: (v) => setResetPercent(Math.round(v)),
-      onDone: () => {
-        // 结束态短暂停留后回归正常面板，不长时间遮挡
-        setTimeout(() => setResetAnimating(false), 600)
-      },
-    })
+    try {
+      const res = await window.api.mucResetCard(target.id)
+      if (disposed) return
+      if (!res.ok) { setResetError(`重置失败：${res.error}`); setResetPhase("failed"); return }
+      const { from, to } = availableQuotaAfterReset(target.weeklyUsagePercent)
+      setResetPercent(from)
+      setResetNextEnd(res.weeklyPeriodEndsAt)
+      setResetPhase("refreshing")
+      const refreshed = await refresh()
+      if (disposed) return
+      if (refreshed) await window.api.mucAcknowledgeReset(target.id, res.operationId)
+      if (!refreshed) setResetError("重置已成功，状态刷新失败；请刷新或重试确认结果。")
+      setResetPhase("success")
+      resetTween?.cancel()
+      resetTween = mucTween({
+        from, to, durationMs: MUC_SUCCESS_MS,
+        onUpdate: (v) => { if (!disposed) setResetPercent(Math.round(v)) },
+        onDone: () => { animationTimer = setTimeout(() => { if (!disposed) setResetPhase("idle") }, 600) },
+      })
+    } catch {
+      if (!disposed) { setResetError("网络异常，请重试同一次重置。"); setResetPhase("failed") }
+    }
   }
 
   onMount(() => {
@@ -224,7 +222,7 @@ export function MucStatus() {
     })
     void refresh()
     void refreshUpdate()
-    const timer = setInterval(() => void refresh(), REFRESH_MS)
+    const timer = setInterval(() => { if (!loading() && !resetBusy()) void refresh(); void refreshUpdate() }, REFRESH_MS)
     const onResize = () => setPos((p) => clampPos(p))
     window.addEventListener("resize", onResize)
     onCleanup(() => {
@@ -234,6 +232,9 @@ export function MucStatus() {
   })
 
   onCleanup(() => {
+    disposed = true
+    ++refreshSequence
+    clearTimeout(animationTimer)
     resetTween?.cancel()
   })
 
@@ -316,6 +317,13 @@ export function MucStatus() {
             </button>
           </div>
 
+          <div class="mb-2 flex justify-between text-[10px] text-white/60">
+            <span>{brand.shortName} · {update()?.localVersion ?? "—"}</span>
+            <button type="button" onClick={() => void window.api.mucOpenAccount()}>账户 ↗</button>
+          </div>
+          <Show when={update() && !update()!.available && (update() as { status?: string }).status === "unavailable"}>
+            <p class="text-[10px] text-white/60">更新检查暂不可用</p>
+          </Show>
           <Show when={updateAvailable()}>
             {(u) => (
               <button
@@ -334,7 +342,7 @@ export function MucStatus() {
             )}
           </Show>
 
-          <Show when={usage()} fallback={<div class="py-3 text-center text-white/50">暂无数据</div>}>
+          <Show when={usage()} fallback={<div class="py-3 text-center text-white/50">{stale() ? "状态暂不可用，请重试" : "暂无数据"}</div>}>
             {(u) => (
               <div class="flex flex-col gap-1.5">
                 {/* 订阅块：本周使用 / 状态 / 恢复日 / 继续使用 / 重置卡 */}
@@ -381,7 +389,7 @@ export function MucStatus() {
                       </div>
                       <div class="mt-1.5 flex items-center justify-between">
                         <span class="text-[11px]" style={{ color: "var(--muc-gold)" }}>
-                          重置卡 ×{resetCardsAvailable()}
+                          重置卡 ×{usage()?.resetCardsAvailable ?? "—"}
                         </span>
                         <button
                           type="button"
@@ -391,8 +399,8 @@ export function MucStatus() {
                             background: "rgba(255,255,255,0.05)",
                             color: "var(--muc-text-primary)",
                           }}
-                          disabled={resetCardsAvailable() <= 0 || resetConfirming() || resetAnimating()}
-                          onClick={() => setResetConfirming(true)}
+                          disabled={resetCardsAvailable() <= 0 || resetConfirming() || resetBusy() || stale()}
+                          onClick={() => setResetPhase("confirming")}
                         >
                           使用
                         </button>
@@ -472,7 +480,7 @@ export function MucStatus() {
                   <button
                     type="button"
                     class="rounded px-1.5 py-0.5 hover:bg-white/10 disabled:opacity-50"
-                    disabled={loading()}
+                    disabled={loading() || resetBusy()}
                     onClick={() => void refresh()}
                   >
                     {loading() ? "刷新中…" : "刷新"}
@@ -500,23 +508,25 @@ export function MucStatus() {
             >
               <p class="text-[12px] font-semibold">使用重置卡？</p>
               <p class="text-[10px] leading-relaxed text-white/60">
-                本周使用量将立即重置，并从现在重新开始 7 天周期。重置卡不可退回。
+                本周使用量将立即重置，并从现在重新开始最多 7 天周期（不超过订阅到期日）。重置卡不可退回。
               </p>
               <div class="mt-1 flex gap-2">
                 <button
                   type="button"
                   class="rounded-md px-2.5 py-1 text-[11px]"
                   style={{ border: "1px solid var(--muc-glass-border)", color: "var(--muc-text-secondary)" }}
-                  onClick={() => setResetConfirming(false)}
+                  disabled={resetBusy()}
+                  onClick={() => setResetPhase("idle")}
                 >
                   取消
                 </button>
                 <button
                   type="button"
                   class="rounded-md bg-white px-2.5 py-1 text-[11px] font-semibold text-black"
+                  disabled={resetBusy()}
                   onClick={() => void confirmResetCard()}
                 >
-                  确认使用
+                  {resetPhase() === "submitting" ? "提交中…" : "确认使用"}
                 </button>
               </div>
             </div>
@@ -550,7 +560,7 @@ export function MucStatus() {
               </div>
               <p class="text-[9px] tracking-[0.3em] text-white/40">AVAILABLE QUOTA</p>
               <p class="text-[10px] text-white/60">
-                {fmtDate(resetNextEnd())} 恢复 · 剩余 {Math.max(resetCardsAvailable() - 1, 0)} 张
+                {fmtDate(resetNextEnd())} 恢复 · 剩余 {usage()?.resetCardsAvailable ?? "—"} 张
               </p>
             </div>
           </Show>

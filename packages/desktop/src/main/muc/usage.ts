@@ -1,3 +1,4 @@
+import { resolveBrand } from "@opencode-ai/brand"
 // MUC Harness: 网关余额/用量拉取。
 // 模式与 countGatewayModels 一致：主进程 fetch + Bearer + 超时，失败返回
 // undefined（不阻塞主流程）。API Key 只存在于主进程内存，渲染层仅拿到聚合结果。
@@ -56,6 +57,10 @@ export type MucUsageSnapshot = {
   topModels: MucUsageModelStat[]
 }
 
+function record(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {}
+}
+
 function num(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0
 }
@@ -99,7 +104,8 @@ function parseTopModels(raw: unknown): MucUsageModelStat[] {
 // 解析 /v1/usage 的两种响应形态（quota_limited / unrestricted 订阅|钱包），
 // 未识别的结构归为 unknown 模式（仍尽力展示今日/累计用量）。
 export function parseMucUsage(body: unknown): MucUsageSnapshot {
-  const d = (body ?? {}) as Record<string, unknown>
+  const envelope = record(body)
+  const d = record(envelope.data ?? body)
   const usage = d.usage as Record<string, unknown> | undefined
   const today = parseUsageBucket(usage?.today)
   const total = parseUsageBucket(usage?.total)
@@ -123,8 +129,8 @@ export function parseMucUsage(body: unknown): MucUsageSnapshot {
   if (typeof d.expires_at === "string" && d.expires_at) snapshot.expiresAt = d.expires_at
 
   // Phase 4 新合同优先：wallet / reset_cards / subscription_status
-  const wallet = (d.wallet ?? {}) as Record<string, unknown>
-  if (typeof wallet.balance === "string") {
+  const wallet = record(d.wallet)
+  if (typeof wallet.balance === "string" && wallet.balance.trim() !== "" && Number.isFinite(Number(wallet.balance))) {
     snapshot.wallet = {
       balance: wallet.balance,
       canonicalCurrency: str(wallet.canonical_currency) || "USD",
@@ -132,16 +138,16 @@ export function parseMucUsage(body: unknown): MucUsageSnapshot {
   }
   const resetCards = (d.reset_cards ?? {}) as Record<string, unknown>
   if (typeof resetCards.available === "number" && Number.isFinite(resetCards.available)) {
-    snapshot.resetCardsAvailable = resetCards.available
+    snapshot.resetCardsAvailable = Math.max(0, Math.floor(resetCards.available))
   }
-  const subStatus = (d.subscription_status ?? {}) as Record<string, unknown>
-  if (subStatus && typeof subStatus === "object" && "id" in subStatus) {
+  const subStatus = record(d.subscription_status)
+  if (Number.isSafeInteger(subStatus.id) && num(subStatus.id) > 0) {
     snapshot.subscriptionStatus = {
       id: num(subStatus.id),
       groupId: num(subStatus.group_id),
       displayName: str(subStatus.display_name),
       weeklyUsagePercent:
-        typeof subStatus.weekly_usage_percent === "number" ? subStatus.weekly_usage_percent : null,
+        typeof subStatus.weekly_usage_percent === "number" && Number.isFinite(subStatus.weekly_usage_percent) && subStatus.weekly_usage_percent >= 0 && subStatus.weekly_usage_percent <= 100 ? subStatus.weekly_usage_percent : null,
       usageStatus: str(subStatus.usage_status) || "normal",
       weeklyPeriodStartedAt:
         typeof subStatus.weekly_period_started_at === "string" ? subStatus.weekly_period_started_at : undefined,
@@ -164,7 +170,7 @@ export function parseMucUsage(body: unknown): MucUsageSnapshot {
       unit: str(quota.unit) || "USD",
     }
     snapshot.remaining = quota.remaining === undefined ? null : num(quota.remaining)
-    snapshot.planName = str(d.plan_name) || "配额 Key"
+    snapshot.planName = (str(d.planName) || str(d.plan_name)) || "配额 Key"
     return snapshot
   }
 
@@ -175,14 +181,17 @@ export function parseMucUsage(body: unknown): MucUsageSnapshot {
     snapshot.remaining = remaining
   }
   if (!snapshot.subscriptionStatus) {
-    snapshot.planName = str(d.plan_name)
-    if (str(d.plan_name) === "钱包余额" || d.balance !== undefined) {
+    snapshot.planName = (str(d.planName) || str(d.plan_name))
+    if (snapshot.wallet || (str(d.planName) || str(d.plan_name)) === "钱包余额" || typeof d.balance === "number") {
       snapshot.mode = "wallet"
       if (snapshot.planName === "") snapshot.planName = "钱包余额"
-    } else {
+    } else if (mode === "unrestricted" && (d.subscription || snapshot.planName)) {
       snapshot.mode = "subscription"
       if (snapshot.planName === "") snapshot.planName = "订阅"
     }
+  }
+  if (!snapshot.wallet && typeof d.balance === "number" && Number.isFinite(d.balance)) {
+    snapshot.wallet = { balance: d.balance.toFixed(8), canonicalCurrency: snapshot.unit }
   }
   return snapshot
 }
@@ -196,14 +205,14 @@ export async function fetchMucUsage(
     const url = gateway.replace(/\/+$/, "") + "/v1/usage"
     // MUC Harness: 附带 mucode/<版本> UA，服务端可统计旧版滞留率；版本未知时不影响请求
     const headers: Record<string, string> = { Authorization: `Bearer ${apiKey}` }
-    if (clientVersion) headers["User-Agent"] = `mucode/${clientVersion}`
+    if (clientVersion) headers["User-Agent"] = `${resolveBrand().artifactPrefix}/${clientVersion}`
     const res = await fetch(url, {
       headers,
       signal: AbortSignal.timeout(8_000),
     })
     if (!res.ok) return undefined
     // 网关返回裸 JSON；兼容 {data:...} 包装以防未来调整
-    const body = (await res.json().catch(() => null)) as any
+    const body = record(await res.json().catch(() => null))
     const payload = body?.data ?? body
     if (!payload || typeof payload !== "object") return undefined
     return parseMucUsage(payload)

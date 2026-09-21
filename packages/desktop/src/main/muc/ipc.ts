@@ -3,7 +3,9 @@
 // 查询新版本自检结果。新版本只"提示"不自动安装（manifest 源固定为官方网关）。
 
 import { app, dialog, ipcMain, Notification, shell } from "electron"
-import { randomUUID } from "node:crypto"
+import { join } from "node:path"
+import { ResetCardClient } from "./reset-card"
+import type { ElectronAPI } from "../../preload/types"
 import { MucSecretStore } from "./secret-store"
 import { MucConnectController } from "./controller"
 import { parseCampusUrl } from "./deep-link"
@@ -56,7 +58,7 @@ function scheduleMucUpdateAnnouncement(): void {
         if (result.status === "forced" && result.manifest) {
           dialog.showMessageBoxSync({
             type: "warning",
-            title: "mucode 需要更新",
+            title: `${resolveBrand().appName} 需要更新`,
             message: `当前版本 ${result.localVersion} 已低于最低支持版本 ${result.manifest.minSupported}`,
             detail: "网关协议已变更，当前版本可能无法正常使用，请下载新版本覆盖安装。",
             buttons: ["去下载新版本"],
@@ -69,7 +71,7 @@ function scheduleMucUpdateAnnouncement(): void {
         if (result.status !== "update-available" || !result.manifest || !Notification.isSupported()) return
         const notes = result.manifest?.notes
         const notification = new Notification({
-          title: `mucode 有新版本 ${result.manifest.version}`,
+          title: `${resolveBrand().appName} 有新版本 ${result.manifest.version}`,
           body: notes ? notes.slice(0, 180) : "点击查看下载页",
           silent: true,
         })
@@ -85,6 +87,8 @@ function scheduleMucUpdateAnnouncement(): void {
 export function registerMucIpcHandlers(userDataDir: string, deps: MucDeps): MucConnectController {
   const store = new MucSecretStore(userDataDir)
   const controller = new MucConnectController(store)
+  const brand = resolveBrand()
+  const resets = new ResetCardClient(join(userDataDir, `${brand.credentialNamespace}-reset-attempts`), brand.resetPath)
 
   ipcMain.handle("muc:get-state", async () => {
     return controller.restoreToProcessEnv()
@@ -130,6 +134,7 @@ export function registerMucIpcHandlers(userDataDir: string, deps: MucDeps): MucC
       if (result.status === "forced" && result.manifest) {
         return {
           available: true as const,
+          localVersion: result.localVersion,
           forced: true,
           version: result.manifest.version,
           notes: result.manifest.notes,
@@ -139,15 +144,16 @@ export function registerMucIpcHandlers(userDataDir: string, deps: MucDeps): MucC
       if (result.status === "update-available" && result.manifest) {
         return {
           available: true as const,
+          localVersion: result.localVersion,
           forced: false,
           version: result.manifest.version,
           notes: result.manifest.notes,
           releasedAt: result.manifest.releasedAt,
         }
       }
-      return { available: false as const }
+      return { available: false as const, status: result.status, localVersion: result.localVersion }
     } catch {
-      return { available: false as const }
+      return { available: false as const, status: "unavailable" as const, localVersion: app.getVersion() }
     }
   })
 
@@ -159,43 +165,33 @@ export function registerMucIpcHandlers(userDataDir: string, deps: MucDeps): MucC
 
   // 重置卡消费：与 Website POST /subscriptions/:id/reset-with-card 同一后端端点语义
   //（网关传输通道 POST /api/v1/muc/reset-with-card/:id，API Key 认证）。
-  // 幂等键每次点击新生成；重置语义/限张/归属校验全部在服务端。
+  // 主进程持久化逻辑操作；响应丢失和重启后重试复用同一幂等键。
   ipcMain.handle("muc:reset-card", async (_event, subscriptionId: unknown) => {
     const cred = await store.get()
     if (!cred) return { ok: false as const, error: "not_connected" as const }
     if (typeof subscriptionId !== "number" || !Number.isInteger(subscriptionId) || subscriptionId <= 0) {
       return { ok: false as const, error: "invalid_subscription" as const }
     }
-    // 网关传输通道挂 /v1（与 /v1/usage 同栈；/api/v1 前缀是网站端 API）
-      const url = cred.gateway.replace(/\/+$/, "") + `/v1/muc/reset-with-card/${subscriptionId}`
-    try {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${cred.apiKey}`,
-          "Content-Type": "application/json",
-          "Idempotency-Key": randomUUID(),
-        },
-        body: "{}",
-        signal: AbortSignal.timeout(10_000),
-      })
-      const body = (await res.json().catch(() => null)) as any
-      const payload = body?.data ?? body
-      if (!res.ok || !payload?.weekly_period_ends_at) {
-        const reason = String(payload?.reason ?? payload?.message ?? "unavailable")
-        return { ok: false as const, error: reason }
-      }
-      return { ok: true as const, weeklyPeriodEndsAt: String(payload.weekly_period_ends_at) }
-    } catch {
-      return { ok: false as const, error: "network" as const }
-    }
+    return resets.reset(cred.gateway, cred.apiKey, subscriptionId)
+  })
+
+  ipcMain.handle("muc:acknowledge-reset", async (_event, id: unknown, operation: unknown) => {
+    if (!Number.isSafeInteger(id) || typeof operation !== "string") return
+    const cred = await store.get()
+    if (cred) resets.acknowledge(cred.gateway, cred.apiKey, id as number, operation)
+  })
+
+  ipcMain.handle("muc:get-brand", () => ({
+    id: brand.id, name: brand.productName, protocol: brand.protocolScheme, version: app.getVersion(),
+  } satisfies Awaited<ReturnType<ElectronAPI["mucGetBrand"]>>))
+
+  ipcMain.handle("muc:open-account", async () => {
+    await shell.openExternal(new URL("/dashboard", brand.updates.downloadPage).href)
   })
 
   // 管理套餐：打开 Website Pricing（MUCODE 内不做支付）
   ipcMain.handle("muc:open-pricing", async () => {
-    const cred = await store.get()
-    if (!cred) return
-    await shell.openExternal(cred.gateway.replace(/\/+$/, "") + "/pricing")
+    await shell.openExternal(new URL("/pricing", brand.updates.downloadPage).href)
   })
 
   return controller

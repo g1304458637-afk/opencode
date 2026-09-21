@@ -45,6 +45,7 @@ describe("MUC Harness: parseMucUsage status contract", () => {
     expect(snap.resetCardsAvailable).toBe(1)
     // 新合同优先：legacy remaining 不得覆盖归一化结果（订阅剩余不是钱包）
     expect(snap.mode).toBe("subscription")
+    expect(snap.planName).toBe("Pro")
   })
 
   test("PAYG: wallet present, subscription_status absent", () => {
@@ -96,4 +97,20 @@ describe("MUC Harness: parseMucUsage status contract", () => {
     expect(snap.subscriptionStatus!.weeklyUsagePercent).toBeNull()
     expect(snap.subscriptionStatus!.usageStatus).toBe("unmetered")
   })
+})
+
+test("legacy wallet, missing fields, malformed numbers and envelopes degrade safely", () => {
+  expect(parseMucUsage({ balance: 3.25, mode: "unrestricted", planName: "钱包余额" }).wallet?.balance).toBe("3.25000000")
+  for (const input of [null, [], "bad", 3, {}, { wallet: { balance: "NaN" } }]) {
+    const parsed = parseMucUsage(input)
+    expect(parsed.mode).toBe("unknown")
+    expect(parsed.subscriptionStatus).toBeNull()
+    expect(parsed.wallet).toBeNull()
+  }
+  expect(parseMucUsage({ data: newContractBody() }).wallet?.balance).toBe("12.48000000")
+  for (const percent of [99, 100, null]) {
+    const body = newContractBody()
+    ;(body.subscription_status as Record<string, unknown>).weekly_usage_percent = percent
+    expect(parseMucUsage(body).subscriptionStatus?.weeklyUsagePercent).toBe(percent)
+  }
 })
