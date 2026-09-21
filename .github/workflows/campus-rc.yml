@@ -1,0 +1,96 @@
+name: Campus RC
+
+on:
+  push:
+    branches: [muc-main, hubu-main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  source-gate:
+    name: Canonical source and brand tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: .bun-version
+      - run: bun install --frozen-lockfile
+      - name: Brand registry gate
+        working-directory: packages/brand
+        run: bun test
+      - name: Desktop identity gates
+        working-directory: packages/desktop
+        run: bun test electron-builder.config.test.ts scripts/campus-config.test.ts scripts/muc-version.test.ts
+      - name: Require canonical branch
+        run: |
+          case "${GITHUB_REF_NAME}" in
+            muc-main|hubu-main) ;;
+            *) echo "Campus RC only accepts muc-main or hubu-main" >&2; exit 1 ;;
+          esac
+
+  package:
+    name: ${{ matrix.brand }} / ${{ matrix.target }}
+    needs: source-gate
+    strategy:
+      fail-fast: false
+      matrix:
+        brand: [muc, hubu]
+        target: [mac-arm64, mac-x64, win-x64]
+        include:
+          - target: mac-arm64
+            os: macos-15
+            platform: mac
+            arch: arm64
+            pty: '@lydell/node-pty-darwin-arm64'
+          - target: mac-x64
+            os: macos-15-intel
+            platform: mac
+            arch: x64
+            pty: '@lydell/node-pty-darwin-x64'
+          - target: win-x64
+            os: windows-2025
+            platform: win
+            arch: x64
+            pty: '@lydell/node-pty-win32-x64'
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+        working-directory: packages/desktop
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: .bun-version
+      - name: Install dependencies
+        working-directory: .
+        run: bun install --frozen-lockfile
+      - name: Build desktop
+        env:
+          OPENCODE_CHANNEL: ${{ matrix.brand }}
+          BRAND: ${{ matrix.brand }}
+          CAMPUS_LOCAL_BUILD: '1'
+          CAMPUS_BUILD_OUTPUT: dist/${{ matrix.brand }}-${{ matrix.target }}
+          MUC_PTY_PKG: ${{ matrix.pty }}
+        run: |
+          bun run build
+          bunx electron-builder --config electron-builder.config.ts --${{ matrix.platform }} --${{ matrix.arch }} --publish never
+      - name: Verify packaged identity
+        env:
+          OPENCODE_CHANNEL: ${{ matrix.brand }}
+          BRAND: ${{ matrix.brand }}
+          CAMPUS_LOCAL_BUILD: '1'
+          CAMPUS_BUILD_OUTPUT: dist/${{ matrix.brand }}-${{ matrix.target }}
+        run: bun e2e/campus.ts --packaged-smoke
+      - uses: actions/upload-artifact@v7
+        with:
+          name: campus-${{ matrix.brand }}-${{ matrix.target }}-${{ github.sha }}
+          path: packages/desktop/dist/${{ matrix.brand }}-${{ matrix.target }}/
+          if-no-files-found: error
+          retention-days: 14

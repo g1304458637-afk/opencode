@@ -20,7 +20,7 @@
 //   win: 在 win32 上 signtool verify /pa PASS（mac 交叉构建无法验证 → 拒绝发布 stable）
 // 任何一项不满足 → 直接失败，不产生任何上传/manifest 变更。
 //
-// 本脚本只发布 muc-harness 已测试的本地构建产物；不触碰上游 OpenCode。
+// 本脚本只发布 muc-main 已测试的本地构建产物；不触碰上游 OpenCode。
 
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { createHash } from "node:crypto"

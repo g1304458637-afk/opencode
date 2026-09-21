@@ -37,7 +37,7 @@ export function campusConfig(env: NodeJS.ProcessEnv = process.env) {
     }
   }
   const release = JSON.parse(readFileSync(new URL(`../resources/${brand.id}/release.json`, import.meta.url), "utf8"))
-  if (typeof release.version !== "string" || !/^\d+\.\d+\.\d+(?:-(?:muc|hubu)\.\d+)?$/.test(release.version)) {
+  if (typeof release.version !== "string" || !/^\d+\.\d+\.\d+(?:-[0-9A-Za-z]+(?:\.[0-9A-Za-z]+)*)?$/.test(release.version)) {
     throw new Error("Invalid campus release version")
   }
   return { brand: configured, version: release.version as string }

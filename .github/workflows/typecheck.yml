@@ -2,9 +2,9 @@ name: typecheck
 
 on:
   push:
-    branches: [dev]
+    branches: [dev, muc-main, hubu-main]
   pull_request:
-    branches: [dev]
+    branches: [muc-main, hubu-main]
   workflow_dispatch:
 
 jobs:

@@ -1,7 +1,7 @@
-# MUC Harness: mucode 自动更新与发布 Runbook（feat/muc-auto-update）
+# MUC: mucode 自动更新与发布 Runbook（muc-main）
 
 > 适用：muc 渠道（`OPENCODE_CHANNEL=muc`，appId `cn.edu.muc.harness`，productName `mucode`）。
-> 基线：OpenCode upstream v1.18.31 fork（分支 `muc-harness`）；MUC 桌面版本独立 SemVer，起始 `2.0.0`。
+> 基线：Campus Shared Core（长期分支 `muc-main`）；MUC 桌面版本独立 SemVer，起始 `2.0.0`。
 
 ## 0. 更新模型（不可动摇的两条线）
 
@@ -25,7 +25,7 @@ MUC Release  → MUC 用户：自动检查、自动下载、用户确认安装�
 
 - **禁止**任何 "OpenCode upstream 自动进入 MUC 生产" 的机制：无 scheduled upstream sync、
   无 repository_dispatch、无 npm latest 依赖。自动更新 feed 只发布已经进入
-  `muc-harness` 并通过测试的代码。
+  `muc-main` 并通过测试的代码。
 - MUC runtime 永远强制 v1（dist/node 内嵌 sidecar，`src/main/index.ts` `SIDECAR_VERSION`），
   `resources/opencode-cli` 在 muc 渠道不执行。更新系统不得改变该约束。
 
@@ -234,7 +234,7 @@ Developer ID build:  designated requirement 稳定（Team ID 锚定）→ 首次
 
 ## 9. 红线检查表（每次发布前过一遍）
 
-- [ ] 本次发布代码已进入 `muc-harness`（或经验收的 feature 分支），非 upstream 直接产物
+- [ ] 本次发布代码已进入 `muc-main`（或经验收的 feature 分支），非 upstream 直接产物
 - [ ] 无新增 upstream 自动同步（rg `git pull upstream|git fetch upstream` 仅出现在 runbook 文档）
 - [ ] `SIDECAR_VERSION` muc 强制 v1 逻辑未动（`index.ts`）
 - [ ] 客户端内无 token/secret（`rg "sk-|TOKEN|SECRET" packages/desktop/resources/muc`）

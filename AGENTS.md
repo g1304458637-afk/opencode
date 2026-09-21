@@ -1,14 +1,14 @@
 - To regenerate the legacy JavaScript SDK, run `./packages/sdk/js/script/build.ts`.
 - After changing the public Protocol or Server `HttpApi`, run `bun run generate` from `packages/client`. Do not edit `src/generated` or `src/generated-effect` directly.
 - Keep runtime dependencies directed from Schema to Core and Protocol, then from Core and Protocol to Server. Client runtime code may depend on Schema and Protocol but never Core or Server; `sdk-next` composes Client, Core, and Server.
-- The default branch in this repo is `dev`.
-- Local `main` ref may not exist; use `dev` or `origin/dev` for diffs.
+- The Campus product fork default branch is `muc-main`; `hubu-main` is the second long-lived product branch.
+- The public upstream default branch remains `dev`; use `upstream/dev` for upstream diffs.
 
 ## Branch Names
 
-Use a short branch name of at most three words, separated by hyphens. Do not use slashes or type prefixes such as `feat/` or `fix/`.
+For Campus product work, use `feat/*`, `fix/*`, `chore/*`, or `release/*` and delete the branch after merge. Never recreate the retired long-lived branches `muc-harness`, `hubu-local`, `subscription-v1`, `backend-complete`, `final-frontend`, `status-contract`, or `auto-update`.
 
-Examples: `session-recovery`, `fix-scroll-state`, `regenerate-sdk`.
+Examples: `feat/session-recovery`, `fix/scroll-state`, `chore/regenerate-sdk`.
 
 ## Commits and PR Titles
 
