@@ -3,6 +3,8 @@ name: Campus RC
 on:
   push:
     branches: [muc-main, hubu-main]
+  pull_request:
+    branches: [muc-main, hubu-main]
   workflow_dispatch:
 
 permissions:
@@ -30,12 +32,17 @@ jobs:
         run: bun test electron-builder.config.test.ts scripts/campus-config.test.ts scripts/muc-version.test.ts
       - name: Require canonical branch
         run: |
-          case "${GITHUB_REF_NAME}" in
+          candidate="${GITHUB_REF_NAME}"
+          if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
+            candidate="${GITHUB_BASE_REF}"
+          fi
+          case "${candidate}" in
             muc-main|hubu-main) ;;
             *) echo "Campus RC only accepts muc-main or hubu-main" >&2; exit 1 ;;
           esac
 
   package:
+    if: github.event_name != 'pull_request'
     name: ${{ matrix.brand }} / ${{ matrix.target }}
     needs: source-gate
     strategy:
