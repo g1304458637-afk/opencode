@@ -1,6 +1,6 @@
 import { _electron, expect } from "@playwright/test"
 import { execFileSync } from "node:child_process"
-import { cpSync, existsSync, mkdtempSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
+import { cpSync, existsSync, mkdtempSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
 import { campusConfig } from "../scripts/campus-config"
@@ -36,21 +36,33 @@ if (mac) {
   execFileSync(join(output, artifact.file), ["/S", `/D=${installed}`], { timeout: 120_000 })
   // Read the installed shortcut's AppUserModelID, not merely the build config.
   const script = join(root, "identity.ps1")
-  writeFileSync(script, `param([string]$Target)
-$ErrorActionPreference = 'Stop'
-$links = @([Environment]::GetFolderPath('Desktop'), [Environment]::GetFolderPath('StartMenu'))
+  writeFileSync(script, `$ErrorActionPreference = 'Stop'
+$links = @('Desktop', 'StartMenu', 'CommonDesktopDirectory', 'CommonStartMenu') |
+  ForEach-Object { [Environment]::GetFolderPath($_) } |
+  Where-Object { $_ -and (Test-Path -LiteralPath $_) } |
+  Select-Object -Unique
 $wsh = New-Object -ComObject WScript.Shell
 $shell = New-Object -ComObject Shell.Application
-foreach ($link in Get-ChildItem $links -Filter *.lnk -Recurse) {
-  if ($wsh.CreateShortcut($link.FullName).TargetPath -eq $Target) {
-    $folder = $shell.NameSpace($link.DirectoryName)
-    Write-Output $folder.ParseName($link.Name).ExtendedProperty('System.AppUserModel.ID')
-    exit 0
+$result = @(foreach ($link in Get-ChildItem $links -Filter *.lnk -Recurse) {
+  $folder = $shell.NameSpace($link.DirectoryName)
+  [PSCustomObject]@{
+    path = $link.FullName
+    target = $wsh.CreateShortcut($link.FullName).TargetPath
+    appId = $folder.ParseName($link.Name).ExtendedProperty('System.AppUserModel.ID')
   }
-}
-throw 'Installed application shortcut not found'
+})
+ConvertTo-Json -InputObject $result -Compress
 `)
-  const id = execFileSync("powershell.exe", ["-NoProfile", "-File", script, binary], { encoding: "utf8" }).trim()
+  const links: { path: string; target: string; appId: string }[] = JSON.parse(
+    execFileSync("powershell.exe", ["-NoProfile", "-File", script], { encoding: "utf8" }).trim(),
+  )
+  writeFileSync(join(output, "installed-shortcuts.json"), JSON.stringify({ binary, links }, null, 2))
+  // Windows TEMP may use RUNNER~1 while Shell shortcuts expand it to runneradmin.
+  // Compare the actual filesystem paths before asserting the native installed identity.
+  const target = realpathSync.native(binary).toLowerCase()
+  const shortcut = links.find((link) => existsSync(link.target) && realpathSync.native(link.target).toLowerCase() === target)
+  expect(shortcut, "Installed application shortcut must target the installed binary").toBeDefined()
+  const id = shortcut?.appId
   expect(id).toBe(brand.appId)
 }
 
