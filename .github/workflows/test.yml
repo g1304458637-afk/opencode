@@ -111,8 +111,12 @@ jobs:
 
       - name: Run HttpApi exerciser gates
         if: runner.os == 'Linux'
+        timeout-minutes: 10
         working-directory: packages/opencode
-        run: bun run test:httpapi
+        run: |
+          bun run script/httpapi-exercise.ts --mode coverage --fail-on-missing --fail-on-skip
+          bun run script/httpapi-exercise.ts --mode auth --fail-on-missing --fail-on-skip --progress --trace
+          bun run script/httpapi-exercise.ts --mode effect --fail-on-missing --fail-on-skip --progress --trace
 
   engine-windows:
     name: engine (windows, shard ${{ matrix.shard }}/3)
