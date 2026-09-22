@@ -7,6 +7,7 @@ import { getStore } from "./store"
 import { setAppQuitting } from "./windows"
 import { nativeT } from "./native-translations"
 import { resolveBrand } from "@opencode-ai/brand"
+import { campusUpdaterChannel } from "./muc/update-check"
 
 const { autoUpdater } = pkg
 const key = "ready"
@@ -25,8 +26,9 @@ const MANUAL_INSTALL = resolveBrand().campus && MUC_UPDATE_MODE === "manual-inst
 export function setupAutoUpdater(stop: () => Promise<void>) {
   const logger = getLogger()
   autoUpdater.logger = logger
-  autoUpdater.channel = "latest"
-  autoUpdater.allowPrerelease = false
+  const policy = campusUpdaterChannel(resolveBrand().campus, APP_VERSION)
+  autoUpdater.channel = policy.channel
+  autoUpdater.allowPrerelease = policy.allowPrerelease
   // MUC Harness: muc 渠道禁止降级（回滚策略=发更高修复版，非降级覆盖）；上游 prod/beta 维持 true
   autoUpdater.allowDowngrade = !resolveBrand().campus
   autoUpdater.autoDownload = false

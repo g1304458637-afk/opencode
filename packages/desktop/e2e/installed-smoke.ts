@@ -63,12 +63,13 @@ try {
   const page = await app.firstWindow({ timeout: 90_000 })
   await page.waitForFunction(() => Boolean(window.api?.mucGetState))
   const identity = await app.evaluate(({ app }) => ({
-    name: app.getName(), version: app.getVersion(), packaged: app.isPackaged, profile: app.getPath("userData"),
+    name: app.getName(), version: app.getVersion(), architecture: process.arch, packaged: app.isPackaged, profile: app.getPath("userData"),
     metadata: JSON.parse(process.getBuiltinModule("fs").readFileSync(process.getBuiltinModule("path").join(app.getAppPath(), "package.json"), "utf8")).campusBuild,
   }))
   expect(identity.packaged).toBe(true)
   expect(identity.name).toBe(brand.appName)
   expect(identity.version).toBe(version)
+  expect(manifest.target).toBe(`${mac ? "mac" : "win"}-${identity.architecture}`)
   expect(identity.profile).toContain(`opencode-onboarding-ci-${brand.id}`)
   expect(identity.metadata.sourceSha).toBe(manifest.sourceSha)
   expect(identity.metadata.brand).toBe(brand.id)

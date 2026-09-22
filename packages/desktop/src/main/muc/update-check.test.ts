@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test"
 
 import {
   compareMucVersions,
+  campusUpdaterChannel,
   evaluateMucUpdate,
   fetchMucUpdateManifest,
   isMucBelowMinimum,
@@ -17,6 +18,15 @@ const manifest = (overrides: Partial<MucUpdateManifest> = {}): MucUpdateManifest
   releasedAt: "2026-09-20T00:00:00.000Z",
   downloads: {},
   ...overrides,
+})
+
+test("Campus RC native updater uses the generated RC feed and permits the next RC", () => {
+  expect(campusUpdaterChannel(true, "2.0.6-rc.1")).toEqual({ channel: "rc", allowPrerelease: true })
+  expect(campusUpdaterChannel(true, "2.0.6")).toEqual({ channel: "latest", allowPrerelease: false })
+  expect(campusUpdaterChannel(true, "2.0.5-muc.3")).toEqual({ channel: "latest", allowPrerelease: false })
+  expect(campusUpdaterChannel(false, "2.0.6-rc.1")).toEqual({ channel: "latest", allowPrerelease: false })
+  expect(isMucUpdateAvailable("2.0.6-rc.1", "2.0.6-rc.2")).toBe(true)
+  expect(isMucUpdateAvailable("2.0.6-rc.2", "2.0.6")).toBe(true)
 })
 
 describe("parseMucVersion / compareMucVersions", () => {

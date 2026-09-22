@@ -12,6 +12,11 @@ export const MUC_UPDATE_CHECK_TIMEOUT_MS = 6_000
 // 渲染层轮询/启动检查共用同一缓存，避免频繁拉取
 export const MUC_UPDATE_CHECK_TTL_MS = 30 * 60 * 1000
 
+export function campusUpdaterChannel(campus: boolean, version: string) {
+  const rc = campus && parse(version)?.prerelease[0] === "rc"
+  return { channel: rc ? "rc" : "latest", allowPrerelease: rc }
+}
+
 export type MucUpdateDownload = {
   file: string
   url: string
