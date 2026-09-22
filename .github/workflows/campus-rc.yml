@@ -114,7 +114,9 @@ jobs:
           BRAND: ${{ matrix.brand }}
           CAMPUS_BUILD_OUTPUT: dist/${{ matrix.brand }}-${{ matrix.target }}
           CAMPUS_TARGET: ${{ matrix.target }}
-        run: bun e2e/installed-smoke.ts
+        run: |
+          bun build e2e/installed-smoke.ts --target node --external '@playwright/test' --outfile e2e/installed-smoke.mjs
+          node e2e/installed-smoke.mjs
       - uses: actions/upload-artifact@v7
         if: always()
         with:

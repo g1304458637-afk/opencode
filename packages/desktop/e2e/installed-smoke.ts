@@ -1,6 +1,6 @@
 import { _electron, expect } from "@playwright/test"
 import { execFileSync } from "node:child_process"
-import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
+import { cpSync, existsSync, mkdtempSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
 import { campusConfig } from "../scripts/campus-config"
@@ -58,6 +58,10 @@ const app = await _electron.launch({
   executablePath: binary,
   env: { ...process.env, OPENCODE_TEST_ONBOARDING: "1", OPENCODE_TEST_ONBOARDING_ID: `ci-${brand.id}`, OPENCODE_SIDECAR_V2: "1" },
   timeout: 90_000,
+}).catch((error) => {
+  const logs = join(tmpdir(), `opencode-onboarding-ci-${brand.id}`, "desktop", "logs")
+  if (existsSync(logs)) cpSync(logs, join(output, "installed-startup-logs"), { recursive: true })
+  throw error
 })
 try {
   const page = await app.firstWindow({ timeout: 90_000 })
