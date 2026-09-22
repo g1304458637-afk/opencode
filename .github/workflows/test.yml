@@ -77,6 +77,7 @@ jobs:
         run: bun test --timeout 30000 test/project/instance-bootstrap.test.ts test/server/httpapi-file.test.ts test/skill/discovery.test.ts
         env:
           OPENCODE_TEST_LOGS: "1"
+          OPENCODE_PRINT_LOGS: "1"
           OPENCODE_EXPERIMENTAL_DISABLE_FILEWATCHER: "true"
 
       - name: Run unit tests

@@ -137,8 +137,11 @@ guard NSWorkspace.shared.open(url) else { fatalError("Protocol open failed") }
       timeout: 30_000,
       env: { ...process.env, OPENCODE_TEST_ONBOARDING: "1", OPENCODE_TEST_ONBOARDING_ID: `ci-${brand.id}`, OPENCODE_SIDECAR_V2: "1" },
     })
-    await expect.poll(() => existsSync(receipt) ? readFileSync(receipt, "utf8") : "", { timeout: 30_000 }).toBe(url)
-    writeFileSync(join(output, "installed-protocol.json"), JSON.stringify({ verdict: "PASS", scheme: brand.protocolScheme, appId: brand.appId, command, received: url }, null, 2))
+    // Windows Shell adds a slash to authority-only URLs before dispatch.
+    const normalized = new URL(url)
+    normalized.pathname = "/"
+    await expect.poll(() => existsSync(receipt) ? readFileSync(receipt, "utf8") : "", { timeout: 30_000 }).toBe(normalized.href)
+    writeFileSync(join(output, "installed-protocol.json"), JSON.stringify({ verdict: "PASS", scheme: brand.protocolScheme, appId: brand.appId, command, requested: url, received: readFileSync(receipt, "utf8") }, null, 2))
   }
   await page.screenshot({ path: join(output, "installed-smoke.png") })
   writeFileSync(join(output, "installed-smoke.json"), JSON.stringify({ verdict: "PASS", target: manifest.target, appId: brand.appId, installer: artifact.file, identity }, null, 2))

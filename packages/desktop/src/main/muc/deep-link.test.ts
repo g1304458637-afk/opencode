@@ -40,3 +40,10 @@ test("campus protocols reject the other brand", () => {
   expect(parseCampusUrl(`muc://connect?code=${code}`, "hubu")).toBeNull()
   expect(parseCampusUrl(`hubu://connect?code=${code}`, "muc")).toBeNull()
 })
+
+for (const brand of ["muc", "hubu"]) {
+  test(`accepts Windows Shell normalized ${brand} link`, () => {
+    const code = "campus_code_123456789"
+    expect(parseCampusUrl(`${brand}://connect/?code=${code}`, brand)).toEqual({ kind: "connect", code })
+  })
+}
