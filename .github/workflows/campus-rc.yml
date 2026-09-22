@@ -2,7 +2,7 @@ name: Campus RC
 
 on:
   push:
-    branches: [muc-main, hubu-main]
+    branches: [muc-main, hubu-main, feat/dual-window-quota, feat/hubu-dual-window-quota]
   pull_request:
     branches: [muc-main, hubu-main]
   workflow_dispatch:
@@ -42,8 +42,8 @@ jobs:
             candidate="${GITHUB_BASE_REF}"
           fi
           case "${candidate}" in
-            muc-main|hubu-main) ;;
-            *) echo "Campus RC only accepts muc-main or hubu-main" >&2; exit 1 ;;
+            muc-main|hubu-main|feat/dual-window-quota|feat/hubu-dual-window-quota) ;;
+            *) echo "Campus RC requires a canonical branch or an explicit quota release candidate" >&2; exit 1 ;;
           esac
 
   package:
