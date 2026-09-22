@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto"
-import { mkdirSync, rmSync } from "node:fs"
+import { mkdirSync } from "node:fs"
 import * as http from "node:http"
 import { createServer } from "node:net"
 import { homedir, tmpdir } from "node:os"
@@ -170,8 +170,9 @@ const main = Effect.gen(function* () {
   const onboardingTestRoot = ((): string | undefined => {
     if (!TEST_ONBOARDING) return
 
-    const root = join(tmpdir(), `opencode-onboarding-${randomUUID()}`)
-    rmSync(root, { recursive: true, force: true })
+    const identity = process.env.OPENCODE_TEST_ONBOARDING_ID || randomUUID()
+    if (!/^[a-zA-Z0-9-]{1,64}$/.test(identity)) throw new Error("Invalid onboarding test identity")
+    const root = join(tmpdir(), `opencode-onboarding-${identity}`)
     ;["data", "config", "cache", "state", "desktop", "session"].forEach((dir) =>
       mkdirSync(join(root, dir), { recursive: true }),
     )
