@@ -72,12 +72,15 @@ describe("file HttpApi", () => {
         "file search index was not ready",
       ).pipe(Effect.tapError(() => Effect.promise(async () => {
         const { Fff } = await import("@opencode-ai/core/filesystem/fff.bun")
-        const picker = Fff.create({ basePath: tmp.path, aiMode: true, disableMmapCache: true, disableContentIndexing: true })
-        try {
-          console.error("File search diagnostic", { directory: tmp.path, last, available: Fff.available(),
-            native: picker.ok ? { scan: await picker.value.waitForScan(5000), search: picker.value.fileSearch("hello") } : picker })
-        } finally {
-          if (picker.ok) picker.value.destroy()
+        for (const directory of [tmp.path, tmp.path.replaceAll("\\", "/")]) {
+          const picker = Fff.create({ basePath: directory, aiMode: true, disableMmapCache: true, disableContentIndexing: true })
+          try {
+            console.error("File search diagnostic " + JSON.stringify({ directory, last, available: Fff.available(),
+              file: await Bun.file(path.join(tmp.path, "hello.txt")).text(),
+              native: picker.ok ? { scan: await picker.value.waitForScan(5000), search: picker.value.fileSearch("hello"), all: picker.value.fileSearch("") } : picker }))
+          } finally {
+            if (picker.ok) picker.value.destroy()
+          }
         }
       }))),
     )
