@@ -55,8 +55,9 @@ const APP_IDS = {
 } as const
 
 const getBase = (appId: string): Configuration => ({
-  artifactName:
-    brand.campus ? `${brand.artifactPrefix}-\${os}-\${arch}.\${ext}` : "opencode-desktop-${os}-${arch}.${ext}",
+  artifactName: brand.campus
+    ? `${brand.artifactPrefix}-\${os}-\${arch}.\${ext}`
+    : "opencode-desktop-${os}-${arch}.${ext}",
   directories: {
     output: process.env.CAMPUS_BUILD_OUTPUT || "dist",
     buildResources: "resources",
@@ -68,16 +69,18 @@ const getBase = (appId: string): Configuration => ({
   // https://www.electron.build/docs/linux/
   extraMetadata: {
     desktopName: `${appId}.desktop`,
-    ...(brand.campus ? {
-      name: brand.artifactPrefix,
-      campusBuild: {
-        sourceSha: execFileSync("git", ["rev-parse", "HEAD"], { cwd: rootDir, encoding: "utf8" }).trim(),
-        brand: brand.id,
-        localBuild: process.env.CAMPUS_LOCAL_BUILD === "1",
-        gateway: brand.gatewayURL,
-        updates: brand.updates,
-      },
-    } : {}),
+    ...(brand.campus
+      ? {
+          name: brand.artifactPrefix,
+          campusBuild: {
+            sourceSha: execFileSync("git", ["rev-parse", "HEAD"], { cwd: rootDir, encoding: "utf8" }).trim(),
+            brand: brand.id,
+            localBuild: process.env.CAMPUS_LOCAL_BUILD === "1",
+            gateway: brand.gatewayURL,
+            updates: brand.updates,
+          },
+        }
+      : {}),
   },
   files: ["out/**/*", "resources/**/*", "!resources/opencode-cli*"],
   extraResources: [

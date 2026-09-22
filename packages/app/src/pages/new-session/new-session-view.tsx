@@ -2,13 +2,14 @@ import { useDialog } from "@opencode-ai/ui/context/dialog"
 import { Tooltip } from "@opencode-ai/ui/tooltip"
 import { Icon as IconV2 } from "@opencode-ai/ui/v2/icon"
 import { TooltipV2 } from "@opencode-ai/ui/v2/tooltip-v2"
-import { WordmarkV2 } from "@opencode-ai/ui/v2/wordmark-v2"
-import mucCampusImg from "@/assets/muc/campus.png" // MUC Harness: 校门插画
-import hubuHeroImg from "@/assets/hubu/hubu-hero.png" // HUBU: 主视觉
+import mucCrest from "@/assets/muc/crest.png"
+import hubuCrest from "@/assets/hubu/crest.png"
+import { NewSessionBackground } from "./new-session-background"
+import "./new-session.css"
 import { resolveBrand } from "@opencode-ai/brand"
 
 const campusBrand = resolveBrand()
-const campusImg = campusBrand.id === "hubu" ? hubuHeroImg : mucCampusImg
+const campusCrest = campusBrand.id === "hubu" ? hubuCrest : mucCrest
 import { Show, createMemo, createSignal, type Accessor } from "solid-js"
 import { createStore } from "solid-js/store"
 import { Portal } from "solid-js/web"
@@ -38,68 +39,53 @@ export function NewSessionView(props: {
   project: PromptProjectController
   workspace: NewSessionWorkspaceController
 }) {
+  const language = useLanguage()
+
   return (
     <div class="@container relative flex flex-col min-h-0 h-full flex-1">
       <div
         data-component="session-new-design"
-        class="relative flex-1 min-h-0 overflow-hidden rounded-[10px] bg-v2-background-bg-deep"
+        class="campus-new-session relative flex-1 min-h-0 overflow-hidden rounded-[10px]"
+        data-brand={campusBrand.id}
       >
-        <img
-          src={campusImg}
-          alt=""
-          class="pointer-events-none absolute inset-0 h-full w-full object-cover"
-        />
-        {campusBrand.id === "hubu" ? (
-          <div
-            class="pointer-events-none absolute inset-x-0 top-0 h-[55%]"
-            style={{
-              background:
-                "linear-gradient(to bottom, rgba(247,243,231,1), rgba(247,243,231,0.85) 50%, transparent)",
-            }}
-          />
-        ) : (
-          <div class="pointer-events-none absolute inset-x-0 top-0 h-[55%] bg-gradient-to-b from-[#FBF6ED] via-[#FBF6ED]/85 to-transparent" />
-        )}
-        {/* MUC Harness: 品牌标识放左上角，中央留给输入区 */}
-        <div class="absolute left-6 top-5 flex flex-col items-start">
-          <WordmarkV2 class="h-14 w-auto" />
-          <p
-            class="mt-1 text-xs font-medium tracking-[0.2em]"
-            style={{ color: campusBrand.id === "hubu" ? campusBrand.colors.primary : "#8f6a3c" }}
-          >
-            {campusBrand.id === "hubu"
-              ? `${campusBrand.name} · ${campusBrand.mottoDisplay}`
-              : "中央民族大学 · 美美与共 知行合一"}
-          </p>
-        </div>
-        <div class="absolute inset-x-0 top-[46%] flex justify-center px-6">
-          <div class={NEW_SESSION_CONTENT_WIDTH}>
-            {/* MUC Harness: workspace selector moved above the composer (Codex-style) */}
-            <div class="flex flex-col gap-3">
-              <Show when={props.project.empty()}>
-                <PromptProjectAddButton controller={props.project} />
-              </Show>
-              <Show when={props.project.selected()}>
-                <div class="flex min-h-7 min-w-0 flex-col items-center justify-center gap-0 text-v2-text-text-faint sm:flex-row">
-                  <PromptProjectSelector controller={props.project} placement="bottom" />
-                  <Show
-                    when={props.workspace.bar.visible()}
-                    fallback={
-                      <PromptGitStatus branch={props.workspace.bar.branch()} noGit={!props.workspace.project.git()} />
-                    }
-                  >
-                    <PromptWorkspaceSelector
-                      value={props.workspace.selection.value()}
-                      projectRoot={props.workspace.project.root()}
-                      workspaces={props.workspace.project.workspaces()}
-                      branch={props.workspace.bar.branch()}
-                      onChange={props.workspace.selection.set}
-                      onDone={props.input.restoreFocus}
-                    />
-                  </Show>
-                </div>
-              </Show>
-              <PromptInputV2Composer controller={props.input} />
+        <NewSessionBackground />
+        <div class="campus-new-session__scroll">
+          <header class="campus-new-session__brand">
+            <span class="campus-new-session__crest">
+              <img src={campusCrest} alt={campusBrand.name} />
+            </span>
+            <span>{campusBrand.id === "hubu" ? "HUBUCode" : "MUCode"}</span>
+          </header>
+          <div class="campus-new-session__hero">
+            <h1>{language.t("session.new.hero.title")}</h1>
+            <div class={`campus-new-session__composer ${NEW_SESSION_CONTENT_WIDTH}`}>
+              {/* MUC Harness: workspace selector moved above the composer (Codex-style) */}
+              <div class="flex flex-col gap-3">
+                <Show when={props.project.empty()}>
+                  <PromptProjectAddButton controller={props.project} />
+                </Show>
+                <Show when={props.project.selected()}>
+                  <div class="campus-new-session__project flex min-h-7 min-w-0 flex-wrap items-center justify-center gap-1 text-v2-text-text-faint">
+                    <PromptProjectSelector controller={props.project} placement="bottom" />
+                    <Show
+                      when={props.workspace.bar.visible()}
+                      fallback={
+                        <PromptGitStatus branch={props.workspace.bar.branch()} noGit={!props.workspace.project.git()} />
+                      }
+                    >
+                      <PromptWorkspaceSelector
+                        value={props.workspace.selection.value()}
+                        projectRoot={props.workspace.project.root()}
+                        workspaces={props.workspace.project.workspaces()}
+                        branch={props.workspace.bar.branch()}
+                        onChange={props.workspace.selection.set}
+                        onDone={props.input.restoreFocus}
+                      />
+                    </Show>
+                  </div>
+                </Show>
+                <PromptInputV2Composer controller={props.input} class="campus-new-session__input" />
+              </div>
             </div>
           </div>
         </div>

@@ -72,13 +72,13 @@ jobs:
             pty: "@lydell/node-pty-win32-x64"
     runs-on: ${{ matrix.os }}
     env:
-      CAMPUS_LOCAL_BUILD: ${{ matrix.brand == 'hubu' && '1' || '0' }}
-      MUC_UPDATE_FEED_URL: https://admin.wuxuexi.top/downloads/muc-updates/rc
-      MUC_MANIFEST_URL: https://admin.wuxuexi.top/downloads/muc-updates/rc/latest-mucode.json
-      MUC_DOWNLOAD_BASE_URL: https://admin.wuxuexi.top/downloads/muc-updates/rc
-      HUBU_UPDATE_FEED_URL: http://localhost:8081/downloads/hubu-updates/rc
-      HUBU_MANIFEST_URL: http://localhost:8081/downloads/hubu-updates/rc/latest-hubu-ai.json
-      HUBU_DOWNLOAD_BASE_URL: http://localhost:8081/downloads/hubu-updates/rc
+      CAMPUS_LOCAL_BUILD: "0"
+      MUC_GATEWAY_URL: https://admin.wuxuexi.top
+      HUBU_GATEWAY_URL: https://hubu.wuxuexi.top
+      HUBU_UPDATE_FEED_URL: https://hubu.wuxuexi.top/downloads/hubu-updates/stable
+      HUBU_MANIFEST_URL: https://hubu.wuxuexi.top/downloads/latest-hubu-ai.json
+      HUBU_DOWNLOAD_BASE_URL: https://hubu.wuxuexi.top/downloads
+      HUBU_WEBSITE_URL: https://hubu.wuxuexi.top/hubu
     defaults:
       run:
         shell: bash
@@ -121,6 +121,13 @@ jobs:
         if: always()
         with:
           name: campus-${{ matrix.brand }}-${{ matrix.target }}-${{ github.sha }}
-          path: packages/desktop/dist/${{ matrix.brand }}-${{ matrix.target }}/
+          path: |
+            packages/desktop/dist/${{ matrix.brand }}-${{ matrix.target }}/*.dmg
+            packages/desktop/dist/${{ matrix.brand }}-${{ matrix.target }}/*.zip
+            packages/desktop/dist/${{ matrix.brand }}-${{ matrix.target }}/*.exe
+            packages/desktop/dist/${{ matrix.brand }}-${{ matrix.target }}/*.blockmap
+            packages/desktop/dist/${{ matrix.brand }}-${{ matrix.target }}/*.yml
+            packages/desktop/dist/${{ matrix.brand }}-${{ matrix.target }}/*.json
+            packages/desktop/dist/${{ matrix.brand }}-${{ matrix.target }}/*.png
           if-no-files-found: error
           retention-days: 14

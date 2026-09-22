@@ -1,0 +1,286 @@
+.campus-new-session {
+  container: campus-hero / size;
+  isolation: isolate;
+  background: #0a0d12;
+  color: #f6f6f7;
+  font-family:
+    Inter,
+    -apple-system,
+    "PingFang SC",
+    "Segoe UI",
+    sans-serif;
+  /* Keep the hero readable in both application themes without changing global tokens. */
+  --v2-text-text-base: #eeeef0;
+  --v2-text-text-strong: #ffffff;
+  --v2-text-text-muted: #c2c3c7;
+  --v2-text-text-faint: #a9aaaf;
+  --v2-icon-icon-base: #e5e5e8;
+  --v2-icon-icon-muted: #b7b8bd;
+  --v2-overlay-simple-overlay-hover: rgb(255 255 255 / 9%);
+  --v2-overlay-simple-overlay-pressed: rgb(255 255 255 / 14%);
+  --v2-border-border-focus: #f8b285;
+}
+
+.campus-new-session__background,
+.campus-new-session__background video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.campus-new-session__background {
+  z-index: -1;
+}
+
+.campus-new-session__background video {
+  object-fit: cover;
+  opacity: 0;
+}
+
+.campus-new-session__background video[data-playing] {
+  opacity: 1;
+}
+
+.campus-new-session__background::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgb(8 13 21 / 28%), rgb(8 13 21 / 8%) 45%, rgb(8 13 21 / 28%));
+}
+
+.campus-new-session__scroll {
+  height: 100%;
+  overflow: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  padding: clamp(22px, 3cqw, 42px);
+}
+
+.campus-new-session__brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  font-size: 19px;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  text-shadow: 0 1px 12px rgb(0 0 0 / 35%);
+}
+
+.campus-new-session__crest {
+  display: block;
+  width: 36px;
+  height: 36px;
+  overflow: hidden;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 1px 12px rgb(0 0 0 / 20%);
+}
+
+.campus-new-session__crest img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.campus-new-session[data-brand="muc"] .campus-new-session__crest img {
+  /* The existing macOS icon contains a margin around the circular school crest. */
+  transform: scale(1.3);
+}
+
+.campus-new-session__hero {
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(26px, 4.5cqh, 48px);
+  padding: 48px 0 max(64px, 16cqh);
+  min-width: 0;
+}
+
+.campus-new-session__hero h1 {
+  color: #fff;
+  font-size: clamp(27px, 3.6cqw, 40px);
+  font-weight: 410;
+  font-variation-settings: "opsz" 32;
+  line-height: 1.3;
+  letter-spacing: 0.015em;
+  text-align: center;
+  text-wrap: balance;
+  text-shadow: 0 2px 22px rgb(0 0 0 / 35%);
+}
+
+.campus-new-session__composer {
+  max-width: 708px;
+  min-width: 0;
+}
+
+.campus-new-session__project {
+  color: #d9dce3;
+  text-shadow: 0 1px 8px rgb(0 0 0 / 60%);
+}
+
+.campus-new-session__project button {
+  color: inherit;
+}
+
+.campus-new-session [data-component="prompt-input-v2"] {
+  border-radius: 26px;
+  background: rgb(41 41 43 / 95.5%);
+  backdrop-filter: blur(26px) saturate(112%);
+  box-shadow:
+    inset 0 0 0 1px rgb(214 228 255 / 14%),
+    0 22px 60px rgb(0 0 0 / 30%);
+  padding: 8px;
+}
+
+.campus-new-session [data-component="prompt-input"],
+.campus-new-session [data-slot="prompt-placeholder"] {
+  padding: 18px 18px 12px;
+  font-size: 14px;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+
+.campus-new-session [data-component="prompt-input"] {
+  min-height: 72px;
+  color: #eeeef0;
+}
+
+.campus-new-session [data-slot="prompt-placeholder"] {
+  color: #a9aaaf;
+}
+
+.campus-new-session [data-slot="prompt-toolbar"] {
+  height: auto;
+  min-height: 50px;
+  gap: 12px;
+  padding: 4px 8px 6px;
+  align-items: flex-end;
+}
+
+.campus-new-session [data-slot="prompt-controls"] {
+  min-height: 38px;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.campus-new-session [data-slot="prompt-controls"] [data-component="button-v2"] {
+  max-width: min(220px, 40cqw);
+  height: 30px;
+  border-radius: 9px;
+  background: linear-gradient(180deg, rgb(255 255 255 / 8.8%), rgb(255 255 255 / 3.8%));
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 5%);
+  font-size: 12px;
+  color: #c4c5ca;
+}
+
+.campus-new-session [data-action="prompt-submit"] {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  color: #fff;
+  /* The shared submit button supplies its default gradient inline. */
+  background-image: linear-gradient(163deg, #fbbc94, #f49d70 46%, #e88654) !important;
+  box-shadow: 0 3px 12px rgb(210 110 60 / 34%);
+  --icon-invert-base: #fff;
+}
+
+.campus-new-session [data-action="prompt-submit"]:not(:disabled):hover {
+  filter: brightness(1.08);
+}
+
+.campus-new-session [data-action="prompt-submit"]:not(:disabled):active {
+  transform: scale(0.95);
+}
+
+.campus-new-session button:focus-visible {
+  outline: 2px solid #f8b285;
+  outline-offset: -2px;
+}
+
+.campus-new-session [data-component="prompt-input-v2"]:focus-within {
+  box-shadow:
+    inset 0 0 0 1px rgb(248 178 133 / 48%),
+    0 22px 60px rgb(0 0 0 / 30%);
+}
+
+@container campus-hero (max-width: 599px) {
+  .campus-new-session__scroll {
+    padding: 22px 18px;
+  }
+
+  .campus-new-session__hero {
+    padding: 48px 0 64px;
+    gap: 28px;
+  }
+
+  .campus-new-session__hero h1 {
+    max-width: 13em;
+    font-size: clamp(25px, 6cqw, 34px);
+  }
+
+  .campus-new-session [data-component="prompt-input-v2"] {
+    border-radius: 20px;
+    padding: 6px;
+  }
+
+  .campus-new-session [data-component="prompt-input"],
+  .campus-new-session [data-slot="prompt-placeholder"] {
+    padding-inline: 12px;
+  }
+
+  .campus-new-session [data-slot="prompt-toolbar"] {
+    gap: 8px;
+  }
+
+  .campus-new-session [data-slot="prompt-controls"] {
+    row-gap: 8px;
+  }
+
+  .campus-new-session [data-action="prompt-submit"] {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+@container campus-hero (max-height: 560px) {
+  .campus-new-session__hero {
+    padding-block: 28px;
+    gap: 18px;
+  }
+
+  .campus-new-session__hero h1 {
+    font-size: clamp(24px, 5.4cqh, 32px);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .campus-new-session__brand {
+    animation: campus-settle 0.6s both;
+  }
+
+  .campus-new-session__hero h1 {
+    animation: campus-settle 0.9s 0.12s both;
+  }
+
+  .campus-new-session__composer {
+    animation: campus-settle 0.9s 0.24s both;
+  }
+
+  @keyframes campus-settle {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}

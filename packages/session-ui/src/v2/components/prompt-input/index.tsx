@@ -143,7 +143,7 @@ export function PromptInputV2(props: PromptInputV2Props) {
           />
         </Show>
 
-        <div class="relative min-h-[60px]">
+        <div data-slot="prompt-editor" class="relative min-h-[60px]">
           <div
             ref={(element) => {
               editor = element
@@ -184,6 +184,7 @@ export function PromptInputV2(props: PromptInputV2Props) {
           />
           <Show when={!props.controller.value()}>
             <div
+              data-slot="prompt-placeholder"
               class="pointer-events-none absolute inset-x-0 top-0 px-4 pt-4 text-[13px] font-[440] leading-5 text-v2-text-text-faint"
               classList={{ "font-mono!": state.mode === "shell" }}
             >
@@ -195,8 +196,9 @@ export function PromptInputV2(props: PromptInputV2Props) {
           </Show>
         </div>
 
-        <div class="flex h-11 items-center px-2">
+        <div data-slot="prompt-toolbar" class="flex h-11 items-center px-2">
           <div
+            data-slot="prompt-controls"
             class="flex min-w-0 flex-1 items-center gap-1"
             aria-hidden={state.mode === "shell"}
             inert={state.mode === "shell" ? true : undefined}
