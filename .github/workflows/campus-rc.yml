@@ -107,6 +107,14 @@ jobs:
           CAMPUS_BUILD_OUTPUT: dist/${{ matrix.brand }}-${{ matrix.target }}
           CAMPUS_TARGET: ${{ matrix.target }}
         run: bun e2e/package-smoke.ts
+      - name: Install and launch distributable
+        timeout-minutes: 5
+        env:
+          OPENCODE_CHANNEL: ${{ matrix.brand }}
+          BRAND: ${{ matrix.brand }}
+          CAMPUS_BUILD_OUTPUT: dist/${{ matrix.brand }}-${{ matrix.target }}
+          CAMPUS_TARGET: ${{ matrix.target }}
+        run: bun e2e/installed-smoke.ts
       - uses: actions/upload-artifact@v7
         if: always()
         with:
