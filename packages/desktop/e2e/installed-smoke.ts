@@ -92,6 +92,29 @@ try {
   expect(identity.metadata.gateway).toBe(brand.gatewayURL)
   expect(await page.evaluate(() => window.api.mucGetBrand())).toMatchObject({ id: brand.id, protocol: brand.protocolScheme })
   expect(await page.evaluate(() => window.api.mucGetState())).toEqual({ connected: false })
+  if (mac) {
+    const receipt = join(root, "protocol-received.txt")
+    const url = `${brand.protocolScheme}://connect?code=invalid`
+    // Observe the OS event without replacing the app's production deep-link handler.
+    await app.evaluate(({ app }, file) => {
+      app.on("open-url", (_event, url) => process.getBuiltinModule("fs").writeFileSync(file, url))
+    }, receipt)
+    const script = join(root, "protocol.swift")
+    writeFileSync(script, `import Foundation
+import AppKit
+import CoreServices
+let application = URL(fileURLWithPath: CommandLine.arguments[1])
+let url = URL(string: CommandLine.arguments[2])!
+guard LSRegisterURL(application as CFURL, true) == noErr else { fatalError("Registration failed") }
+guard let selected = NSWorkspace.shared.urlForApplication(toOpen: url),
+  selected.resolvingSymlinksInPath() == application.resolvingSymlinksInPath()
+else { fatalError("Protocol selected a different application") }
+guard NSWorkspace.shared.open(url) else { fatalError("Protocol open failed") }
+`)
+    execFileSync("swift", [script, join(installed, `${brand.appName}.app`), url], { timeout: 60_000 })
+    await expect.poll(() => existsSync(receipt) ? readFileSync(receipt, "utf8") : "").toBe(url)
+    writeFileSync(join(output, "installed-protocol.json"), JSON.stringify({ verdict: "PASS", scheme: brand.protocolScheme, appId: brand.appId, received: url }, null, 2))
+  }
   await page.screenshot({ path: join(output, "installed-smoke.png") })
   writeFileSync(join(output, "installed-smoke.json"), JSON.stringify({ verdict: "PASS", target: manifest.target, appId: brand.appId, installer: artifact.file, identity }, null, 2))
 } finally {
