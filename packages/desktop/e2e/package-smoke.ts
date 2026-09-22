@@ -12,7 +12,7 @@ if (brand.id === "muc" && localBuild) throw new Error("MUC RC must use productio
 if (version?.includes("-rc.") && (!brand.updates.feed.includes("/rc") || !brand.updates.manifest.includes("/rc/"))) {
   throw new Error("RC artifacts require isolated RC update endpoints")
 }
-const distribution = brand.id === "hubu" && localBuild ? "HUBU LOCAL / CI RC ARTIFACT" : "MUC RC ARTIFACT"
+const distribution = localBuild ? "LOCAL TEST ARTIFACT" : "UNSIGNED MANUAL RELEASE"
 if (!brand.campus || !version) throw new Error("Package smoke requires a campus brand")
 
 const output = resolve(process.env.CAMPUS_BUILD_OUTPUT || "dist")
@@ -74,6 +74,22 @@ const entries = artifacts.map((path) => {
 })
 writeFileSync(
   join(output, "package-smoke.json"),
-  JSON.stringify({ sourceSha, distribution, localBuild, gateway: brand.gatewayURL, updates: brand.updates, brand: brand.id, appId: brand.appId, protocol: brand.protocolScheme, version, target, artifacts: entries }, null, 2),
+  JSON.stringify(
+    {
+      sourceSha,
+      distribution,
+      localBuild,
+      gateway: brand.gatewayURL,
+      updates: brand.updates,
+      brand: brand.id,
+      appId: brand.appId,
+      protocol: brand.protocolScheme,
+      version,
+      target,
+      artifacts: entries,
+    },
+    null,
+    2,
+  ),
 )
 console.log(JSON.stringify({ verdict: "PASS", brand: brand.id, version, target, artifacts: entries }, null, 2))
