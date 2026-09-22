@@ -70,6 +70,15 @@ jobs:
         working-directory: packages/core
         run: bun script/prepare-tests.ts
 
+      - name: Check Windows lifecycle regressions
+        if: runner.os == 'Windows'
+        timeout-minutes: 5
+        working-directory: packages/opencode
+        run: bun test --timeout 30000 test/project/instance-bootstrap.test.ts test/server/httpapi-file.test.ts test/skill/discovery.test.ts
+        env:
+          OPENCODE_TEST_LOGS: "1"
+          OPENCODE_EXPERIMENTAL_DISABLE_FILEWATCHER: "true"
+
       - name: Run unit tests
         timeout-minutes: 20
         run: GITHUB_ACTIONS=false bun turbo test --log-order=stream

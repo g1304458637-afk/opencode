@@ -132,7 +132,7 @@ const make = <R, E>(testLayer: Layer.Layer<R, E>, liveLayer: Layer.Layer<R, E>, 
 const testEnv = Layer.mergeAll(TestConsole.layer, TestClock.layer())
 
 // Live environment - uses real clock, but keeps TestConsole for output capture
-const liveEnv = TestConsole.layer
+const liveEnv = process.env.OPENCODE_TEST_LOGS === "1" ? Layer.empty : TestConsole.layer
 
 export const it = make<never, never>(testEnv, liveEnv)
 
