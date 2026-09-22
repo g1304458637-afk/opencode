@@ -790,6 +790,7 @@ export const dict = {
   "session.revertDock.collapse": "折叠已回滚消息",
   "session.revertDock.expand": "展开已回滚消息",
   "session.revertDock.restore": "恢复消息",
+  "session.new.hero.title": "描述你的想法，开始创造。",
   "session.new.title": "构建任何内容",
   "session.new.project.new": "新建项目",
   "session.new.project.search": "搜索项目",

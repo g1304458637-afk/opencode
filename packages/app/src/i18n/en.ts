@@ -722,6 +722,7 @@ export const dict = {
   "session.revertDock.expand": "Expand rolled back messages",
   "session.revertDock.restore": "Restore message",
 
+  "session.new.hero.title": "Describe your idea. Start creating.",
   "session.new.title": "Build anything",
   "session.new.project.new": "New project",
   "session.new.project.search": "Search projects",
