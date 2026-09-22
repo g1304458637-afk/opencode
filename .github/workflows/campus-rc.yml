@@ -67,7 +67,7 @@ jobs:
       HUBU_UPDATE_FEED_URL: https://hubu.wuxuexi.top/downloads/hubu-updates/stable
       HUBU_MANIFEST_URL: https://hubu.wuxuexi.top/downloads/latest-hubu-ai.json
       HUBU_DOWNLOAD_BASE_URL: https://hubu.wuxuexi.top/downloads
-      HUBU_WEBSITE_URL: https://hubu.wuxuexi.top/muc
+      HUBU_WEBSITE_URL: https://hubu.wuxuexi.top/hubu
     defaults:
       run:
         shell: bash
