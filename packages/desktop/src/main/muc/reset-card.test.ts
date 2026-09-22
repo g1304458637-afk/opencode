@@ -19,6 +19,7 @@ test("concurrent clicks, lost response, restart and acknowledgement use one dura
   const request: typeof fetch = Object.assign(
     async (_input: RequestInfo | URL, init?: RequestInit) => {
       if (String(_input).endsWith("/prepare")) return Response.json({ data: { status: "pending" } })
+      expect(new Headers(init?.headers).get("X-Quota-Contract")).toBe("2")
       requests.push(new Headers(init?.headers).get("Idempotency-Key")!)
       // Inspect the real journal before the network boundary; no plaintext credential is persisted.
       const journal = readFileSync(join(path, readdirSync(path)[0]!), "utf8")

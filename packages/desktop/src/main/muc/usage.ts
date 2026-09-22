@@ -23,7 +23,18 @@ export type MucWalletStatus = {
   canonicalCurrency: string
 }
 
+export type MucQuotaWindow = {
+  remainingPercent: number
+  startsAt: string | null
+  resetsAt: string | null
+  exhausted: boolean
+}
+
 export type MucSubscriptionStatus = {
+  quotaPolicy?: string
+  shortWindow?: MucQuotaWindow
+  weeklyWindow?: MucQuotaWindow
+
   id: number
   groupId: number
   displayName: string
@@ -58,7 +69,7 @@ export type MucUsageSnapshot = {
 }
 
 function record(value: unknown): Record<string, unknown> {
-  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {}
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {}
 }
 
 function num(value: unknown): number {
@@ -143,11 +154,19 @@ export function parseMucUsage(body: unknown): MucUsageSnapshot {
   const subStatus = record(d.subscription_status)
   if (Number.isSafeInteger(subStatus.id) && num(subStatus.id) > 0) {
     snapshot.subscriptionStatus = {
+      quotaPolicy: str(subStatus.quota_policy),
+      shortWindow: parseQuotaWindow(subStatus.short_window),
+      weeklyWindow: parseQuotaWindow(subStatus.weekly_window),
       id: num(subStatus.id),
       groupId: num(subStatus.group_id),
       displayName: str(subStatus.display_name),
       weeklyUsagePercent:
-        typeof subStatus.weekly_usage_percent === "number" && Number.isFinite(subStatus.weekly_usage_percent) && subStatus.weekly_usage_percent >= 0 && subStatus.weekly_usage_percent <= 100 ? subStatus.weekly_usage_percent : null,
+        typeof subStatus.weekly_usage_percent === "number" &&
+        Number.isFinite(subStatus.weekly_usage_percent) &&
+        subStatus.weekly_usage_percent >= 0 &&
+        subStatus.weekly_usage_percent <= 100
+          ? subStatus.weekly_usage_percent
+          : null,
       usageStatus: str(subStatus.usage_status) || "normal",
       weeklyPeriodStartedAt:
         typeof subStatus.weekly_period_started_at === "string" ? subStatus.weekly_period_started_at : undefined,
@@ -170,7 +189,7 @@ export function parseMucUsage(body: unknown): MucUsageSnapshot {
       unit: str(quota.unit) || "USD",
     }
     snapshot.remaining = quota.remaining === undefined ? null : num(quota.remaining)
-    snapshot.planName = (str(d.planName) || str(d.plan_name)) || "配额 Key"
+    snapshot.planName = str(d.planName) || str(d.plan_name) || "配额 Key"
     return snapshot
   }
 
@@ -181,7 +200,7 @@ export function parseMucUsage(body: unknown): MucUsageSnapshot {
     snapshot.remaining = remaining
   }
   if (!snapshot.subscriptionStatus) {
-    snapshot.planName = (str(d.planName) || str(d.plan_name))
+    snapshot.planName = str(d.planName) || str(d.plan_name)
     if (snapshot.wallet || (str(d.planName) || str(d.plan_name)) === "钱包余额" || typeof d.balance === "number") {
       snapshot.mode = "wallet"
       if (snapshot.planName === "") snapshot.planName = "钱包余额"
@@ -218,5 +237,19 @@ export async function fetchMucUsage(
     return parseMucUsage(payload)
   } catch {
     return undefined
+  }
+}
+
+export function parseQuotaWindow(value: unknown): MucQuotaWindow | undefined {
+  const data = record(value)
+  const percent = data.remaining_percent
+  if (typeof percent !== "number" || !Number.isFinite(percent) || percent < 0 || percent > 100) return undefined
+  if (typeof data.exhausted !== "boolean") return undefined
+  const validTime = (v: unknown) => (typeof v === "string" && Number.isFinite(Date.parse(v)) ? v : null)
+  return {
+    remainingPercent: percent,
+    startsAt: validTime(data.starts_at),
+    resetsAt: validTime(data.resets_at),
+    exhausted: data.exhausted,
   }
 }

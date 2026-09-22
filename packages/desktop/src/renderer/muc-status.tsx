@@ -3,19 +3,15 @@ import { resolveBrand } from "@opencode-ai/brand"
 // 可自由拖动的圆形悬浮球（位置持久化），点击展开用量详情面板（吸附在球上方）。
 // 数据经主进程 IPC 拉取（凭据不出主进程）。本文件为 mucode 新增文件。
 //
-// Final Frontend 规范：
-// - 悬浮球恒显钱包余额（语义稳定，不随订阅/按量模式切换）
-// - 展开卡 = 订阅块（档位/本周%/状态/恢复日/继续使用/重置卡[使用]）+ 钱包块 + 用量块
-// - 重置卡与 Website 走同一后端 API；API 成功后才播放「AVAILABLE QUOTA → 100%」动画
-//   （与 Website frontend resetAnimation.ts 同语义，跨仓按同一规范精简实现）
+// 额度面板只显示剩余百分比；金额留在网站钱包及管理员账单。
 
 import { Show, createSignal, onCleanup, onMount, For } from "solid-js"
 import type { MucUpdateState, MucUsageSnapshot } from "../preload/types"
-import { availableQuotaAfterReset, mucTween, MUC_SUCCESS_MS, type MucTweenHandle } from "./muc-reset-animation"
+import { mucTween, MUC_SUCCESS_MS, type MucTweenHandle } from "./muc-reset-animation"
 
 const brand = resolveBrand()
 const STORE_NAME = `${brand.credentialNamespace}-status`
-const REFRESH_MS = 5 * 60 * 1000
+const REFRESH_MS = 30 * 1000
 const BALL_SIZE = 56
 const PANEL_WIDTH = 280
 const EDGE = 8
@@ -40,18 +36,10 @@ const MUC_TOKENS = `
   }
 `
 
-const fmtMoney = (v: number | null | undefined) => {
-  if (v === null || v === undefined || !Number.isFinite(v)) return "—"
-  const abs = Math.abs(v)
-  const s = abs >= 100 ? v.toFixed(0) : v.toFixed(2)
-  return `$${s}`
-}
-
-// Wallet（新合同）：8 位小数字符串 → $12.48 展示
-const fmtWallet = (w: { balance: string } | null | undefined) => {
-  if (!w || typeof w.balance !== "string") return null
-  const n = Number(w.balance)
-  return Number.isFinite(n) ? fmtMoney(n) : null
+const fmtPercent = (value: number | null | undefined) => {
+  if (value == null || !Number.isFinite(value)) return "—"
+  if (value > 0 && value < 1) return "<1%"
+  return `${Math.floor(Math.max(0, Math.min(100, value)))}%`
 }
 
 // usage_status → 文案与颜色（阈值由服务端定义，前端只做映射，不复制数值）
@@ -90,7 +78,7 @@ const fmtTime = (iso: string) => {
 const fmtDate = (iso: string | null | undefined) => {
   if (!iso) return "—"
   try {
-    return new Date(iso).toLocaleDateString([], { month: "short", day: "numeric" })
+    return new Date(iso).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
   } catch {
     return iso
   }
@@ -166,11 +154,37 @@ export function MucStatus() {
     const n = usage()?.resetCardsAvailable
     return typeof n === "number" && n > 0 ? n : 0
   }
-  // 悬浮球/钱包块：恒显钱包余额（语义稳定；缺失时显示 —）
-  const walletBalanceText = (): string => {
-    const u = usage()
-    return (u && fmtWallet(u.wallet)) || "—"
+  const quotaWindows = () => {
+    const sub = subscriptionStatus()
+    if (!sub) return []
+    if (sub.quotaPolicy === "dual_window_v1")
+      return [
+        { label: "5 小时剩余", data: sub.shortWindow },
+        { label: "本周剩余", data: sub.weeklyWindow },
+      ]
+    return [
+      {
+        label: "本周剩余",
+        data:
+          sub.weeklyUsagePercent === null
+            ? undefined
+            : {
+                remainingPercent: 100 - sub.weeklyUsagePercent,
+                startsAt: sub.weeklyPeriodStartedAt ?? null,
+                resetsAt: sub.weeklyPeriodEndsAt ?? null,
+                exhausted: sub.weeklyUsagePercent >= 100,
+              },
+      },
+    ]
   }
+  const limitingWindow = () => {
+    const windows = quotaWindows()
+    if (windows.some((w) => !w.data)) return undefined
+    return windows.sort((a, b) => a.data!.remainingPercent - b.data!.remainingPercent)[0]
+  }
+  const remainingText = () => (stale() ? "—" : fmtPercent(limitingWindow()?.data?.remainingPercent))
+  const remainingLabel = () =>
+    stale() ? "待刷新" : subscriptionStatus() ? (limitingWindow()?.label ?? "额度状态") : "未订阅"
 
   // 重置卡：确认 → API 成功 → 播放 AVAILABLE QUOTA 动画
   const confirmResetCard = async () => {
@@ -195,19 +209,22 @@ export function MucStatus() {
         setResetPhase("failed")
         return
       }
-      const { from, to } = availableQuotaAfterReset(target.weeklyUsagePercent)
+      const from = limitingWindow()?.data?.remainingPercent ?? 0
       setResetPercent(from)
       setResetNextEnd(res.weeklyPeriodEndsAt)
       setResetPhase("refreshing")
       const refreshed = await refresh()
       if (disposed) return
-      if (refreshed) await window.api.mucAcknowledgeReset(target.id, res.operationId)
+      if (refreshed) {
+        await window.api.mucAcknowledgeReset(target.id, res.operationId)
+        if (target.quotaPolicy === "dual_window_v1") setResetNextEnd(limitingWindow()?.data?.resetsAt ?? "")
+      }
       if (!refreshed) setResetError("重置已成功，状态刷新失败；请刷新或重试确认结果。")
       setResetPhase("success")
       resetTween?.cancel()
       resetTween = mucTween({
         from,
-        to,
+        to: refreshed ? (limitingWindow()?.data?.remainingPercent ?? from) : from,
         durationMs: MUC_SUCCESS_MS,
         onUpdate: (v) => {
           if (!disposed) setResetPercent(Math.round(v))
@@ -384,27 +401,38 @@ export function MucStatus() {
                       class="rounded-lg px-2 py-1.5"
                       style={{ border: "1px solid var(--muc-red-border)", background: "var(--muc-red-soft)" }}
                     >
-                      <div class="flex items-center justify-between">
-                        <span class="text-[11px] text-white/60">本周使用</span>
-                        <span class="text-[13px] font-semibold" style={{ color: statusColor(ss().usageStatus) }}>
-                          {ss().weeklyUsagePercent === null ? "不限量" : `${ss().weeklyUsagePercent}%`}
-                        </span>
-                      </div>
-                      <Show when={ss().weeklyUsagePercent !== null}>
-                        <div class="mt-1 h-1.5 overflow-hidden rounded-full bg-white/10">
-                          <div
-                            class="h-1.5 rounded-full transition-all"
-                            style={{
-                              width: `${Math.min(ss().weeklyUsagePercent ?? 0, 100)}%`,
-                              background: statusColor(ss().usageStatus),
-                            }}
-                          />
-                        </div>
-                      </Show>
+                      <For each={quotaWindows()}>
+                        {(w) => (
+                          <div class="mb-2">
+                            <div class="flex items-center justify-between text-[12px]">
+                              <span>{w.label}</span>
+                              <span>{fmtPercent(w.data?.remainingPercent)}</span>
+                            </div>
+                            <div class="mt-1 h-1.5 overflow-hidden rounded-full bg-white/10">
+                              <div
+                                class="h-full rounded-full"
+                                style={{
+                                  width: `${w.data?.remainingPercent ?? 0}%`,
+                                  background: w.data?.exhausted ? "var(--muc-danger)" : "var(--muc-red-bright)",
+                                }}
+                              />
+                            </div>
+                            <div class="mt-1 text-[10px] text-white/50">
+                              {w.data?.resetsAt
+                                ? `${fmtDate(w.data.resetsAt)} 恢复`
+                                : w.data?.startsAt
+                                  ? "到期前不再恢复"
+                                  : w.data
+                                    ? "首次使用后开始计时"
+                                    : "状态暂不可用"}
+                            </div>
+                          </div>
+                        )}
+                      </For>
                       <div class="mt-1.5 flex items-center justify-between text-[10px] text-white/50">
                         <span>{USAGE_STATUS_LABELS[ss().usageStatus] ?? ss().usageStatus}</span>
                         <span>
-                          <Show when={ss().weeklyPeriodEndsAt} fallback={null}>
+                          <Show when={ss().quotaPolicy !== "dual_window_v1" && ss().weeklyPeriodEndsAt} fallback={null}>
                             {fmtDate(ss().weeklyPeriodEndsAt)} 恢复 ·{" "}
                           </Show>
                           继续使用{" "}
@@ -453,62 +481,11 @@ export function MucStatus() {
                   )}
                 </Show>
 
-                {/* 钱包块：恒显钱包余额 */}
-                <div class="grid grid-cols-2 gap-1.5">
-                  <div class="rounded-lg bg-black/30 px-2 py-1.5">
-                    <div class="text-[10px] text-white/50">钱包余额</div>
-                    <div class="text-[15px] font-semibold">{walletBalanceText()}</div>
-                  </div>
-                  <div class="rounded-lg bg-black/30 px-2 py-1.5">
-                    <div class="text-[10px] text-white/50">今日</div>
-                    <div class="text-[15px] font-semibold">{fmtMoney(u().todayCost)}</div>
-                    <div class="text-[10px] text-white/40">{u().todayRequests} 次请求</div>
-                  </div>
-                </div>
-
-                <Show when={u().quota}>
-                  <div class="text-[11px] text-white/60">
-                    配额：已用 {fmtMoney(u().quota!.used)} / {fmtMoney(u().quota!.limit)} {u().quota!.unit}
-                  </div>
+                <Show when={!subscriptionStatus()}>
+                  <p class="py-2 text-white/60">暂无有效订阅，请在网站管理套餐。</p>
                 </Show>
-
-                <For each={u().rateWindows}>
-                  {(w) => (
-                    <div class="flex justify-between text-[11px] text-white/60">
-                      <span>{w.window} 窗口</span>
-                      <span>
-                        {fmtMoney(w.used)} / {fmtMoney(w.limit)}
-                      </span>
-                    </div>
-                  )}
-                </For>
-
-                <div class="flex justify-between text-[11px] text-white/60">
-                  <span>累计</span>
-                  <span>
-                    {fmtMoney(u().totalCost)} · {u().totalRequests} 次
-                  </span>
-                </div>
-
-                <Show when={u().expiresAt}>
-                  <div class="flex justify-between text-[11px] text-white/60">
-                    <span>Key 到期</span>
-                    <span>{u().expiresAt!.slice(0, 10)}</span>
-                  </div>
-                </Show>
-
-                <Show when={u().topModels.length > 0}>
-                  <div class="mt-1 border-t border-white/10 pt-1.5">
-                    <div class="mb-1 text-[10px] text-white/40">费用 Top 模型</div>
-                    <For each={u().topModels}>
-                      {(m) => (
-                        <div class="flex justify-between text-[11px]">
-                          <span class="max-w-[180px] truncate">{m.model}</span>
-                          <span class="text-white/60">{fmtMoney(m.cost)}</span>
-                        </div>
-                      )}
-                    </For>
-                  </div>
+                <Show when={subscriptionStatus()}>
+                  <p class="text-[10px] text-white/50">订阅到期：{fmtDate(subscriptionStatus()!.expiresAt)}</p>
                 </Show>
 
                 <div class="mt-1 flex items-center justify-between text-[10px] text-white/40">
@@ -547,7 +524,10 @@ export function MucStatus() {
             >
               <p class="text-[12px] font-semibold">使用重置卡？</p>
               <p class="text-[10px] leading-relaxed text-white/60">
-                本周使用量将立即重置，并从现在重新开始最多 7 天周期（不超过订阅到期日）。重置卡不可退回。
+                {subscriptionStatus()?.quotaPolicy === "dual_window_v1"
+                  ? "同时恢复 5 小时和周额度，并从现在重新计时。未用额度不叠加，不延长订阅；尚未结算的请求会消耗恢复后的额度。"
+                  : "恢复周额度并重新计时，不延长订阅。"}{" "}
+                重置卡不可退回。
               </p>
               <div class="mt-1 flex gap-2">
                 <button
@@ -594,22 +574,23 @@ export function MucStatus() {
                   />
                 </svg>
                 <div class="absolute inset-0 flex items-center justify-center text-[20px] font-bold tabular-nums">
-                  {resetPercent()}%
+                  {fmtPercent(resetPercent())}
                 </div>
               </div>
-              <p class="text-[9px] tracking-[0.3em] text-white/40">AVAILABLE QUOTA</p>
+              <p class="text-[9px] tracking-[0.3em] text-white/40">剩余额度</p>
               <p class="text-[10px] text-white/60">
-                {fmtDate(resetNextEnd())} 恢复 · 剩余 {usage()?.resetCardsAvailable ?? "—"} 张
+                {resetNextEnd() ? `${fmtDate(resetNextEnd())} 恢复 · ` : "到期前不再恢复 · "}剩余{" "}
+                {usage()?.resetCardsAvailable ?? "—"} 张
               </p>
             </div>
           </Show>
         </div>
       </Show>
 
-      {/* 悬浮球：恒显钱包余额 */}
+      {/* 悬浮球显示限制最紧的周期剩余百分比 */}
       <button
         type="button"
-        title="钱包余额（可拖动）"
+        title="订阅剩余额度（可拖动）"
         class="muc-status-scope fixed z-[9999] flex touch-none flex-col items-center justify-center rounded-full border-2 border-white/25 text-white shadow-[0_4px_14px_rgba(0,0,0,0.5)] transition-transform hover:scale-105 active:scale-95"
         classList={{
           "cursor-grabbing opacity-80": dragging,
@@ -629,8 +610,8 @@ export function MucStatus() {
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
       >
-        <span class="text-[9px] leading-none text-white/75">余额</span>
-        <span class="mt-0.5 max-w-full truncate px-1 text-[12px] font-bold leading-none">{walletBalanceText()}</span>
+        <span class="text-[9px] leading-none text-white/75">{remainingLabel()}</span>
+        <span class="mt-0.5 max-w-full truncate px-1 text-[12px] font-bold leading-none">{remainingText()}</span>
         <span
           class="absolute right-0.5 top-0.5 size-2 rounded-full border border-white/60"
           classList={{ "bg-emerald-400": !stale(), "bg-amber-400": stale() }}
