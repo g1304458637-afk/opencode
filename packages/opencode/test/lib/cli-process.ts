@@ -528,7 +528,9 @@ export const cliIt = {
     body: (input: CliFixture) => Effect.Effect<A, E, Scope.Scope | HttpClient.HttpClient>,
     opts?: number | TestOptions,
   ) =>
-    (process.platform === "win32" ? test : test.concurrent)(
+    // Hosted runners cannot cold-start a dozen full CLI processes within the
+    // prompt-exit budgets. Keep those budgets and serialize the fixture in CI.
+    (process.platform === "win32" || process.env.CI ? test : test.concurrent)(
       name,
       () => Effect.runPromise(Effect.scoped(withCliFixture(body))),
       opts,
