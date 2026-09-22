@@ -108,11 +108,11 @@ jobs:
 
             await removeLabel('needs:title');
 
-            // Step 2: Check for linked issue (skip for docs/refactor/feat PRs)
-            const skipIssueCheck = /^(docs|refactor|feat)\s*(\([a-zA-Z0-9-]+\))?\s*:/.test(title);
+            // Repositories without Issues cannot supply a linked issue.
+            const skipIssueCheck = context.payload.repository.has_issues === false || /^(docs|refactor|feat)\s*(\([a-zA-Z0-9-]+\))?\s*:/.test(title);
             if (skipIssueCheck) {
               await removeLabel('needs:issue');
-              console.log('Skipping issue check for docs/refactor/feat PR');
+              console.log('Issue reference is not required for this repository or PR type');
               return;
             }
             const query = `
@@ -226,7 +226,7 @@ jobs:
             }
 
             // Check: issue reference (skip for docs/refactor/feat)
-            if (!isDocsRefactorOrFeat && hasIssueSection) {
+            if (context.payload.repository.has_issues !== false && !isDocsRefactorOrFeat && hasIssueSection) {
               const issueMatch = body.match(/### Issue for this PR\s*\n([\s\S]*?)(?=###|$)/);
               const issueContent = issueMatch ? issueMatch[1].trim() : '';
               const hasIssueRef = /(closes|fixes|resolves)\s+#\d+/i.test(issueContent) || /#\d+/.test(issueContent);
