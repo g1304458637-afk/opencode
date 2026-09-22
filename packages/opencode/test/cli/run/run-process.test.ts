@@ -9,6 +9,19 @@ import { reply } from "../../lib/llm-server"
 import { cliIt } from "../../lib/cli-process"
 
 describe("opencode run (non-interactive subprocess)", () => {
+  cliIt.concurrent(
+    "resolves relative attachments inside the isolated working directory",
+    ({ llm, opencode, home }) =>
+      Effect.gen(function* () {
+        yield* Effect.promise(() => Bun.write(`${home}/cli-isolation.txt`, "isolated attachment"))
+        yield* llm.text("attachment received")
+        const result = yield* opencode.run("read this attachment", { extraArgs: ["--file", "cli-isolation.txt", "--"] })
+        opencode.expectExit(result, 0)
+        expect(result.stdout).toBe("attachment received\n")
+      }),
+    60_000,
+  )
+
   // Happy path: prompt completes, output reaches stdout, process exits 0.
   // If this fails, all the others likely will too — debug here first.
   cliIt.concurrent(
