@@ -1,11 +1,10 @@
 import { afterEach, beforeAll, expect } from "bun:test"
 import { existsSync } from "node:fs"
+import { mkdir, symlink } from "node:fs/promises"
 import path from "node:path"
 import { pathToFileURL } from "node:url"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { Global } from "@opencode-ai/core/global"
-import { Npm } from "@opencode-ai/core/npm"
-import { InstallationLocal, InstallationVersion } from "@opencode-ai/core/installation/version"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Cause, Effect, Exit, Fiber } from "effect"
 import { bootstrap as cliBootstrap } from "../../src/cli/bootstrap"
@@ -13,6 +12,7 @@ import { InstanceBootstrap } from "../../src/project/bootstrap"
 import { InstanceStore } from "../../src/project/instance-store"
 import { disposeAllInstances, tmpdirScoped } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
+import { markPluginDependenciesReady } from "../fixture/plugin"
 import { waitGlobalBusEvent } from "../server/global-bus"
 
 const it = testEffect(
@@ -29,13 +29,14 @@ const it = testEffect(
 //
 // The boundaries below are transport-agnostic and stay.
 
-// Cold Windows runners can spend a minute installing the real plugin dependency.
-// Prepare it outside the lifecycle assertions; each bootstrap still has its original deadline.
+// Bootstrap ordering is tested against the real checkout plugin, already installed
+// by CI. Avoid an unrelated registry download inside a lifecycle assertion suite.
 beforeAll(async () => {
-  await Npm.Service.use((npm) => npm.install(Global.Path.config, {
-    add: [{ name: "@opencode-ai/plugin", version: InstallationLocal ? undefined : InstallationVersion }],
-  })).pipe(Effect.provide(LayerNode.compile(Npm.node)), Effect.scoped, Effect.runPromise)
-}, 120_000)
+  await markPluginDependenciesReady(Global.Path.config)
+  const target = path.join(Global.Path.config, "node_modules", "@opencode-ai", "plugin")
+  await mkdir(path.dirname(target), { recursive: true })
+  if (!existsSync(target)) await symlink(path.resolve(import.meta.dir, "../../../plugin"), target, "junction")
+})
 
 afterEach(async () => {
   await disposeAllInstances()
