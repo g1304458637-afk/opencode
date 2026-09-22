@@ -144,6 +144,9 @@ jobs:
         run: bun --cwd packages/app test:e2e:local
         env:
           CI: true
+          # Windows traces show multi-second Vite module loads and stalled diff
+          # workers with five browser processes competing for the hosted CPU.
+          PLAYWRIGHT_WORKERS: ${{ runner.os == 'Windows' && '2' || '5' }}
         timeout-minutes: 30
 
       - name: Upload Playwright artifacts

@@ -170,6 +170,18 @@ export type ParsedAPICallError =
     }
 
 export function parseAPICallError(input: { providerID: ProviderV2.ID; error: APICallError }): ParsedAPICallError {
+  // Recent SDK versions wrap body-read failures in an APICallError even when
+  // the HTTP status is 200. Preserve our explicit stalled-stream retry signal.
+  if (input.error.cause instanceof ResponseStreamError) {
+    return {
+      type: "api_error",
+      message: input.error.cause.message,
+      isRetryable: true,
+      responseHeaders: input.error.responseHeaders,
+      responseBody: input.error.responseBody,
+      metadata: { code: input.error.cause.name },
+    }
+  }
   const m = message(input.providerID, input.error)
   const body = json(input.error.responseBody)
   if (isContextOverflow(m) || input.error.statusCode === 413 || body?.error?.code === "context_length_exceeded") {
