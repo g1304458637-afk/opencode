@@ -14,20 +14,24 @@ afterAll(async () => {
   await AppRuntime.dispose()
 
   const busy = (error: unknown) =>
-    typeof error === "object" && error !== null && "code" in error && error.code === "EBUSY"
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error.code === "EBUSY" ||
+      (process.platform === "win32" && ["EACCES", "EPERM", "ENOTEMPTY"].includes(String(error.code))))
   const rm = async (left: number): Promise<void> => {
     Bun.gc(true)
     await sleep(100)
     return fs.rm(dir, { recursive: true, force: true }).catch((error) => {
       if (!busy(error)) throw error
-      if (left <= 1 && process.platform !== "win32") throw error
-      if (left <= 1) return
+      if (left <= 1) throw error
       return rm(left - 1)
     })
   }
 
   // Windows can keep SQLite WAL handles alive until GC finalizers run, so we
-  // force GC and retry teardown to avoid flaky EBUSY in test cleanup.
+  // force GC and retry teardown. Bun can report these locks as EACCES/EPERM;
+  // persistent cleanup failures must still fail instead of being swallowed.
   await rm(30)
 })
 
