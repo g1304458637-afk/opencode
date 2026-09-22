@@ -87,6 +87,16 @@ const languageBaseURL = (language: unknown) => (language as { config: { baseURL:
 const it = testEffect(LayerNode.compile(LayerNode.group([Provider.node, Env.node, Plugin.node])))
 const experimentalModels = testEffect(providerLayer({ enableExperimentalModels: true }))
 
+it.instance("Campus default still excludes configured non-Campus providers", () =>
+  Effect.gen(function* () {
+    yield* remove("MUC_ALLOW_ALL_PROVIDERS")
+    yield* setProcessEnv("ANTHROPIC_API_KEY", "test-api-key")
+    const providers = yield* list
+    expect(providers[ProviderV2.ID.anthropic]).toBeUndefined()
+    expect(Object.keys(providers).every((id) => id.startsWith("sub2api"))).toBe(true)
+  }),
+)
+
 const alphaProviderConfig = {
   provider: {
     "custom-provider": {
