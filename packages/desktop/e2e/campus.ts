@@ -1,4 +1,6 @@
 import { _electron, expect } from "@playwright/test"
+import { createServer } from "node:http"
+import { setTimeout as sleep } from "node:timers/promises"
 import { mkdtempSync, mkdirSync, readFileSync, existsSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
@@ -37,6 +39,19 @@ function usage() {
             id: 123,
             group_id: 13,
             display_name: "Pro",
+            quota_policy: "dual_window_v1",
+            short_window: {
+              remaining_percent: 100 - (state.percent ?? 0),
+              starts_at: "2026-09-22T00:00:00Z",
+              resets_at: "2099-01-01T00:00:00Z",
+              exhausted: state.percent === 100,
+            },
+            weekly_window: {
+              remaining_percent: 80,
+              starts_at: "2026-09-22T00:00:00Z",
+              resets_at: "2099-01-03T00:00:00Z",
+              exhausted: false,
+            },
             weekly_usage_percent: state.percent,
             usage_status: state.percent === 100 ? "exhausted" : state.percent === 99 ? "near_limit" : "normal",
             weekly_period_started_at: "2026-09-21T00:00:00Z",
@@ -49,7 +64,44 @@ function usage() {
     usage: { today: { cost: 1.5, requests: 4 }, total: { cost: 9, requests: 20 } },
   }
 }
-const fixture = Bun.serve({
+// Run the Playwright driver under Node, including when Electron is cold.
+async function serveFixture(options: {
+  hostname: string
+  port: number
+  fetch: (request: Request) => Promise<Response>
+}) {
+  const url = new URL(`http://${options.hostname}:${options.port}`)
+  const server = createServer(async (incoming, outgoing) => {
+    try {
+      const chunks: Buffer[] = []
+      for await (const chunk of incoming) chunks.push(Buffer.from(chunk))
+      const body = Buffer.concat(chunks)
+      const request = new Request(new URL(incoming.url || "/", url), {
+        method: incoming.method,
+        headers: incoming.headers as Record<string, string>,
+        ...(body.length ? { body } : {}),
+      })
+      const response = await options.fetch(request)
+      outgoing.writeHead(response.status, Object.fromEntries(response.headers))
+      outgoing.end(Buffer.from(await response.arrayBuffer()))
+    } catch (error) {
+      outgoing.writeHead(500)
+      outgoing.end(String(error))
+    }
+  })
+  await new Promise<void>((resolve, reject) => {
+    server.once("error", reject)
+    server.listen(options.port, options.hostname, resolve)
+  })
+  return {
+    url,
+    stop: () => {
+      server.closeAllConnections()
+      server.close()
+    },
+  }
+}
+const fixture = await serveFixture({
   hostname: "127.0.0.1",
   port: 18765,
   async fetch(request) {
@@ -95,18 +147,19 @@ const fixture = Bun.serve({
       })
     }
     if (path.startsWith("/v1/muc/reset-with-card/")) {
+      expect(request.headers.get("X-Quota-Contract")).toBe("2")
       const key = request.headers.get("Idempotency-Key")!
       if (receipts.has(key)) return Response.json(receipts.get(key))
       if (!state.cards) return Response.json({ reason: "NO_CARD" }, { status: 409 })
       state.cards--
-      state.percent = 0
+      state.percent = 10
       const receipt = { data: { subscription_id: 123, weekly_period_ends_at: "2099-01-01T00:00:00Z" } }
       receipts.set(key, receipt)
       if (state.loseReset) {
         state.loseReset = false
         return new Response("response lost", { status: 502 })
       }
-      await Bun.sleep(250)
+      await sleep(250)
       return Response.json(receipt)
     }
     if (path.includes("latest-")) {
@@ -156,7 +209,7 @@ async function panel(page: Awaited<ReturnType<typeof launch>>) {
   await expect(ball).toBeVisible({ timeout: 60000 })
   // This is the actual pointer drag/click path, not component state injection.
   await ball.click()
-  await expect(page.getByText("钱包余额", { exact: true })).toBeVisible()
+  await expect(page.getByText("5 小时剩余", { exact: true }).first()).toBeVisible()
 }
 async function refresh(page: Awaited<ReturnType<typeof launch>>) {
   await page.getByRole("button", { name: "刷新", exact: true }).click()
@@ -199,8 +252,8 @@ try {
   page = await launch()
   expect(await page.evaluate(() => window.api.mucGetState())).toMatchObject({ connected: true })
   await panel(page)
-  await expect(page.locator("button.muc-status-scope")).toContainText("$12.48")
-  await expect(page.getByText("63%", { exact: true })).toBeVisible()
+  await expect(page.locator("button.muc-status-scope")).toContainText("37%")
+  await expect(page.getByText("37%", { exact: true }).first()).toBeVisible()
   const server = await page.evaluate(() => window.api.awaitInitialization())
   const providerResponse = await fetch(`${server.url}/provider`, {
     headers: { Authorization: `Basic ${Buffer.from(`${server.username}:${server.password}`).toString("base64")}` },
@@ -212,20 +265,21 @@ try {
   expect(Object.keys(providers.all[0]!.models).sort()).toEqual(["glm-5-thinking", "gpt-5"])
   expect(Object.keys(providers.all[0]!.models["glm-5-thinking"]!.variants || {})).toContain("high")
   pass("gateway-only runtime catalog and thinking effort")
-  pass("existing credentials restore, wallet and active subscription UI")
+  pass("existing credentials restore and remaining-only subscription UI")
   for (const percent of [99, 100]) {
     state.percent = percent
     await refresh(page)
-    await expect(page.getByText(`${percent}%`, { exact: true })).toBeVisible()
+    await expect(page.getByText(`${100 - percent}%`, { exact: true }).first()).toBeVisible()
   }
-  pass("99%, 100%, PAYG state with wallet always visible")
+  await expect(page.locator(".muc-status-scope").filter({ hasText: "钱包余额" })).toHaveCount(0)
+  pass("remaining 1% and 0%, no money in subscription popover")
   state.subscription = false
   await refresh(page)
   await expect(page.getByText("本周使用", { exact: true })).toHaveCount(0)
-  await expect(page.locator("button.muc-status-scope")).toContainText("$12.48")
+  await expect(page.locator("button.muc-status-scope")).toContainText("未订阅")
   state.legacy = true
   await refresh(page)
-  await expect(page.locator("button.muc-status-scope")).toContainText("$8.50")
+  await expect(page.locator("button.muc-status-scope")).toContainText("未订阅")
   pass("no subscription and old-compatible response")
   state.legacy = false
   state.subscription = true
@@ -254,13 +308,13 @@ try {
     button.click()
   })
   await expect(page.getByText("额度已恢复", { exact: true })).toBeVisible()
-  await expect(page.getByText("100%", { exact: true })).toBeVisible({ timeout: 10000 })
+  await expect(page.locator("button.muc-status-scope")).toContainText("80%", { timeout: 10000 })
   await page.screenshot({ path: join(artifacts, "reset-success.png") })
   await expect(page.getByText("额度已恢复", { exact: true })).toHaveCount(0, { timeout: 10000 })
   expect(state.cards).toBe(2)
   expect(new Set(calls.filter((x) => x.path.includes("reset-with-card")).map((x) => x.key)).size).toBe(1)
   await expect(page.getByText("重置卡 ×2", { exact: true })).toBeVisible()
-  await expect(page.getByText("0%", { exact: true })).toBeVisible()
+  await expect(page.getByText("90%", { exact: true })).toBeVisible()
   pass("lost response, restart retry, double click, one card, server refresh and animation")
   state.offline = true
   await refresh(page)
@@ -273,24 +327,29 @@ try {
   await page.getByRole("button", { name: "账户 ↗", exact: true }).click()
   expect(readFileSync(join(profile, "events.jsonl"), "utf8")).toContain("/pricing")
   expect(readFileSync(join(profile, "events.jsonl"), "utf8")).toContain("/dashboard")
-  expect(await page.evaluate(() => window.api.mucGetUpdate())).toMatchObject({ available: false, status: "up-to-date" })
-  pass("pricing/account navigation and no update")
-  state.update = "available"
-  await close()
-  page = await launch()
-  await panel(page)
-  await expect(page.getByText("有新版本 99.0.0")).toBeVisible()
-  await page.getByText("有新版本 99.0.0").click()
-  expect(readFileSync(join(profile, "events.jsonl"), "utf8")).toContain(
-    process.env.CAMPUS_E2E_DOWNLOAD_PAGE || `/${brand}`,
-  )
-  pass("update available and manual download action")
-  state.update = "bad"
-  await close()
-  page = await launch()
-  await panel(page)
-  await expect(page.getByText("更新检查暂不可用")).toBeVisible()
-  pass("bad update feed is contained")
+  if (process.env.CAMPUS_E2E_SCOPE !== "quota") {
+    expect(await page.evaluate(() => window.api.mucGetUpdate())).toMatchObject({
+      available: false,
+      status: "up-to-date",
+    })
+    pass("pricing/account navigation and no update")
+    state.update = "available"
+    await close()
+    page = await launch()
+    await panel(page)
+    await expect(page.getByText("有新版本 99.0.0")).toBeVisible()
+    await page.getByText("有新版本 99.0.0").click()
+    expect(readFileSync(join(profile, "events.jsonl"), "utf8")).toContain(
+      process.env.CAMPUS_E2E_DOWNLOAD_PAGE || `/${brand}`,
+    )
+    pass("update available and manual download action")
+    state.update = "bad"
+    await close()
+    page = await launch()
+    await panel(page)
+    await expect(page.getByText("更新检查暂不可用")).toBeVisible()
+    pass("bad update feed is contained")
+  }
   expect(await application!.evaluate(({ app }) => app.getName())).toBe(brand === "muc" ? "mucode" : "HUBU AI")
   const runtime = await application!.evaluate(() => ({ brand: process.env.BRAND, data: process.env.XDG_DATA_HOME }))
   expect(runtime.brand).toBe(brand)
@@ -314,15 +373,31 @@ try {
   pass("reconnect persists isolated brand credential")
   writeFileSync(
     join(artifacts, "result.json"),
-    JSON.stringify({ brand, profile, results, calls, verdict: "PASS" }, null, 2),
+    JSON.stringify(
+      { brand, scope: process.env.CAMPUS_E2E_SCOPE || "all", profile, results, calls, verdict: "PASS" },
+      null,
+      2,
+    ),
   )
 } catch (error) {
   writeFileSync(
     join(artifacts, "result.json"),
-    JSON.stringify({ brand, profile, results, calls, verdict: "FAIL", error: String(error) }, null, 2),
+    JSON.stringify(
+      {
+        brand,
+        scope: process.env.CAMPUS_E2E_SCOPE || "all",
+        profile,
+        results,
+        calls,
+        verdict: "FAIL",
+        error: String(error),
+      },
+      null,
+      2,
+    ),
   )
   throw error
 } finally {
   await close()
-  fixture.stop(true)
+  fixture.stop()
 }

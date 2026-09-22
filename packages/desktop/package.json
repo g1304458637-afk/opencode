@@ -21,7 +21,7 @@
     "package:win": "electron-builder --win --config electron-builder.config.ts",
     "package:linux": "electron-builder --linux --config electron-builder.config.ts",
     "native:build": "bun install --cwd native",
-    "test:e2e:campus": "bun e2e/campus.ts"
+    "test:e2e:campus": "bun build e2e/campus.ts --target node --external @playwright/test --outfile e2e/artifacts/campus-run.mjs && node e2e/artifacts/campus-run.mjs"
   },
   "main": "./out/main/index.js",
   "dependencies": {

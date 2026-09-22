@@ -137,6 +137,7 @@ export class ResetCardClient {
           Authorization: `Bearer ${apiKey}`,
           "Content-Type": "application/json",
           "Idempotency-Key": attempt.key,
+          "X-Quota-Contract": "2",
         },
         body: "{}",
         signal: AbortSignal.timeout(10_000),

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { parseMucUsage } from "./usage"
+import { parseMucUsage, parseQuotaWindow } from "./usage"
 
 // Phase 5 —— /v1/usage 解析器合同测试：
 // 新合同（wallet/reset_cards/subscription_status）优先，缺失时回退 legacy。
@@ -100,7 +100,9 @@ describe("MUC Harness: parseMucUsage status contract", () => {
 })
 
 test("legacy wallet, missing fields, malformed numbers and envelopes degrade safely", () => {
-  expect(parseMucUsage({ balance: 3.25, mode: "unrestricted", planName: "钱包余额" }).wallet?.balance).toBe("3.25000000")
+  expect(parseMucUsage({ balance: 3.25, mode: "unrestricted", planName: "钱包余额" }).wallet?.balance).toBe(
+    "3.25000000",
+  )
   for (const input of [null, [], "bad", 3, {}, { wallet: { balance: "NaN" } }]) {
     const parsed = parseMucUsage(input)
     expect(parsed.mode).toBe("unknown")
@@ -113,4 +115,34 @@ test("legacy wallet, missing fields, malformed numbers and envelopes degrade saf
     ;(body.subscription_status as Record<string, unknown>).weekly_usage_percent = percent
     expect(parseMucUsage(body).subscriptionStatus?.weeklyUsagePercent).toBe(percent)
   }
+})
+
+test("dual-window contract preserves sub-one-percent remaining and independent reset dates", () => {
+  const body = newContractBody()
+  Object.assign(body.subscription_status as object, {
+    quota_policy: "dual_window_v1",
+    short_window: {
+      remaining_percent: 0.01,
+      starts_at: "2026-09-22T00:00:00Z",
+      resets_at: "2026-09-22T05:00:00Z",
+      exhausted: false,
+    },
+    weekly_window: {
+      remaining_percent: 80,
+      starts_at: "2026-09-21T00:00:00Z",
+      resets_at: "2026-09-28T00:00:00Z",
+      exhausted: false,
+    },
+  })
+  const status = parseMucUsage(body).subscriptionStatus!
+  expect(status.quotaPolicy).toBe("dual_window_v1")
+  expect(status.shortWindow?.remainingPercent).toBe(0.01)
+  expect(status.weeklyWindow?.remainingPercent).toBe(80)
+  expect(status.shortWindow?.resetsAt).not.toBe(status.weeklyWindow?.resetsAt)
+  for (const remaining_percent of [null, "50", NaN, Infinity, -1, 101]) {
+    expect(parseQuotaWindow({ remaining_percent, exhausted: false })).toBeUndefined()
+  }
+  expect(
+    parseQuotaWindow({ remaining_percent: 100, starts_at: null, resets_at: null, exhausted: false })?.startsAt,
+  ).toBeNull()
 })
