@@ -154,15 +154,22 @@ test.describe("smoke: session timeline", () => {
         const firstPaintNodes = new WeakSet<Node>()
         let firstPaint = false
         let removedFirstPaintNodes = 0
+        const removedDetails: string[] = []
         let running = true
         new MutationObserver((records) => {
           if (!firstPaint || !running) return
           records.forEach((record) =>
             record.removedNodes.forEach((node) => {
-              if (firstPaintNodes.has(node)) removedFirstPaintNodes += 1
+              if (firstPaintNodes.has(node)) {
+                removedFirstPaintNodes += 1
+                removedDetails.push(node instanceof Element ? node.outerHTML.slice(0, 300) : node.nodeName)
+              }
               if (!(node instanceof Element)) return
               node.querySelectorAll("*").forEach((element) => {
-                if (firstPaintNodes.has(element)) removedFirstPaintNodes += 1
+                if (firstPaintNodes.has(element)) {
+                  removedFirstPaintNodes += 1
+                  removedDetails.push(element.outerHTML.slice(0, 300))
+                }
               })
             }),
           )
@@ -202,11 +209,12 @@ test.describe("smoke: session timeline", () => {
         }
         ;(
           window as Window & {
-            __sessionTabPaint?: { samples: typeof samples; removed: () => number; stop: () => void }
+            __sessionTabPaint?: { samples: typeof samples; removed: () => number; details: string[]; stop: () => void }
           }
         ).__sessionTabPaint = {
           samples,
           removed: () => removedFirstPaintNodes,
+          details: removedDetails,
           stop: () => {
             running = false
           },
@@ -229,16 +237,17 @@ test.describe("smoke: session timeline", () => {
           __sessionTabPaint?: {
             samples: Array<{ ids: string[]; last: boolean; bottomError?: number }>
             removed: () => number
+            details: string[]
             stop: () => void
           }
         }
       ).__sessionTabPaint!
       probe.stop()
-      return { first: probe.samples.find((sample) => sample.ids.length > 0), removed: probe.removed() }
+      return { first: probe.samples.find((sample) => sample.ids.length > 0), removed: probe.removed(), details: probe.details }
     })
     expect(first.first?.last).toBe(true)
     expect(Math.abs(first.first?.bottomError ?? Infinity)).toBeLessThanOrEqual(1)
-    expect(first.removed).toBe(0)
+    expect(first.removed, JSON.stringify(first.details)).toBe(0)
   })
 
   test("paints a cold session tab at the latest message", async ({ page }) => {

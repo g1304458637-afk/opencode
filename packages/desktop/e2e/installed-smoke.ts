@@ -1,7 +1,7 @@
 import { _electron, expect } from "@playwright/test"
 import { execFileSync } from "node:child_process"
 import { cpSync, existsSync, mkdtempSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs"
-import { tmpdir } from "node:os"
+import { homedir, tmpdir } from "node:os"
 import { join, resolve } from "node:path"
 import { campusConfig } from "../scripts/campus-config"
 
@@ -12,9 +12,10 @@ const { brand, version } = campusConfig()
 const output = resolve(process.env.CAMPUS_BUILD_OUTPUT || "dist")
 const manifest = JSON.parse(readFileSync(join(output, "package-smoke.json"), "utf8"))
 const root = mkdtempSync(join(tmpdir(), "campus-installed-"))
-const installed = join(root, "Applications")
-mkdirSync(installed)
 const mac = process.platform === "darwin"
+const installed = mac ? join(homedir(), "Applications") : join(root, "Applications")
+mkdirSync(installed, { recursive: true })
+if (mac && existsSync(join(installed, `${brand.appName}.app`))) throw new Error("Runner already has this application installed")
 const artifact = manifest.artifacts.find((entry: { file: string }) => entry.file.endsWith(mac ? ".dmg" : ".exe"))
 if (!artifact) throw new Error("Missing installer")
 const binary = mac
@@ -106,8 +107,9 @@ import CoreServices
 let application = URL(fileURLWithPath: CommandLine.arguments[1])
 let url = URL(string: CommandLine.arguments[2])!
 guard LSRegisterURL(application as CFURL, true) == noErr else { fatalError("Registration failed") }
+if let selected = NSWorkspace.shared.urlForApplication(toOpen: url) { print("OS selected: " + selected.path) }
 guard let selected = NSWorkspace.shared.urlForApplication(toOpen: url),
-  selected.resolvingSymlinksInPath() == application.resolvingSymlinksInPath()
+  selected.resolvingSymlinksInPath().path == application.resolvingSymlinksInPath().path
 else { fatalError("Protocol selected a different application") }
 guard NSWorkspace.shared.open(url) else { fatalError("Protocol open failed") }
 `)
