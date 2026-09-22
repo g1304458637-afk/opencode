@@ -1,8 +1,11 @@
-import { afterEach, expect } from "bun:test"
+import { afterEach, beforeAll, expect } from "bun:test"
 import { existsSync } from "node:fs"
 import path from "node:path"
 import { pathToFileURL } from "node:url"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { Global } from "@opencode-ai/core/global"
+import { Npm } from "@opencode-ai/core/npm"
+import { InstallationLocal, InstallationVersion } from "@opencode-ai/core/installation/version"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Cause, Effect, Exit, Fiber } from "effect"
 import { bootstrap as cliBootstrap } from "../../src/cli/bootstrap"
@@ -25,6 +28,14 @@ const it = testEffect(
 // appears if InstanceBootstrap ran at the instance boundary.
 //
 // The boundaries below are transport-agnostic and stay.
+
+// Cold Windows runners can spend a minute installing the real plugin dependency.
+// Prepare it outside the lifecycle assertions; each bootstrap still has its original deadline.
+beforeAll(async () => {
+  await Npm.Service.use((npm) => npm.install(Global.Path.config, {
+    add: [{ name: "@opencode-ai/plugin", version: InstallationLocal ? undefined : InstallationVersion }],
+  })).pipe(Effect.provide(LayerNode.compile(Npm.node)), Effect.scoped, Effect.runPromise)
+}, 120_000)
 
 afterEach(async () => {
   await disposeAllInstances()

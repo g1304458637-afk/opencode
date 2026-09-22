@@ -83,6 +83,7 @@ jobs:
         timeout-minutes: 20
         run: GITHUB_ACTIONS=false bun turbo test --log-order=stream
         env:
+          OPENCODE_TEST_LOGS: ${{ runner.os == 'Windows' && '1' || '0' }}
           OPENCODE_EXPERIMENTAL_DISABLE_FILEWATCHER: ${{ runner.os == 'Windows' && 'true' || 'false' }}
 
       - name: Check generated client

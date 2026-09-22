@@ -60,15 +60,26 @@ describe("file HttpApi", () => {
       request(FilePaths.findText, tmp.path, { pattern: "needle" }),
       request(FilePaths.findSymbol, tmp.path, { query: "hello" }),
     ])
+    let last: unknown
     const files = await Effect.runPromise(
       pollWithTimeout(
         Effect.promise(async () => {
           const response = await request(FilePaths.findFile, tmp.path, { query: "hello", type: "file" })
           const body = await response.json()
+          last = { status: response.status, body }
           return body.includes("hello.txt") ? { response, body } : undefined
         }),
         "file search index was not ready",
-      ),
+      ).pipe(Effect.tapError(() => Effect.promise(async () => {
+        const { Fff } = await import("@opencode-ai/core/filesystem/fff.bun")
+        const picker = Fff.create({ basePath: tmp.path, aiMode: true, disableMmapCache: true, disableContentIndexing: true })
+        try {
+          console.error("File search diagnostic", { directory: tmp.path, last, available: Fff.available(),
+            native: picker.ok ? { scan: await picker.value.waitForScan(5000), search: picker.value.fileSearch("hello") } : picker })
+        } finally {
+          if (picker.ok) picker.value.destroy()
+        }
+      }))),
     )
 
     expect(text.status).toBe(200)

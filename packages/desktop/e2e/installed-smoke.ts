@@ -116,6 +116,29 @@ guard NSWorkspace.shared.open(url) else { fatalError("Protocol open failed") }
     execFileSync("swift", [script, join(installed, `${brand.appName}.app`), url], { timeout: 60_000 })
     await expect.poll(() => existsSync(receipt) ? readFileSync(receipt, "utf8") : "").toBe(url)
     writeFileSync(join(output, "installed-protocol.json"), JSON.stringify({ verdict: "PASS", scheme: brand.protocolScheme, appId: brand.appId, received: url }, null, 2))
+  } else {
+    const receipt = join(root, "protocol-received.txt")
+    const url = `${brand.protocolScheme}://connect?code=invalid`
+    const command = execFileSync("powershell.exe", ["-NoProfile", "-Command",
+      `(Get-Item -LiteralPath 'Registry::HKEY_CLASSES_ROOT\\${brand.protocolScheme}\\shell\\open\\command').GetValue('')`,
+    ], { encoding: "utf8" }).trim()
+    const executable = /^"([^"]+)"/.exec(command)?.[1]
+    expect(executable, "OS protocol command must quote its executable").toBeDefined()
+    expect(realpathSync.native(executable!).toLowerCase()).toBe(realpathSync.native(binary).toLowerCase())
+    await app.evaluate(({ app }, { file, scheme }) => {
+      app.on("second-instance", (_event, argv) => {
+        const url = argv.find((arg) => arg.startsWith(`${scheme}://`))
+        if (url) process.getBuiltinModule("fs").writeFileSync(file, url)
+      })
+    }, { file: receipt, scheme: brand.protocolScheme })
+    const script = join(root, "protocol.ps1")
+    writeFileSync(script, "$ErrorActionPreference = 'Stop'\nStart-Process -FilePath $args[0]\n")
+    execFileSync("powershell.exe", ["-NoProfile", "-File", script, url], {
+      timeout: 30_000,
+      env: { ...process.env, OPENCODE_TEST_ONBOARDING: "1", OPENCODE_TEST_ONBOARDING_ID: `ci-${brand.id}`, OPENCODE_SIDECAR_V2: "1" },
+    })
+    await expect.poll(() => existsSync(receipt) ? readFileSync(receipt, "utf8") : "", { timeout: 30_000 }).toBe(url)
+    writeFileSync(join(output, "installed-protocol.json"), JSON.stringify({ verdict: "PASS", scheme: brand.protocolScheme, appId: brand.appId, command, received: url }, null, 2))
   }
   await page.screenshot({ path: join(output, "installed-smoke.png") })
   writeFileSync(join(output, "installed-smoke.json"), JSON.stringify({ verdict: "PASS", target: manifest.target, appId: brand.appId, installer: artifact.file, identity }, null, 2))
