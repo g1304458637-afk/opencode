@@ -116,10 +116,8 @@ describe("tool.assertExternalDirectory", () => {
           yield* Effect.promise(() => Bun.write(path.join(outerTmp, "outside.txt"), "x"))
 
           const target = path.join(outerTmp, "outside.txt")
-          const alt = target
-            .replace(/^[A-Za-z]:/, "")
-            .replaceAll("\\", "/")
-            .toLowerCase()
+          // Keep the drive: the fixture can be on C: while CI runs on D:.
+          const alt = target.replaceAll("\\", "/").toLowerCase()
 
           yield* assertExternalDirectoryEffect(ctx, alt)
 

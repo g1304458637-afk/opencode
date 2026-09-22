@@ -80,9 +80,26 @@ jobs:
           OPENCODE_PRINT_LOGS: "1"
           OPENCODE_EXPERIMENTAL_DISABLE_FILEWATCHER: "true"
 
+      - name: Check Windows path and shell regressions
+        if: runner.os == 'Windows'
+        timeout-minutes: 5
+        working-directory: packages/opencode
+        run: |
+          bun test --timeout 30000 test/tool/external-directory.test.ts test/tool/read.test.ts
+          bun test --timeout 30000 --test-name-pattern 'loop waits while shell runs|shell completion resumes' test/session/prompt.test.ts
+        env:
+          OPENCODE_TEST_LOGS: "1"
+          OPENCODE_EXPERIMENTAL_DISABLE_FILEWATCHER: "true"
+
       - name: Run unit tests
         timeout-minutes: 20
-        run: GITHUB_ACTIONS=false bun turbo test --log-order=stream
+        run: |
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            # All engine files run in the three independent jobs below.
+            GITHUB_ACTIONS=false bun turbo test --filter='!opencode' --log-order=stream
+          else
+            GITHUB_ACTIONS=false bun turbo test --log-order=stream
+          fi
         env:
           OPENCODE_TEST_LOGS: ${{ runner.os == 'Windows' && '1' || '0' }}
           OPENCODE_EXPERIMENTAL_DISABLE_FILEWATCHER: ${{ runner.os == 'Windows' && 'true' || 'false' }}
@@ -96,6 +113,40 @@ jobs:
         if: runner.os == 'Linux'
         working-directory: packages/opencode
         run: bun run test:httpapi
+
+  engine-windows:
+    name: engine (windows, shard ${{ matrix.shard }}/3)
+    runs-on: windows-2025
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    defaults:
+      run:
+        shell: bash
+    env:
+      OPENCODE_TEST_LOGS: "1"
+      OPENCODE_EXPERIMENTAL_DISABLE_FILEWATCHER: "true"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun
+      - name: Configure git identity
+        run: |
+          git config --global user.email "bot@opencode.ai"
+          git config --global user.name "opencode"
+      - name: Build engine dependencies
+        timeout-minutes: 5
+        run: bun turbo build --filter='opencode^...'
+      - name: Prepare test tools
+        timeout-minutes: 3
+        working-directory: packages/core
+        run: bun script/prepare-tests.ts
+      - name: Run engine shard
+        timeout-minutes: 20
+        working-directory: packages/opencode
+        run: bun test --timeout 30000 --shard '${{ matrix.shard }}/3'
 
   e2e:
     name: e2e (${{ matrix.settings.name }})
