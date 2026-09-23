@@ -29,6 +29,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { $ } from "bun"
 import { getMucVersion, MUC_VERSION_SOURCE } from "./utils"
+import { canPublishMucRelease } from "./muc-release-policy"
 
 const DESKTOP_DIR = import.meta.dir.replace(/\/scripts$/, "")
 const DIST = `${DESKTOP_DIR}/dist`
@@ -429,20 +430,23 @@ function verifyLocalManifest(manifestPath: string) {
   console.log(`local manifest integrity OK: ${manifestPath} (${cm.files.length} files @ ${cm.version})`)
 }
 
-/** #7 同版本重复发布保护：stable 中该版本的 channel manifest 已存在 → 硬拒（immutable releases）。
- *  payload 残缺（无 manifest）视为未发布，允许断点续传补齐。 */
+/** #7 同版本重复发布保护：stable feed 是滚动指针，允许新版本推进，但拒绝重复发布和降级。
+ *  旧版本 payload 保持不可变；payload 残缺（无 manifest）视为未发布，允许断点续传补齐。 */
 async function ensureVersionNotPublished(host: string, remoteDir: string, manifestFile: string, version: string) {
   const probe = Bun.spawnSync(
-    ["ssh", host, `if [ -e '${remoteDir}/${manifestFile}' ]; then echo YES_ALREADY_PUBLISHED; else echo NO_NOT_PUBLISHED; fi`],
+    ["ssh", host, `if [ -f '${remoteDir}/${manifestFile}' ]; then awk '/^version:/ { print $2; exit }' '${remoteDir}/${manifestFile}'; else printf 'NO_MANIFEST'; fi`],
     { stdout: "pipe", stderr: "pipe" },
   )
-  if (probe.stdout.toString().includes("YES_ALREADY_PUBLISHED")) {
+  if (probe.exitCode !== 0) throw new Error(`stable feed probe failed: ${probe.stderr.toString().trim()}`)
+  const current = probe.stdout.toString().trim()
+  const currentVersion = current === "NO_MANIFEST" ? undefined : current
+  if (!canPublishMucRelease(currentVersion, version)) {
     throw new Error(
-      `IMMUTABLE_RELEASE: ${version} 的 ${manifestFile} 已发布至 stable，禁止覆盖重发。\n` +
-        `请 bump 新版本（如 2.0.5）后重新 build + upload。`,
+      `IMMUTABLE_RELEASE: stable ${manifestFile} 当前版本 ${currentVersion ?? "无效"}，候选版本 ${version} 不是更新版本。\n` +
+        `请使用严格高于当前版本的新版本后重新 build + upload。`,
     )
   }
-  console.log(`version-not-published probe OK（stable 无 ${version} 的 ${manifestFile}）`)
+  console.log(`version probe OK（stable ${currentVersion ?? "为空"} → ${version}）`)
 }
 
 /** #6 签名安全门（macOS）：ad-hoc / 未公证 → 直接失败，错误信息指明缺失的凭据类别。 */
