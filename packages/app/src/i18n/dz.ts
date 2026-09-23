@@ -771,6 +771,7 @@ export const dict: Record<string, string> = {
   "session.revertDock.collapse": "ལོག་བཤུད་འབད་ཡོད་པའི་འཕྲིན་དོན་ཚུ་ མར་བསྡམས།",
   "session.revertDock.expand": "ཕྱིར་ལོག་འབད་ཡོད་པའི་འཕྲིན་དོན་ཚུ་རྒྱ་བསྐྱེད་འབད།",
   "session.revertDock.restore": "འཕྲིན་དོན་སླར་གསོ་འབད།",
+  "session.new.hero.title": "ཁྱེད་ཀྱི་བསམ་ཚུལ་འགྲེལ་བཤད་བྱེད། གསར་བཟོ་འགོ་བཙུགས།",
   "session.new.title": "ག་ཅི་ཡང་བཟོ་བསྐྲུན།",
   "session.new.project.new": "ལས་འགུལ་གསརཔ།",
   "session.new.project.search": "ལས་གཞི་འཚོལ་ཞིབ།",

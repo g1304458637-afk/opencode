@@ -753,6 +753,7 @@ export const dict = {
   "session.revertDock.collapse": "ຫຍໍ້ຂໍ້ຄວາມທີ່ມ້ວນຄືນ",
   "session.revertDock.expand": "ຂະຫຍາຍຂໍ້ຄວາມທີ່ມ້ວນຄືນ",
   "session.revertDock.restore": "ຟື້ນຟູຂໍ້ຄວາມ",
+  "session.new.hero.title": "ອະທິບາຍແນວຄິດຂອງທ່ານ. ເລີ່ມສ້າງສັນ.",
   "session.new.title": "ສ້າງສິ່ງໃດ",
   "session.new.project.new": "ໂຄງການໃໝ່",
   "session.new.project.search": "ໂຄງການຄົ້ນຫາ",

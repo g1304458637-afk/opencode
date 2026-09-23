@@ -757,6 +757,7 @@ export const dict = {
   "session.revertDock.collapse": "کوچک کردن پیام‌های برگشتی",
   "session.revertDock.expand": "گسترش پیام‌های برگشتی",
   "session.revertDock.restore": "بازیابی پیام",
+  "session.new.hero.title": "ایده‌تان را شرح دهید. خلق کردن را آغاز کنید.",
   "session.new.title": "هر چیزی بساز",
   "session.new.project.new": "پروژه جدید",
   "session.new.project.search": "جستجوی پروژه ها",

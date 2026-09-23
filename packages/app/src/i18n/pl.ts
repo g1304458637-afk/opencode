@@ -751,6 +751,7 @@ export const dict = {
   "session.revertDock.collapse": "Zwiń cofnięte wiadomości",
   "session.revertDock.expand": "Rozwiń cofnięte wiadomości",
   "session.revertDock.restore": "Przywróć wiadomość",
+  "session.new.hero.title": "Opisz swój pomysł. Zacznij tworzyć.",
   "session.new.title": "Zbuduj cokolwiek",
   "session.new.project.new": "Nowy projekt",
   "session.new.project.search": "Szukaj projektów",

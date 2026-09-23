@@ -741,6 +741,7 @@ export const dict = {
   "session.revertDock.collapse": "ロールバックされたメッセージを折りたたむ",
   "session.revertDock.expand": "ロールバックされたメッセージを展開",
   "session.revertDock.restore": "メッセージを復元",
+  "session.new.hero.title": "アイデアを説明して、創造を始めましょう。",
   "session.new.title": "何でも作る",
   "session.new.project.new": "新しいプロジェクト",
   "session.new.project.search": "プロジェクトを検索",

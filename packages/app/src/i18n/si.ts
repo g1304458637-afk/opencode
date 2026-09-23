@@ -755,6 +755,7 @@ export const dict: Record<string, string> = {
   "session.revertDock.collapse": "පෙරළන ලද පණිවිඩ හකුළන්න",
   "session.revertDock.expand": "පෙරළන ලද පණිවිඩ පුළුල් කරන්න",
   "session.revertDock.restore": "පණිවිඩය ප්‍රතිසාධනය කරන්න",
+  "session.new.hero.title": "ඔබේ අදහස විස්තර කරන්න. නිර්මාණය ආරම්භ කරන්න.",
   "session.new.title": "ඕනෑම දෙයක් ගොඩනඟන්න",
   "session.new.project.new": "නව ව්යාපෘතිය",
   "session.new.project.search": "ව්යාපෘති සොයන්න",

@@ -761,6 +761,7 @@ export const dict = {
   "session.revertDock.collapse": "Паёмҳои баргардонидашуда",
   "session.revertDock.expand": "Паёмҳои баргардонидашударо васеъ кунед",
   "session.revertDock.restore": "Барқарор кардани паём",
+  "session.new.hero.title": "Ғояи худро шарҳ диҳед. Ба эҷод оғоз кунед.",
   "session.new.title": "Ҳар чизеро созед",
   "session.new.project.new": "Лоиҳаи нав",
   "session.new.project.search": "Ҷустуҷӯи лоиҳаҳо",

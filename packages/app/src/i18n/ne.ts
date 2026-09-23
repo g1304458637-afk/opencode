@@ -760,6 +760,7 @@ export const dict: Record<string, string> = {
   "session.revertDock.collapse": "रोल्ड ब्याक सन्देशहरू संक्षिप्त गर्नुहोस्",
   "session.revertDock.expand": "घुमाइएको सन्देशहरू विस्तार गर्नुहोस्",
   "session.revertDock.restore": "सन्देश पुनर्स्थापित गर्नुहोस्",
+  "session.new.hero.title": "आफ्नो विचार वर्णन गर्नुहोस्। सिर्जना गर्न सुरु गर्नुहोस्.",
   "session.new.title": "जे पनि बनाउनुहोस्",
   "session.new.project.new": "नयाँ परियोजना",
   "session.new.project.search": "परियोजनाहरू खोज्नुहोस्",

@@ -770,6 +770,7 @@ export const dict = {
   "session.revertDock.collapse": "ކޮލަޕްސް ރޯލް ބެކް މެސެޖުތަކެވެ",
   "session.revertDock.expand": "ރޯލް ބެކް މެސެޖުތައް ފުޅާކުރުން",
   "session.revertDock.restore": "މެސެޖު ރިސްޓޯރ ކުރާށެވެ",
+  "session.new.hero.title": "ތިބާގެ ޚިޔާލު ބަޔާންކުރޭ. ފަށާފައި ހަދާ.",
   "session.new.title": "ކޮންމެ އެއްޗެއް ބިނާކުރާށެވެ",
   "session.new.project.new": "އާ މަޝްރޫއެއް",
   "session.new.project.search": "ޕްރޮޖެކްޓްތައް ހޯދުން",

@@ -794,6 +794,7 @@ export const dict = {
   "session.revertDock.expand": "ขยายข้อความที่ถูกย้อนกลับ",
   "session.revertDock.restore": "กู้คืนข้อความ",
 
+  "session.new.hero.title": "บอกเล่าไอเดียของคุณ แล้วเริ่มสร้างสรรค์",
   "session.new.title": "สร้างอะไรก็ได้",
   "session.new.project.new": "โปรเจกต์ใหม่",
   "session.new.project.search": "ค้นหาโปรเจกต์",

@@ -656,6 +656,7 @@ export const dict = {
   "session.revertDock.collapse": "Kutista palautetut viestit",
   "session.revertDock.expand": "Laajenna palautetut viestit",
   "session.revertDock.restore": "Palauta viesti",
+  "session.new.hero.title": "Kuvaile ideaasi. Ala luoda.",
   "session.new.title": "Rakenna mitä tahansa",
   "session.new.project.new": "Uusi projekti",
   "session.new.project.search": "Etsi projekteja",
