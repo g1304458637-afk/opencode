@@ -763,6 +763,7 @@ export const dict = {
   "session.revertDock.collapse": "Sakļaut atsauktās ziņas",
   "session.revertDock.expand": "Izvērst atsauktās ziņas",
   "session.revertDock.restore": "Atjaunot ziņu",
+  "session.new.hero.title": "Aprakstiet savu ideju. Sāciet radīt.",
   "session.new.title": "Izveido jebko",
   "session.new.project.new": "Jauns projekts",
   "session.new.project.search": "Meklēt projektus",

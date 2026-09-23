@@ -1,3 +1,6 @@
+import { createRewardArrivalAnimator, RewardArrivalLayer } from "./reward-arrival"
+import { initI18n } from "./i18n"
+import { isSystemReward } from "../shared/reward-arrival"
 import { resolveBrand } from "@opencode-ai/brand"
 // MUC Harness: sub2api 余额/用量悬浮球。
 // 可自由拖动的圆形悬浮球（位置持久化），点击展开用量详情面板（吸附在球上方）。
@@ -5,16 +8,17 @@ import { resolveBrand } from "@opencode-ai/brand"
 //
 // 额度面板只显示剩余百分比；金额留在网站钱包及管理员账单。
 
-import { Show, createSignal, onCleanup, onMount, For } from "solid-js"
+import { Show, createSignal, onCleanup, onMount, Index } from "solid-js"
 import type { MucUpdateState, MucUsageSnapshot } from "../preload/types"
-import { mucTween, MUC_SUCCESS_MS, type MucTweenHandle } from "./muc-reset-animation"
+import { QuotaOrb, EnergyProgressBar, QuotaPanel, createResetChargeEffect } from "./quota-energy"
+import { quotaReadings } from "./quota-energy-state"
 
 const brand = resolveBrand()
 const STORE_NAME = `${brand.credentialNamespace}-status`
 const REFRESH_MS = 30 * 1000
-const BALL_SIZE = 56
-const PANEL_WIDTH = 280
-const EDGE = 8
+const BALL_SIZE = 80
+const PANEL_WIDTH = 304
+const EDGE = 16
 
 type Pos = { x: number; y: number }
 
@@ -89,21 +93,30 @@ const clampPos = (p: Pos): Pos => ({
   y: Math.min(Math.max(p.y, EDGE), Math.max(EDGE, window.innerHeight - BALL_SIZE - EDGE)),
 })
 
-const defaultPos = (): Pos => ({ x: EDGE, y: window.innerHeight - BALL_SIZE - 12 })
+const defaultPos = (): Pos => ({ x: EDGE, y: window.innerHeight - BALL_SIZE - EDGE })
 
 export function MucStatus() {
+  const charge = createResetChargeEffect()
+  const rewards = createRewardArrivalAnimator()
+  const [paused, setPaused] = createSignal(document.hidden)
+  const [viewport, setViewport] = createSignal({ width: window.innerWidth, height: window.innerHeight })
   const [open, setOpen] = createSignal(false)
   const [usage, setUsage] = createSignal<MucUsageSnapshot | null>(null)
-  const [fetchedAt, setFetchedAt] = createSignal<string>("")
+  const [fetchedAt, setFetchedAt] = createSignal("")
   const [stale, setStale] = createSignal(false)
   const [loading, setLoading] = createSignal(false)
-  const [pos, setPos] = createSignal<Pos>(defaultPos())
+  const [pos, setPos] = createSignal(defaultPos())
   const [update, setUpdate] = createSignal<MucUpdateState | null>(null)
 
   // 有新版本时返回非空对象（供 Show 收窄）；否则 null
   const updateAvailable = () => {
     const u = update()
     return u?.available ? u : null
+  }
+
+  const updateUnavailable = () => {
+    const value = update()
+    return value && !value.available && value.status === "unavailable"
   }
 
   const refreshUpdate = async () => {
@@ -117,32 +130,38 @@ export function MucStatus() {
     "idle" | "confirming" | "submitting" | "success" | "failed" | "refreshing"
   >("idle")
   const resetConfirming = () => resetPhase() === "confirming" || resetPhase() === "submitting"
-  const resetAnimating = () => resetPhase() === "success" || resetPhase() === "refreshing"
   const resetBusy = () => ["submitting", "success", "refreshing"].includes(resetPhase())
   let disposed = false
   let refreshSequence = 0
   let animationTimer: ReturnType<typeof setTimeout> | undefined
-  const [resetPercent, setResetPercent] = createSignal(0)
-  const [resetNextEnd, setResetNextEnd] = createSignal("")
   const [resetError, setResetError] = createSignal("")
-  let resetTween: MucTweenHandle | null = null
 
-  const refresh = async () => {
+  const refresh = async (confirmedReset = false) => {
     const sequence = ++refreshSequence
     setLoading(true)
     try {
-      const res = await window.api.mucGetUsage()
+      const [res] = await Promise.all([window.api.mucGetUsage(), initI18n()])
       if (disposed || sequence !== refreshSequence) return false
       if (!res.ok) {
+        charge.cancel()
         setStale(true)
         return false
       }
+      const arrivals = res.usage.rewardArrivals ?? []
+      const rewardedReset = arrivals.some(
+        (event) => isSystemReward(event) && event.subscriptionId === res.usage.subscriptionStatus?.id,
+      )
+      charge.observe(usage()?.subscriptionStatus, res.usage.subscriptionStatus, confirmedReset || rewardedReset)
+      rewards.receive(arrivals)
       setUsage(res.usage)
       setFetchedAt(new Date().toISOString())
       setStale(false)
       return true
     } catch {
-      if (!disposed && sequence === refreshSequence) setStale(true)
+      if (!disposed && sequence === refreshSequence) {
+        charge.cancel()
+        setStale(true)
+      }
       return false
     } finally {
       if (!disposed && sequence === refreshSequence) setLoading(false)
@@ -182,7 +201,15 @@ export function MucStatus() {
     if (windows.some((w) => !w.data)) return undefined
     return windows.sort((a, b) => a.data!.remainingPercent - b.data!.remainingPercent)[0]
   }
-  const remainingText = () => (stale() ? "—" : fmtPercent(limitingWindow()?.data?.remainingPercent))
+  const visualWindow = (index: number) =>
+    stale() ? null : (charge.values()[index] ?? quotaReadings(subscriptionStatus())[index]?.value)
+  const visualRemaining = () => {
+    if (stale()) return null
+    const readings = quotaReadings(subscriptionStatus()).map((_, index) => visualWindow(index))
+    if (!readings.length || readings.some((value) => value == null)) return null
+    return Math.min(...readings.filter((value): value is number => value != null))
+  }
+  const remainingText = () => fmtPercent(visualRemaining())
   const remainingLabel = () =>
     stale() ? "待刷新" : subscriptionStatus() ? (limitingWindow()?.label ?? "额度状态") : "未订阅"
 
@@ -209,32 +236,18 @@ export function MucStatus() {
         setResetPhase("failed")
         return
       }
-      const from = limitingWindow()?.data?.remainingPercent ?? 0
-      setResetPercent(from)
-      setResetNextEnd(res.weeklyPeriodEndsAt)
       setResetPhase("refreshing")
-      const refreshed = await refresh()
+      const refreshed = await refresh(true)
       if (disposed) return
       if (refreshed) {
         await window.api.mucAcknowledgeReset(target.id, res.operationId)
-        if (target.quotaPolicy === "dual_window_v1") setResetNextEnd(limitingWindow()?.data?.resetsAt ?? "")
       }
       if (!refreshed) setResetError("重置已成功，状态刷新失败；请刷新或重试确认结果。")
       setResetPhase("success")
-      resetTween?.cancel()
-      resetTween = mucTween({
-        from,
-        to: refreshed ? (limitingWindow()?.data?.remainingPercent ?? from) : from,
-        durationMs: MUC_SUCCESS_MS,
-        onUpdate: (v) => {
-          if (!disposed) setResetPercent(Math.round(v))
-        },
-        onDone: () => {
-          animationTimer = setTimeout(() => {
-            if (!disposed) setResetPhase("idle")
-          }, 600)
-        },
-      })
+      clearTimeout(animationTimer)
+      animationTimer = setTimeout(() => {
+        if (!disposed) setResetPhase("idle")
+      }, 2200)
     } catch {
       if (!disposed) {
         setResetError("网络异常，请重试同一次重置。")
@@ -253,9 +266,21 @@ export function MucStatus() {
     }
     // 恢复上次拖动的位置（越界则回默认）
     void window.api.storeGet(STORE_NAME, "ballPos").then((raw) => {
-      if (raw) {
+      if (raw && !disposed) {
         try {
-          setPos(clampPos(JSON.parse(raw) as Pos))
+          const saved: unknown = JSON.parse(raw)
+          if (
+            saved &&
+            typeof saved === "object" &&
+            "x" in saved &&
+            "y" in saved &&
+            typeof saved.x === "number" &&
+            typeof saved.y === "number" &&
+            Number.isFinite(saved.x) &&
+            Number.isFinite(saved.y)
+          ) {
+            setPos(clampPos({ x: saved.x, y: saved.y }))
+          }
         } catch {}
       }
     })
@@ -265,10 +290,24 @@ export function MucStatus() {
       if (!loading() && !resetBusy()) void refresh()
       void refreshUpdate()
     }, REFRESH_MS)
-    const onResize = () => setPos((p) => clampPos(p))
+    const onResize = () => {
+      setViewport({ width: window.innerWidth, height: window.innerHeight })
+      setPos((p) => clampPos(p))
+    }
+    const onVisibility = () => setPaused(document.hidden)
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !resetBusy()) {
+        setResetPhase("idle")
+        setOpen(false)
+      }
+    }
+    document.addEventListener("visibilitychange", onVisibility)
+    window.addEventListener("keydown", onKey)
     window.addEventListener("resize", onResize)
     onCleanup(() => {
       clearInterval(timer)
+      document.removeEventListener("visibilitychange", onVisibility)
+      window.removeEventListener("keydown", onKey)
       window.removeEventListener("resize", onResize)
     })
   })
@@ -277,7 +316,6 @@ export function MucStatus() {
     disposed = true
     ++refreshSequence
     clearTimeout(animationTimer)
-    resetTween?.cancel()
   })
 
   // ---- 拖拽：Pointer Events，位移 >4px 判定为拖动，否则视为点击 ----
@@ -295,7 +333,7 @@ export function MucStatus() {
     startY = e.clientY
     origX = pos().x
     origY = pos().y
-    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+    if (e.currentTarget instanceof HTMLElement) e.currentTarget.setPointerCapture(e.pointerId)
   }
   const onPointerMove = (e: PointerEvent) => {
     if (!dragging) return
@@ -309,35 +347,40 @@ export function MucStatus() {
     dragging = false
     if (moved) {
       void window.api.storeSet(STORE_NAME, "ballPos", JSON.stringify(pos()))
-    } else {
-      // 展开面板时顺带刷新一次新版本状态（主进程带缓存，无额外网络开销）
-      if (!open()) void refreshUpdate()
-      setOpen((v) => !v)
     }
   }
 
+  const togglePanel = (event: MouseEvent) => {
+    if (moved && event.detail !== 0) {
+      moved = false
+      return
+    }
+    if (!open()) void refreshUpdate()
+    setOpen((value) => !value)
+  }
+
   // 面板吸附在球正上方，左右夹取避免出屏
-  const panelStyle = () => ({
-    left: `${Math.min(Math.max(pos().x, EDGE), Math.max(EDGE, window.innerWidth - PANEL_WIDTH - EDGE))}px`,
-    top: `${Math.max(EDGE, pos().y - 10)}px`,
-    transform: "translateY(-100%)",
-  })
+  const panelStyle = () => {
+    const above = pos().y > viewport().height / 2
+    const room = above ? pos().y - EDGE - 12 : viewport().height - pos().y - BALL_SIZE - EDGE - 12
+    return {
+      left: `${Math.min(Math.max(pos().x, EDGE), Math.max(EDGE, viewport().width - PANEL_WIDTH - EDGE))}px`,
+      ...(above ? { bottom: `${viewport().height - pos().y + 12}px` } : { top: `${pos().y + BALL_SIZE + 12}px` }),
+      "--panel-max-height": `${Math.max(80, room)}px`,
+    }
+  }
 
   return (
     <>
+      <RewardArrivalLayer
+        animator={rewards}
+        charge={charge.phase()}
+        orb={{ x: pos().x + BALL_SIZE / 2, y: pos().y + BALL_SIZE / 2 }}
+        onDetails={() => setOpen(true)}
+      />
       <Show when={open()}>
-        <div
-          class="muc-status-scope fixed z-[9998] w-[280px] rounded-xl border p-3 shadow-xl"
-          style={{
-            left: panelStyle().left,
-            top: panelStyle().top,
-            transform: panelStyle().transform,
-            background: "rgba(12,12,14,0.95)",
-            "border-color": "var(--muc-glass-border)",
-            color: "var(--muc-text-primary)",
-          }}
-        >
-          <div class="mb-2 flex items-center justify-between">
+        <QuotaPanel style={panelStyle()} phase={charge.phase()} paused={paused()}>
+          <div class="quota-panel-header mb-2 flex items-center justify-between">
             <span class="flex items-center gap-1.5 text-[13px] font-semibold">
               <Show when={subscriptionStatus()}>
                 {(ss) => (
@@ -354,7 +397,11 @@ export function MucStatus() {
                 <span class="rounded bg-amber-100 px-1 text-[10px] text-amber-700">缓存</span>
               </Show>
             </span>
-            <button type="button" class="text-white/40 hover:text-white/80" onClick={() => setOpen(false)}>
+            <button
+              type="button"
+              class="quota-panel-close text-white/60 hover:text-white/80"
+              onClick={() => setOpen(false)}
+            >
               ✕
             </button>
           </div>
@@ -367,7 +414,7 @@ export function MucStatus() {
               账户 ↗
             </button>
           </div>
-          <Show when={update() && !update()!.available && (update() as { status?: string }).status === "unavailable"}>
+          <Show when={updateUnavailable()}>
             <p class="text-[10px] text-white/60">更新检查暂不可用</p>
           </Show>
           <Show when={updateAvailable()}>
@@ -392,45 +439,40 @@ export function MucStatus() {
             when={usage()}
             fallback={<div class="py-3 text-center text-white/50">{stale() ? "状态暂不可用，请重试" : "暂无数据"}</div>}
           >
-            {(u) => (
+            {(_u) => (
               <div class="flex flex-col gap-1.5">
                 {/* 订阅块：本周使用 / 状态 / 恢复日 / 继续使用 / 重置卡 */}
                 <Show when={subscriptionStatus()}>
                   {(ss) => (
-                    <div
-                      class="rounded-lg px-2 py-1.5"
-                      style={{ border: "1px solid var(--muc-red-border)", background: "var(--muc-red-soft)" }}
-                    >
-                      <For each={quotaWindows()}>
-                        {(w) => (
-                          <div class="mb-2">
-                            <div class="flex items-center justify-between text-[12px]">
-                              <span>{w.label}</span>
-                              <span>{fmtPercent(w.data?.remainingPercent)}</span>
+                    <div class="quota-windows">
+                      <Index each={quotaWindows()}>
+                        {(w, index) => (
+                          <div class="quota-window">
+                            <div class="quota-window-heading">
+                              <span>{w().label}</span>
+                              <span>{fmtPercent(visualWindow(index))}</span>
                             </div>
-                            <div class="mt-1 h-1.5 overflow-hidden rounded-full bg-white/10">
-                              <div
-                                class="h-full rounded-full"
-                                style={{
-                                  width: `${w.data?.remainingPercent ?? 0}%`,
-                                  background: w.data?.exhausted ? "var(--muc-danger)" : "var(--muc-red-bright)",
-                                }}
-                              />
-                            </div>
-                            <div class="mt-1 text-[10px] text-white/50">
-                              {w.data?.resetsAt
-                                ? `${fmtDate(w.data.resetsAt)} 恢复`
-                                : w.data?.startsAt
+                            <EnergyProgressBar
+                              value={visualWindow(index)}
+                              label={w().label}
+                              phase={charge.values()[index] == null ? "idle" : charge.phase()}
+                            />
+                            <div class="quota-window-reset">
+                              {w().data?.resetsAt
+                                ? `${fmtDate(w().data!.resetsAt)} 恢复`
+                                : w().data?.startsAt
                                   ? "到期前不再恢复"
-                                  : w.data
+                                  : w().data
                                     ? "首次使用后开始计时"
                                     : "状态暂不可用"}
                             </div>
                           </div>
                         )}
-                      </For>
+                      </Index>
                       <div class="mt-1.5 flex items-center justify-between text-[10px] text-white/50">
-                        <span>{USAGE_STATUS_LABELS[ss().usageStatus] ?? ss().usageStatus}</span>
+                        <span style={{ color: statusColor(ss().usageStatus) }}>
+                          {USAGE_STATUS_LABELS[ss().usageStatus] ?? ss().usageStatus}
+                        </span>
                         <span>
                           <Show when={ss().quotaPolicy !== "dual_window_v1" && ss().weeklyPeriodEndsAt} fallback={null}>
                             {fmtDate(ss().weeklyPeriodEndsAt)} 恢复 ·{" "}
@@ -444,8 +486,14 @@ export function MucStatus() {
                           </span>
                         </span>
                       </div>
-                      <div class="mt-1.5 flex items-center justify-between">
-                        <span class="text-[11px]" style={{ color: "var(--muc-gold)" }}>
+                      <div class="quota-reset-row mt-1.5 flex items-center justify-between">
+                        <span
+                          class="quota-reset-count text-[11px]"
+                          data-reward={
+                            rewards.active() && !isSystemReward(rewards.active()!) ? rewards.phase() : undefined
+                          }
+                          style={{ color: "var(--muc-gold)" }}
+                        >
                           重置卡 ×{usage()?.resetCardsAvailable ?? "—"}
                         </span>
                         <button
@@ -551,78 +599,40 @@ export function MucStatus() {
             </div>
           </Show>
 
-          {/* 重置成功动画层：AVAILABLE QUOTA → 100%（API 成功后播放） */}
-          <Show when={resetAnimating()}>
-            <div
-              class="absolute inset-0 z-10 flex flex-col items-center justify-center gap-1.5 rounded-xl"
-              style={{ background: "rgba(7,7,8,0.96)" }}
-            >
-              <p class="text-[12px] font-semibold">额度已恢复</p>
-              <div class="relative h-[92px] w-[92px]">
-                <svg viewBox="0 0 100 100" class="h-full w-full -rotate-90">
-                  <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="7" />
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="42"
-                    fill="none"
-                    stroke="var(--muc-red-bright)"
-                    stroke-width="7"
-                    stroke-linecap="round"
-                    stroke-dasharray={(2 * Math.PI * 42).toString()}
-                    stroke-dashoffset={(2 * Math.PI * 42 * (1 - resetPercent() / 100)).toString()}
-                  />
-                </svg>
-                <div class="absolute inset-0 flex items-center justify-center text-[20px] font-bold tabular-nums">
-                  {fmtPercent(resetPercent())}
-                </div>
-              </div>
-              <p class="text-[9px] tracking-[0.3em] text-white/40">剩余额度</p>
-              <p class="text-[10px] text-white/60">
-                {resetNextEnd() ? `${fmtDate(resetNextEnd())} 恢复 · ` : "到期前不再恢复 · "}剩余{" "}
-                {usage()?.resetCardsAvailable ?? "—"} 张
-              </p>
-            </div>
+          <Show when={resetPhase() === "success"}>
+            <p class="quota-reset-feedback" role="status">
+              额度已恢复
+            </p>
           </Show>
-        </div>
+        </QuotaPanel>
       </Show>
 
       {/* 悬浮球显示限制最紧的周期剩余百分比 */}
       <button
         type="button"
         title="订阅剩余额度（可拖动）"
-        class="muc-status-scope fixed z-[9999] flex touch-none flex-col items-center justify-center rounded-full border-2 border-white/25 text-white shadow-[0_4px_14px_rgba(0,0,0,0.5)] transition-transform hover:scale-105 active:scale-95"
-        classList={{
-          "cursor-grabbing opacity-80": dragging,
-          "cursor-grab": !dragging,
-        }}
-        style={{
-          left: `${pos().x}px`,
-          top: `${pos().y}px`,
-          width: `${BALL_SIZE}px`,
-          height: `${BALL_SIZE}px`,
-          background: "linear-gradient(to bottom, var(--muc-red), var(--muc-red-deep))",
-          color: brand.colors.onDark,
-          "border-color": brand.colors.gold,
-        }}
+        class="muc-status-scope quota-orb-button"
+        data-reward={rewards.active() && !isSystemReward(rewards.active()!) ? rewards.phase() : undefined}
+        aria-expanded={open()}
+        data-energy-paused={paused()}
+        style={{ left: `${pos().x}px`, top: `${pos().y}px`, width: `${BALL_SIZE}px`, height: `${BALL_SIZE}px` }}
+        onClick={togglePanel}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
-        onPointerCancel={onPointerUp}
+        onPointerCancel={() => {
+          dragging = false
+          moved = false
+        }}
       >
-        <span class="text-[9px] leading-none text-white/75">{remainingLabel()}</span>
-        <span class="mt-0.5 max-w-full truncate px-1 text-[12px] font-bold leading-none">{remainingText()}</span>
-        <span
-          class="absolute right-0.5 top-0.5 size-2 rounded-full border border-white/60"
-          classList={{ "bg-emerald-400": !stale(), "bg-amber-400": stale() }}
-        />
+        <QuotaOrb value={visualRemaining()} label={remainingLabel()} text={remainingText()} phase={charge.phase()} />
         <Show when={updateAvailable()}>
-          <span class="absolute left-1 top-1 flex size-3.5 animate-pulse items-center justify-center rounded-full bg-sky-400 text-[8px] font-bold leading-none text-white">
+          <span class="absolute left-1 top-1 flex size-3.5 items-center justify-center rounded-full bg-sky-400 text-[8px] font-bold leading-none text-white">
             新
           </span>
         </Show>
         <Show when={loading()}>
-          <span class="absolute inset-0 animate-pulse rounded-full bg-white/10" />
+          <span class="absolute inset-0 rounded-full border border-white/20" />
         </Show>
       </button>
     </>

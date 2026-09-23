@@ -762,6 +762,7 @@ export const dict = {
   "session.revertDock.collapse": "Скупи враћене поруке",
   "session.revertDock.expand": "Проширите враћене поруке",
   "session.revertDock.restore": "Врати поруку",
+  "session.new.hero.title": "Опишите своју идеју. Почните да стварате.",
   "session.new.title": "Направите било шта",
   "session.new.project.new": "Нови пројекат",
   "session.new.project.search": "Претрага пројеката",

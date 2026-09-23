@@ -760,6 +760,7 @@ export const dict = {
   "session.revertDock.collapse": "Réduire les messages annulés",
   "session.revertDock.expand": "Développer les messages annulés",
   "session.revertDock.restore": "Restaurer le message",
+  "session.new.hero.title": "Décrivez votre idée. Commencez à créer.",
   "session.new.title": "Créez ce que vous voulez",
   "session.new.project.new": "Nouveau projet",
   "session.new.project.search": "Rechercher des projets",

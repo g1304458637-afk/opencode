@@ -763,6 +763,7 @@ export const dict = {
   "session.revertDock.collapse": "Fäll ihop återställda meddelanden",
   "session.revertDock.expand": "Fäll ut återställda meddelanden",
   "session.revertDock.restore": "Återställ meddelande",
+  "session.new.hero.title": "Beskriv din idé. Börja skapa.",
   "session.new.title": "Bygg vad som helst",
   "session.new.project.new": "Nytt projekt",
   "session.new.project.search": "Sök efter projekt",

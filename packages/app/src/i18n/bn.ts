@@ -758,6 +758,7 @@ export const dict: Record<string, string> = {
   "session.revertDock.collapse": "রোল ব্যাক বার্তাগুলিকে আড়াল করুন৷",
   "session.revertDock.expand": "রোল ব্যাক বার্তা প্রসারিত করুন",
   "session.revertDock.restore": "বার্তা পুনরুদ্ধার করুন",
+  "session.new.hero.title": "আপনার ভাবনা বর্ণনা করুন। সৃষ্টি শুরু করুন।",
   "session.new.title": "যে কোনো কিছু তৈরি করুন",
   "session.new.project.new": "নতুন প্রকল্প",
   "session.new.project.search": "অনুসন্ধান প্রকল্প",

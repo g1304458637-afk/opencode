@@ -758,6 +758,7 @@ export const dict = {
   "session.revertDock.collapse": "გაბრუნებული შეტყობინებების ჩაკეცვა",
   "session.revertDock.expand": "გაფართოვებული შეტყობინებების გაფართოება",
   "session.revertDock.restore": "წერილის აღდგენა",
+  "session.new.hero.title": "აღწერეთ თქვენი იდეა. დაიწყეთ შექმნა.",
   "session.new.title": "აშენეთ რამე",
   "session.new.project.new": "ახალი პროექტი",
   "session.new.project.search": "პროექტების ძიება",

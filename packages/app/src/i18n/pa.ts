@@ -767,6 +767,7 @@ export const dict = {
   "session.revertDock.collapse": "واپس موڑے سنیہے سمیٹو",
   "session.revertDock.expand": "رول بیک پیغامات نو ودھاؤ",
   "session.revertDock.restore": "سنیہا بحال کرو",
+  "session.new.hero.title": "ਆਪਣੇ ਵਿਚਾਰ ਬਾਰੇ ਦੱਸੋ। ਬਣਾਉਣਾ ਸ਼ੁਰੂ ਕਰੋ।",
   "session.new.title": "کجھ وی بناؤ",
   "session.new.project.new": "نواں منصوبہ",
   "session.new.project.search": "منصوبیاں دی تلاش کرو",

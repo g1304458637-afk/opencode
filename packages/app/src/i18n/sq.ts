@@ -762,6 +762,7 @@ export const dict = {
   "session.revertDock.collapse": "Palos mesazhet e kthyera",
   "session.revertDock.expand": "Zgjero mesazhet e kthyera",
   "session.revertDock.restore": "Rivendos mesazhin",
+  "session.new.hero.title": "Përshkruani idenë tuaj. Filloni të krijoni.",
   "session.new.title": "Ndërtoni ndonjë gjë",
   "session.new.project.new": "Projekt i ri",
   "session.new.project.search": "Kërko projekte",

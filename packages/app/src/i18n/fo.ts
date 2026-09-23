@@ -758,6 +758,7 @@ export const dict = {
   "session.revertDock.collapse": "Kollaps afturrullað boð",
   "session.revertDock.expand": "Víðka afturrullað boð",
   "session.revertDock.restore": "Endurnýggja boð",
+  "session.new.hero.title": "Lýs tína hugskot. Byrja at skapa.",
   "session.new.title": "Bygg alt",
   "session.new.project.new": "Nýggj verkætlan",
   "session.new.project.search": "Leita verkætlanir",

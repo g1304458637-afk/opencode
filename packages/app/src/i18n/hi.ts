@@ -768,6 +768,7 @@ export const dict = {
   "session.revertDock.collapse": "रोलबैक संदेशों को संक्षिप्त करें",
   "session.revertDock.expand": "वापस लाये गए संदेशों का विस्तार करें",
   "session.revertDock.restore": "संदेश पुनर्स्थापित करें",
+  "session.new.hero.title": "अपने विचार का वर्णन करें। सृजन शुरू करें।",
   "session.new.title": "कुछ भी बनाएँ",
   "session.new.project.new": "नया प्रोजेक्ट",
   "session.new.project.search": "प्रोजेक्ट खोजें",

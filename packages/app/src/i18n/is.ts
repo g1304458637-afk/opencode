@@ -758,6 +758,7 @@ export const dict = {
   "session.revertDock.collapse": "Dragðu saman skilaboð sem eru afturkölluð",
   "session.revertDock.expand": "Stækka afturkölluð skilaboð",
   "session.revertDock.restore": "Endurheimta skilaboð",
+  "session.new.hero.title": "Lýstu hugmyndinni þinni. Byrjaðu að skapa.",
   "session.new.title": "Byggja hvað sem er",
   "session.new.project.new": "Nýtt verkefni",
   "session.new.project.search": "Leita að verkefnum",

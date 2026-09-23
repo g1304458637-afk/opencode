@@ -766,6 +766,7 @@ export const dict = {
   "session.revertDock.collapse": "Σύμπτυξη επαναλαμβανόμενων μηνυμάτων",
   "session.revertDock.expand": "Ανάπτυξη επαναλαμβανόμενων μηνυμάτων",
   "session.revertDock.restore": "Επαναφορά μηνύματος",
+  "session.new.hero.title": "Περιγράψτε την ιδέα σας. Ξεκινήστε να δημιουργείτε.",
   "session.new.title": "Δημιουργία οτιδήποτε",
   "session.new.project.new": "Νέο έργο",
   "session.new.project.search": "Αναζήτηση έργων",

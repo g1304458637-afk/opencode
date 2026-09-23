@@ -1,0 +1,524 @@
+.muc-status-scope {
+  --energy-ruby: #9e3049;
+  --energy-rose: #eb8999;
+  --energy-highlight: #ffe6e8;
+  --energy-glow: #ce52633b;
+  --glass-bg: #17171bd9;
+  --glass-border: #e5c5ca29;
+  --glass-highlight: #ffffff40;
+  --glass-shadow: #00000066;
+}
+
+.quota-orb-button {
+  position: fixed;
+  z-index: 9999;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #fff;
+  touch-action: none;
+  cursor: grab;
+  isolation: isolate;
+  -webkit-app-region: no-drag;
+}
+.quota-orb-button:active {
+  cursor: grabbing;
+}
+.quota-orb-button:focus-visible {
+  outline: 2px solid var(--energy-highlight);
+  outline-offset: 8px;
+}
+.quota-orb {
+  display: block;
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+.quota-orb-aura {
+  position: absolute;
+  inset: -14%;
+  border-radius: 50%;
+  background: radial-gradient(circle, transparent 40%, var(--energy-glow) 57%, transparent 73%);
+  opacity: 0.55;
+  animation: energy-breathe 4s ease-in-out infinite;
+  pointer-events: none;
+}
+.quota-orb-shell {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: 50%;
+  border: 1px solid #f8c7d070;
+  background: radial-gradient(ellipse at 35% 18%, #65454f70, #1d151e 55%, #0d0e15 100%);
+  box-shadow:
+    inset 1px 1px 3px #fff4,
+    inset -3px -5px 8px #05020abe,
+    0 5px 16px var(--glass-shadow);
+  animation: energy-shell-breathe 4s ease-in-out infinite;
+}
+.quota-orb-core {
+  position: absolute;
+  inset: 8%;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at 47% 73%,
+    #ffe8e99c 0,
+    #ec869b80 16%,
+    #ac365f80 38%,
+    #651d4133 65%,
+    transparent 75%
+  );
+  opacity: var(--energy-opacity);
+}
+.quota-orb-liquid {
+  position: absolute;
+  inset: 3%;
+  overflow: hidden;
+  border-radius: 50%;
+  clip-path: inset(var(--liquid-level) 0 0 0);
+  opacity: var(--energy-opacity);
+}
+.quota-orb-liquid > span {
+  position: absolute;
+  inset: -22%;
+  background:
+    radial-gradient(ellipse at 38% 73%, #ffccd799, transparent 28%),
+    radial-gradient(ellipse at 75% 50%, #db507b94, transparent 42%),
+    conic-gradient(from 35deg at 40% 55%, transparent, #a64263bb, #edb1bf66, transparent, #63162fcc, transparent);
+  filter: blur(3px);
+  animation: energy-fluid 18s ease-in-out infinite;
+}
+.quota-orb-refraction {
+  position: absolute;
+  inset: 3%;
+  border-radius: 50%;
+  border: 1px solid #ffe0e330;
+  box-shadow:
+    inset -2px -4px 2px #f8b1bd50,
+    inset 1px 2px 3px #ffeced30;
+  background: radial-gradient(ellipse at 45% 98%, #ffdfdd80, transparent 30%);
+  opacity: var(--energy-strength);
+}
+.quota-orb-highlight {
+  position: absolute;
+  width: 55%;
+  height: 25%;
+  top: 6%;
+  left: 13%;
+  transform: rotate(-28deg);
+  border-radius: 50%;
+  background: linear-gradient(#fff8, #ffedef12 80%);
+  opacity: 0.65;
+  transition: opacity 180ms ease;
+}
+.quota-orb-shadow {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  box-shadow: inset -5px -6px 9px #05051075;
+}
+.quota-orb-content {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  text-shadow:
+    0 1px 5px #160610,
+    0 0 9px #160610;
+  color: #fff6f6;
+}
+.quota-orb-label {
+  font-size: 10px;
+  line-height: 1.2;
+  font-weight: 500;
+}
+.quota-orb-number {
+  font-size: 21px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.6px;
+  font-variant-numeric: tabular-nums;
+}
+.quota-orb-orbit {
+  position: absolute;
+  inset: -9%;
+  border: 1px solid #e69aa21c;
+  border-radius: 50%;
+  animation: energy-orbit 26s linear infinite;
+  pointer-events: none;
+}
+.quota-orb-orbit i {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--energy-rose);
+  opacity: 0.4;
+}
+.quota-orb-orbit i:nth-child(1) {
+  top: 8%;
+  left: 20%;
+}
+.quota-orb-orbit i:nth-child(2) {
+  bottom: 15%;
+  right: 10%;
+}
+.quota-orb-orbit i:nth-child(3) {
+  top: 41%;
+  right: -1%;
+  width: 2px;
+  height: 2px;
+}
+.quota-orb-button:hover .quota-orb-highlight {
+  opacity: 0.85;
+}
+.quota-orb-button:hover .quota-orb-aura {
+  background: radial-gradient(circle, transparent 40%, #ce52634b 57%, transparent 73%);
+}
+.quota-orb-ring {
+  position: absolute;
+  inset: -4%;
+  border: 1px solid #f9c5cd80;
+  border-radius: 50%;
+  opacity: 0;
+  pointer-events: none;
+}
+.quota-orb-sparks {
+  position: absolute;
+  inset: -5%;
+  pointer-events: none;
+  opacity: 0;
+}
+.quota-orb-sparks i {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: var(--energy-highlight);
+}
+.quota-orb-sparks i:nth-child(1) {
+  top: 5%;
+  left: 22%;
+}
+.quota-orb-sparks i:nth-child(2) {
+  top: 42%;
+  right: 0;
+}
+.quota-orb-sparks i:nth-child(3) {
+  bottom: 0;
+  left: 28%;
+}
+.quota-orb[data-level="unknown"] .quota-orb-liquid,
+.quota-orb[data-level="unknown"] .quota-orb-core {
+  opacity: 0;
+}
+.quota-orb[data-level="critical"] .quota-orb-shell {
+  border-color: #dc7e82a6;
+}
+.quota-orb[data-level="low"] .quota-orb-shell {
+  border-color: #b0828270;
+}
+
+.quota-panel-anchor {
+  position: fixed;
+  z-index: 9998;
+  width: min(304px, calc(100vw - 32px));
+  color: #f9f4f5;
+  -webkit-app-region: no-drag;
+}
+.quota-panel {
+  position: relative;
+  padding: 16px;
+  max-height: var(--panel-max-height, calc(100dvh - 110px));
+  overflow: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--glass-border);
+  border-radius: 18px;
+  background: linear-gradient(145deg, #fff3 0, transparent 1.2%, transparent 75%, #b8647010), var(--glass-bg);
+  backdrop-filter: blur(20px) saturate(115%);
+  box-shadow:
+    0 18px 55px var(--glass-shadow),
+    0 0 24px #82273d0d,
+    inset 0 1px 0 #fff1;
+  animation: energy-panel-enter 200ms ease-out both;
+  transform-origin: bottom left;
+  scrollbar-width: thin;
+}
+.quota-panel button {
+  min-height: 26px;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
+}
+.quota-panel button:hover:not(:disabled) {
+  background-color: #ffffff0e;
+}
+.quota-panel button:focus-visible {
+  outline: 2px solid var(--energy-rose);
+  outline-offset: 2px;
+}
+.quota-panel button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+.quota-panel-header {
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.quota-panel-header > span {
+  flex-wrap: wrap;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.quota-panel-close {
+  flex: none;
+  width: 26px;
+  border-radius: 7px;
+}
+.quota-panel .quota-windows {
+  padding: 12px;
+  border: 1px solid #e8b5c020;
+  background: linear-gradient(140deg, #97384f18, #ffffff03 65%);
+  border-radius: 12px;
+}
+.quota-window + .quota-window {
+  margin-top: 18px;
+}
+.quota-window-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 550;
+}
+.quota-window-heading > span:last-child {
+  font-variant-numeric: tabular-nums;
+}
+.quota-window-reset {
+  margin-top: 8px;
+  color: #e3d7dd99;
+  font-size: 11px;
+  line-height: 1.4;
+}
+.quota-panel .quota-reset-row {
+  border-top: 1px solid #ffffff0d;
+  padding-top: 9px;
+  margin-top: 9px;
+}
+.quota-reset-feedback {
+  margin: 8px 0 0;
+  color: var(--energy-highlight);
+  font-size: 11px;
+}
+
+.energy-track {
+  position: relative;
+  height: 9px;
+  margin-top: 9px;
+  border: 1px solid #ffffff15;
+  border-radius: 10px;
+  background: #08090c80;
+  box-shadow: inset 0 1px 3px #0008;
+}
+.energy-track::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: inherit;
+  box-shadow: 0 0 12px var(--energy-glow);
+  opacity: 0;
+  pointer-events: none;
+}
+.energy-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--energy-ruby), #d86982 55%, var(--energy-rose));
+}
+.energy-fill-core {
+  position: absolute;
+  inset: 1px 2px 3px;
+  border-radius: inherit;
+  background: linear-gradient(#ffe3eab3, transparent);
+}
+.energy-fill-glow {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: 0 0 7px var(--energy-glow);
+  opacity: var(--energy-strength);
+}
+.energy-fill-flow {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  opacity: 0.35;
+}
+.energy-fill-flow::after {
+  content: "";
+  position: absolute;
+  inset: -3px -30%;
+  background: repeating-linear-gradient(165deg, transparent 0 14px, #ffd1e020 20px, transparent 28px);
+  animation: energy-flow 16s ease-in-out infinite;
+}
+.energy-fill-sweep {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+}
+.energy-fill-sweep::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 25%, #ffeff03b 50%, transparent 70%);
+  animation: energy-sweep 8s ease-in-out infinite;
+}
+.energy-fill-head {
+  position: absolute;
+  right: 0;
+  top: 1px;
+  bottom: 1px;
+  width: min(8px, 100%);
+  border-radius: 50%;
+  background: #ffdfe9a8;
+  box-shadow: 0 0 5px #f9a5b366;
+}
+.energy-track[data-level="unknown"] .energy-fill {
+  visibility: hidden;
+}
+[data-charge="awaken"] .quota-orb-aura,
+[data-charge="charging"] .quota-orb-aura {
+  opacity: 1;
+  animation: none;
+}
+.energy-track[data-charge="awaken"]::after,
+.energy-track[data-charge="charging"]::after {
+  opacity: 1;
+}
+[data-charge="charging"] .quota-orb-orbit {
+  animation-duration: 15s;
+}
+[data-charge="fullPulse"] .quota-orb-ring {
+  animation: energy-ring 500ms ease-out both;
+}
+[data-charge="fullPulse"] .quota-orb-number {
+  animation: energy-number-pulse 350ms ease-out;
+}
+[data-charge="fullPulse"] .quota-orb-sparks {
+  animation: energy-sparks 350ms ease-out both;
+}
+.energy-track[data-charge="fullPulse"]::after {
+  animation: energy-bloom 350ms ease-out both;
+}
+[data-energy-paused="true"] *,
+[data-energy-paused="true"] *::after {
+  animation-play-state: paused !important;
+}
+
+@keyframes energy-shell-breathe {
+  50% {
+    transform: scale(1.015);
+  }
+}
+@keyframes energy-breathe {
+  50% {
+    opacity: 0.75;
+    transform: scale(1.015);
+  }
+}
+@keyframes energy-fluid {
+  50% {
+    transform: translate(3%, -3%) rotate(18deg);
+  }
+}
+@keyframes energy-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes energy-flow {
+  50% {
+    transform: translateX(12%);
+  }
+}
+@keyframes energy-sweep {
+  0%,
+  25% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.65;
+  }
+  80%,
+  100% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+@keyframes energy-ring {
+  from {
+    transform: scale(0.98);
+    opacity: 0.7;
+  }
+  to {
+    transform: scale(1.3);
+    opacity: 0;
+  }
+}
+@keyframes energy-number-pulse {
+  50% {
+    transform: scale(1.035);
+  }
+}
+@keyframes energy-sparks {
+  from {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.2);
+  }
+}
+@keyframes energy-bloom {
+  from {
+    opacity: 0.9;
+    transform: scaleY(1);
+  }
+  to {
+    opacity: 0;
+    transform: scaleY(1.4);
+  }
+}
+@keyframes energy-panel-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .muc-status-scope *,
+  .muc-status-scope *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  .quota-orb-ring,
+  .quota-orb-sparks {
+    display: none;
+  }
+}

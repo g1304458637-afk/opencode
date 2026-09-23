@@ -755,6 +755,7 @@ export const dict = {
   "session.revertDock.collapse": "បង្រួមសារដែលបានវិលត្រឡប់មកវិញ",
   "session.revertDock.expand": "ពង្រីកសារត្រឡប់",
   "session.revertDock.restore": "ស្តារសារឡើងវិញ",
+  "session.new.hero.title": "ពិពណ៌នាអំពីគំនិតរបស់អ្នក។ ចាប់ផ្តើមបង្កើត។",
   "session.new.title": "សាងសង់អ្វីក៏បាន",
   "session.new.project.new": "គម្រោងថ្មី។",
   "session.new.project.search": "គម្រោងស្វែងរក",

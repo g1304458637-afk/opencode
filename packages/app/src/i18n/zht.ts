@@ -788,6 +788,7 @@ export const dict = {
   "session.revertDock.expand": "展開已還原的訊息",
   "session.revertDock.restore": "還原訊息",
 
+  "session.new.hero.title": "描述你的想法，開始創作。",
   "session.new.title": "實現任何想法",
   "session.new.project.new": "新專案",
   "session.new.project.search": "搜尋專案",

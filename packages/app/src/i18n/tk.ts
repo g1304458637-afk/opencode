@@ -758,6 +758,7 @@ export const dict = {
   "session.revertDock.collapse": "Yzyna gaýdyp gelen habarlary ýykmak",
   "session.revertDock.expand": "Yza gaýdýan habarlary giňeltmek",
   "session.revertDock.restore": "Habary dikelt",
+  "session.new.hero.title": "Pikiriňi beýan ediň. Döretmäge başlaň.",
   "session.new.title": "Islän zadyňyzy guruň",
   "session.new.project.new": "Täze taslama",
   "session.new.project.search": "Taslamalary gözläň",

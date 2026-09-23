@@ -754,6 +754,7 @@ export const dict = {
   "session.revertDock.collapse": "Ahenda tagasi keritud sõnumid",
   "session.revertDock.expand": "Laienda tagasipööratud sõnumeid",
   "session.revertDock.restore": "Taasta sõnum",
+  "session.new.hero.title": "Kirjelda oma ideed. Alusta loomist.",
   "session.new.title": "Ehitage midagi",
   "session.new.project.new": "Uus projekt",
   "session.new.project.search": "Otsige projekte",

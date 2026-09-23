@@ -768,6 +768,7 @@ export const dict = {
   "session.revertDock.collapse": "Sutraukti atšauktus pranešimus",
   "session.revertDock.expand": "Išplėskite atšauktus pranešimus",
   "session.revertDock.restore": "Atkurti pranešimą",
+  "session.new.hero.title": "Apibūdinkite savo idėją. Pradėkite kurti.",
   "session.new.title": "Statyti bet ką",
   "session.new.project.new": "Naujas projektas",
   "session.new.project.search": "Ieškoti projektų",
