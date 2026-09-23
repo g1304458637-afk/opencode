@@ -1,4 +1,18 @@
 export const dict = {
+  "reward.card.one.title": "你收到了一张重置卡",
+  "reward.card.one.body": "恭喜你获得一张重置卡，你可以随时使用来重置你的额度",
+  "reward.card.many.title": "你收到了 {{count}} 张重置卡",
+  "reward.card.many.body": "它们已加入你的账户，你可以按需使用来重置额度",
+  "reward.system.title": "你收到了一次全量重置",
+  "reward.system.body": "系统补给已到账，额度已恢复。请继续你的创作。",
+  "reward.status.received": "已存入账户",
+  "reward.status.charging": "额度恢复中",
+  "reward.status.full": "额度已恢复",
+  "reward.action.details": "查看额度",
+  "reward.action.dismiss": "关闭奖励到账通知",
+  "reward.system.label": "系统补给",
+  "reward.card.label": "奖励到账",
+
   "desktop.menu.checkForUpdates": "检查更新...",
   "desktop.menu.installCli": "安装 CLI...",
   "desktop.menu.reloadWebview": "重新加载 WebView",

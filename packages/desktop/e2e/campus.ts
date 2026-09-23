@@ -8,6 +8,9 @@ import { join, resolve } from "node:path"
 const brand = process.env.OPENCODE_CHANNEL
 if (brand !== "muc" && brand !== "hubu") throw new Error("Set OPENCODE_CHANNEL=muc|hubu")
 const profile = process.env.CAMPUS_E2E_PROFILE || mkdtempSync(join(tmpdir(), `campus-${brand}-e2e-`))
+const brandProfile = join(profile, brand === "muc" ? "cn.edu.muc.harness" : "cn.edu.hubu.harness")
+mkdirSync(brandProfile, { recursive: true })
+writeFileSync(join(brandProfile, "opencode.global.dat"), JSON.stringify({ language: JSON.stringify({ locale: "zh" }) }))
 const artifacts = resolve(process.env.CAMPUS_E2E_ARTIFACTS || `e2e/artifacts/${brand}`)
 mkdirSync(artifacts, { recursive: true })
 const eventOffset = existsSync(join(profile, "events.jsonl"))
@@ -15,9 +18,19 @@ const eventOffset = existsSync(join(profile, "events.jsonl"))
   : 0
 const calls: Array<{ path: string; key?: string; brand: string }> = []
 const receipts = new Map<string, object>()
+const rewardEvents: Array<{
+  id: string
+  type: string
+  quantity: number
+  occurred_at: string
+  subscription_id?: number
+}> = []
 const state = {
   percent: 63 as number | null,
   cards: 3,
+  usageDelay: 0,
+  week: 80,
+  epoch: "2026-09-22T00:00:00Z",
   wallet: "12.48000000",
   subscription: true,
   legacy: false,
@@ -33,6 +46,7 @@ function usage() {
     planName: state.subscription ? "Pro" : "钱包余额",
     wallet: { balance: state.wallet, canonical_currency: "USD" },
     reset_cards: { available: state.cards },
+    reward_arrivals: { account_id: "123", events: rewardEvents },
     ...(state.subscription
       ? {
           subscription_status: {
@@ -42,13 +56,13 @@ function usage() {
             quota_policy: "dual_window_v1",
             short_window: {
               remaining_percent: 100 - (state.percent ?? 0),
-              starts_at: "2026-09-22T00:00:00Z",
+              starts_at: state.epoch,
               resets_at: "2099-01-01T00:00:00Z",
               exhausted: state.percent === 100,
             },
             weekly_window: {
-              remaining_percent: 80,
-              starts_at: "2026-09-22T00:00:00Z",
+              remaining_percent: state.week,
+              starts_at: state.epoch,
               resets_at: "2099-01-03T00:00:00Z",
               exhausted: false,
             },
@@ -134,7 +148,10 @@ const fixture = await serveFixture({
       })
     }
     if (path === "/v1/models") return Response.json({ data: [{ id: "gpt-5" }, { id: "glm-5-thinking" }] })
-    if (path === "/v1/usage") return state.offline ? new Response("offline", { status: 503 }) : Response.json(usage())
+    if (path === "/v1/usage") {
+      if (state.usageDelay) await sleep(state.usageDelay)
+      return state.offline ? new Response("offline", { status: 503 }) : Response.json(usage())
+    }
     if (path.endsWith("/prepare")) return Response.json({ data: { status: "pending" } })
     if (path.endsWith("/reconcile")) {
       const receipt = receipts.get(request.headers.get("Idempotency-Key")!) as
@@ -323,6 +340,223 @@ try {
   state.offline = false
   await refresh(page)
   pass("status network error and recovery")
+  if (process.env.CAMPUS_E2E_VISUAL === "1") {
+    const orb = page.locator(".quota-orb")
+    state.week = 100
+    await page.setViewportSize({ width: 1586, height: 992 })
+    for (const [value, level] of [
+      [100, "healthy"],
+      [75, "normal"],
+      [30, "low"],
+      [10, "critical"],
+    ] as const) {
+      state.percent = 100 - value
+      await refresh(page)
+      await expect(orb).toHaveAttribute("data-level", level)
+      await expect(orb).toHaveAttribute("data-charge", "idle")
+      await expect(page.getByRole("progressbar", { name: "5 小时剩余" })).toHaveAttribute(
+        "aria-valuenow",
+        String(value),
+      )
+      await page.screenshot({ path: join(artifacts, `quota-${value}.png`) })
+      if (value === 100) {
+        await page.locator(".quota-panel").screenshot({ path: join(artifacts, "quota-panel-detail.png") })
+        await orb.screenshot({ path: join(artifacts, "quota-orb-detail.png") })
+      }
+    }
+    pass("100/75/30/10 percent visual states and no charge on ordinary refresh")
+    state.percent = 0
+    state.epoch = "2026-09-22T05:00:00Z"
+    await refresh(page)
+    await expect(orb).toHaveAttribute("data-charge", /awaken|charging/)
+    await sleep(450)
+    await page.screenshot({ path: join(artifacts, "quota-charge.png") })
+    // The full pulse lasts only 350 ms; default exponential assertion polling can skip it.
+    await page.waitForFunction(
+      () => document.querySelector(".quota-orb")?.getAttribute("data-charge") === "fullPulse",
+      undefined,
+      { polling: "raf", timeout: 2500 },
+    )
+    await page.screenshot({ path: join(artifacts, "quota-full-pulse.png") })
+    await expect(orb).toHaveAttribute("data-charge", "idle")
+    await expect(orb).toContainText("100%")
+    await refresh(page)
+    await expect(orb).toHaveAttribute("data-charge", "idle")
+    pass("server rollover charges once, reaches full pulse and settles")
+    await page.emulateMedia({ reducedMotion: "reduce" })
+    state.percent = 90
+    await refresh(page)
+    state.percent = 0
+    state.epoch = "2026-09-22T10:00:00Z"
+    await refresh(page)
+    await expect(orb).toHaveAttribute("data-charge", "idle")
+    expect(
+      await page
+        .locator(".muc-status-scope")
+        .evaluateAll((elements) => elements.flatMap((element) => element.getAnimations({ subtree: true })).length),
+    ).toBe(0)
+    await page.screenshot({ path: join(artifacts, "quota-reduced-motion.png") })
+    await page.emulateMedia({ reducedMotion: "no-preference" })
+    pass("reduced motion disables idle and charge animations")
+    for (const viewport of [
+      { width: 768, height: 640 },
+      { width: 420, height: 600 },
+      { width: 1000, height: 420 },
+    ]) {
+      await page.setViewportSize(viewport)
+      const bounds = await page.locator(".quota-panel").boundingBox()
+      expect(bounds).not.toBeNull()
+      expect(bounds!.x).toBeGreaterThanOrEqual(0)
+      expect(bounds!.y).toBeGreaterThanOrEqual(0)
+      expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(viewport.width)
+      expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(viewport.height)
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+      await page.screenshot({ path: join(artifacts, `quota-${viewport.width}x${viewport.height}.png`) })
+    }
+    await page.setViewportSize({ width: 1200, height: 800 })
+    const ball = page.locator(".quota-orb-button")
+    const box = await ball.boundingBox()
+    await page.mouse.move(box!.x + 40, box!.y + 40)
+    await page.mouse.down()
+    await page.mouse.move(80, 60, { steps: 8 })
+    await page.mouse.up()
+    await expect(ball).toHaveAttribute("aria-expanded", "true")
+    const below = await page.locator(".quota-panel").boundingBox()
+    expect(below!.y).toBeGreaterThan(100)
+    await page.screenshot({ path: join(artifacts, "quota-top-edge.png") })
+    await ball.press("Escape")
+    await expect(page.locator(".quota-panel")).toHaveCount(0)
+    await ball.press("Enter")
+    await expect(page.locator(".quota-panel")).toBeVisible()
+    await expect(orb).toHaveAttribute("data-charge", "idle")
+    pass("responsive bounds, drag without toggle, keyboard open/close and no replay")
+    // Sample Electron's own OS process metrics after an idle period (no RAF sampling loop).
+    await application!.evaluate(({ app }) => app.getAppMetrics())
+    await sleep(5000)
+    const metrics = await application!.evaluate(({ app }) =>
+      app.getAppMetrics().map(({ type, cpu, memory }) => ({ type, cpu, memory })),
+    )
+    writeFileSync(join(artifacts, "idle-metrics.json"), JSON.stringify(metrics, null, 2))
+    pass("idle process metrics captured")
+    state.week = 80
+  }
+
+  if (process.env.CAMPUS_E2E_REWARD === "1") {
+    await page.setViewportSize({ width: 1200, height: 800 })
+    const newSession = page.locator('[data-action="home-new-session"]')
+    if (await newSession.isVisible()) await newSession.click()
+    const notice = page.locator(".reward-arrival")
+    const orb = page.locator(".quota-orb")
+    let sequence = 0
+    const arrival = (card: boolean, quantity = 1) => {
+      rewardEvents.push({
+        id: `${card ? "card" : "reset"}:e2e-${++sequence}`,
+        type: card ? "reset_card_received" : "global_reset_received",
+        quantity,
+        occurred_at: new Date().toISOString(),
+        ...(card ? {} : { subscription_id: 123 }),
+      })
+      if (card) state.cards += quantity
+    }
+    const dismiss = async () => {
+      await page.getByRole("button", { name: "关闭奖励到账通知" }).click()
+      await sleep(1100)
+    }
+    state.percent = 70
+    await refresh(page)
+    arrival(true)
+    await refresh(page)
+    await expect(notice).toContainText("你收到了一张重置卡")
+    await expect(orb).toHaveAttribute("data-charge", "idle")
+    await sleep(320)
+    await page.screenshot({ path: join(artifacts, "reward-card.png") })
+    arrival(true, 2)
+    await refresh(page)
+    await expect(notice).toContainText("你收到了 3 张重置卡")
+    await expect(page.locator(".quota-reset-count")).toContainText(String(state.cards))
+    await dismiss()
+    await refresh(page)
+    await expect(notice).toHaveCount(0)
+    state.cards++
+    await refresh(page)
+    await expect(notice).toHaveCount(0)
+    pass("single card, burst merge, real count, no replay and no event inference from count")
+    arrival(false)
+    state.percent = 0
+    state.week = 100
+    await refresh(page)
+    await expect(notice).toHaveAttribute("data-mode", "system")
+    await expect(orb).toHaveAttribute("data-charge", /awaken|charging/)
+    await sleep(320)
+    await page.screenshot({ path: join(artifacts, "reward-immediate-reset.png") })
+    await expect(orb).toHaveAttribute("data-charge", "idle")
+    await dismiss()
+    arrival(false)
+    await refresh(page)
+    await expect(notice).toBeVisible()
+    await expect(orb).toHaveAttribute("data-charge", "idle")
+    await dismiss()
+    pass("immediate reset recharges only when actual quota increases")
+    await page.setViewportSize({ width: 1200, height: 800 })
+    arrival(true)
+    state.usageDelay = 700
+    await page.getByRole("button", { name: "刷新", exact: true }).click()
+    const composerState = async (action = "read") =>
+      application!.evaluate(async ({ webContents }, action) => {
+        for (const contents of webContents.getAllWebContents()) {
+          if (!["webview", "window"].includes(contents.getType())) continue
+          const result = await contents.executeJavaScript(`(() => {
+          const editor = document.querySelector('[contenteditable="true"]');
+          if (!editor) return null;
+          if (${JSON.stringify(action)} === "fill") { editor.focus(); document.execCommand("insertText", false, "Reward focus retention test"); }
+          if (${JSON.stringify(action)} === "clear") { editor.focus(); document.execCommand("selectAll"); document.execCommand("delete"); }
+          return { focused: document.activeElement === editor, text: editor.textContent };
+        })()`)
+          if (result) {
+            if (action === "fill") contents.focus()
+            return result
+          }
+        }
+        throw new Error("Actual chat webview composer not found")
+      }, action)
+    await composerState("fill")
+    await expect(notice).toBeVisible()
+    expect(await composerState()).toMatchObject({ focused: true, text: expect.stringContaining("Reward focus retention test") })
+    state.usageDelay = 0
+    await sleep(1800)
+    expect(await composerState()).toMatchObject({ focused: true, text: expect.stringContaining("Reward focus retention test") })
+    await page.getByRole("button", { name: "查看额度 ↗", exact: true }).click()
+    await expect(page.locator(".quota-panel")).toBeVisible()
+    await dismiss()
+    await composerState("clear")
+    pass("arrival and absorption preserve actual composer focus and draft; details opens quota panel")
+    await page.emulateMedia({ reducedMotion: "reduce" })
+    arrival(true)
+    await refresh(page)
+    await expect(notice).toBeVisible()
+    expect(await notice.evaluate((element) => element.getAnimations({ subtree: true }).length)).toBe(0)
+    await page.screenshot({ path: join(artifacts, "reward-reduced-motion.png") })
+    for (const viewport of [
+      { width: 768, height: 640 },
+      { width: 420, height: 600 },
+      { width: 1000, height: 420 },
+    ]) {
+      await page.setViewportSize(viewport)
+      const bounds = await notice.boundingBox()
+      expect(bounds!.x).toBeGreaterThanOrEqual(0)
+      expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(viewport.width)
+      expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(viewport.height)
+      await page.screenshot({ path: join(artifacts, `reward-${viewport.width}x${viewport.height}.png`) })
+    }
+    await dismiss()
+    await page.emulateMedia({ reducedMotion: "no-preference" })
+    await page.reload()
+    await expect(page.locator(".quota-orb")).toBeVisible()
+    await expect(notice).toHaveCount(0)
+    await panel(page)
+    pass("static reduced motion, responsive bounds and persisted receipts after reload")
+  }
+
   await page.getByRole("button", { name: "管理套餐 ↗", exact: true }).click()
   await page.getByRole("button", { name: "账户 ↗", exact: true }).click()
   expect(readFileSync(join(profile, "events.jsonl"), "utf8")).toContain("/pricing")

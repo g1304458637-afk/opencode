@@ -1,3 +1,4 @@
+import { parseRewardFeed, type RewardFeed, type RewardArrival } from "../../shared/reward-arrival"
 import { resolveBrand } from "@opencode-ai/brand"
 // MUC Harness: 网关余额/用量拉取。
 // 模式与 countGatewayModels 一致：主进程 fetch + Bearer + 超时，失败返回
@@ -48,6 +49,8 @@ export type MucSubscriptionStatus = {
 }
 
 export type MucUsageSnapshot = {
+  rewardFeed?: RewardFeed
+  rewardArrivals?: RewardArrival[]
   // 展示用归一化字段
   planName: string
   remaining: number | null // null = 无限额/未知（legacy 字段；新合同下保留以兼容）
@@ -137,6 +140,8 @@ export function parseMucUsage(body: unknown): MucUsageSnapshot {
     rateWindows: parseRateWindows(d.rate_limits),
     topModels: parseTopModels(d.model_stats),
   }
+  const rewardFeed = parseRewardFeed(d.reward_arrivals)
+  if (rewardFeed) snapshot.rewardFeed = rewardFeed
   if (typeof d.expires_at === "string" && d.expires_at) snapshot.expiresAt = d.expires_at
 
   // Phase 4 新合同优先：wallet / reset_cards / subscription_status
