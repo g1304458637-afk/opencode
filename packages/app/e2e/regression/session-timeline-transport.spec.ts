@@ -148,7 +148,12 @@ function timelineRows(page: Page) {
       parts: Array.from(element.querySelectorAll("[data-timeline-part-id]"), (part) =>
         part.getAttribute("data-timeline-part-id"),
       ),
-      text: element.textContent,
+      // Message-level model/timing metadata can settle after the part renders. Compare message
+      // bodies so this transport assertion stays focused on the content users actually wrote.
+      text: Array.from(
+        element.querySelectorAll('[data-slot="text-part-body"], [data-slot="user-message-text"]'),
+        (part) => part.textContent,
+      ),
     })),
   )
 }

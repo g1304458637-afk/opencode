@@ -15,7 +15,7 @@ export async function setupCampusSession(
   options: { video?: "live" | "fail"; locale?: string; projectName?: string } = {},
 ) {
   const { directory, draftID, projectID, sessionID } = campusFixture
-  const server = `http://${process.env.PLAYWRIGHT_SERVER_HOST ?? "localhost"}:${process.env.PLAYWRIGHT_SERVER_PORT ?? "4196"}`
+  const server = `http://${process.env.PLAYWRIGHT_SERVER_HOST ?? "127.0.0.1"}:${process.env.PLAYWRIGHT_SERVER_PORT ?? "4096"}`
   const submitted: unknown[] = []
   const session = {
     id: sessionID,

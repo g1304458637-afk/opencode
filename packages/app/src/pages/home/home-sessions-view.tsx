@@ -78,7 +78,11 @@ export function HomeSessionsView(props: HomeSessionsViewProps) {
       class="min-h-0 min-w-0 flex-1 flex flex-col"
       aria-label={props.language.t("sidebar.project.recentSessions")}
     >
-      <div class="sticky top-0 z-30 shrink-0 bg-v2-background-bg-base pb-3 pt-6 lg:pt-12" onWheel={props.onWheel}>
+      <div
+        data-slot="home-session-search-header"
+        class="sticky top-0 z-30 shrink-0 bg-v2-background-bg-base pb-3 pt-6 lg:pt-12"
+        onWheel={props.onWheel}
+      >
         <HomeSessionSearch {...props} />
         <Suspense>
           <Show when={props.groups().length > 0 && props.canCreateSession()}>
@@ -267,6 +271,7 @@ function HomeSessionSearch(props: HomeSessionsViewProps) {
           </div>
         </Show>
         <label
+          data-slot="home-session-search-field"
           class={`
             relative z-20 flex h-9 w-full items-center gap-2 rounded-[6px] py-1 pl-3 pr-2
             bg-v2-background-bg-layer-02/60 text-v2-icon-icon-muted transition-[background-color,box-shadow]
@@ -401,6 +406,7 @@ function HomeSessionGroupHeader(props: {
   return (
     <div
       ref={props.onSetRef}
+      data-slot="home-session-group-header"
       class={`
         pointer-events-none sticky top-[84px] flex h-7 min-w-0 items-center justify-between
         bg-v2-background-bg-base pl-3 lg:top-[108px]

@@ -49,6 +49,9 @@ async function checkMucUpdateCached(): Promise<MucUpdateCheckResult> {
 // 低于 minSupported 弹强制升级对话框（每次启动都会出现，直到升级）。
 // 全程 fire-and-forget，任何失败静默——不阻塞启动、不打扰用户。
 function scheduleMucUpdateAnnouncement(): void {
+  // Installed-package smoke tests must be deterministic and never open native
+  // update dialogs or notifications from a live release manifest.
+  if (process.env[`${resolveBrand().id.toUpperCase()}_DISABLE_AUTO_UPDATE`] === "1") return
   if (announcementScheduled) return
   announcementScheduled = true
   setTimeout(() => {
