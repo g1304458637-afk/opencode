@@ -225,10 +225,11 @@ async function panel(page: Awaited<ReturnType<typeof launch>>) {
   const ball = page.locator("button.muc-status-scope")
   await expect(ball).toBeVisible({ timeout: 60000 })
   // This is the actual pointer drag/click path, not component state injection.
-  await ball.click()
-  await expect(page.getByText("5 小时剩余", { exact: true }).first()).toBeVisible()
+  if (!(await page.locator(".quota-panel").isVisible())) await ball.click()
+  await expect(page.locator(".quota-panel")).toBeVisible()
 }
 async function refresh(page: Awaited<ReturnType<typeof launch>>) {
+  await panel(page)
   await page.getByRole("button", { name: "刷新", exact: true }).click()
   await expect(page.getByRole("button", { name: "刷新", exact: true })).toBeEnabled()
 }
@@ -342,6 +343,12 @@ try {
   pass("status network error and recovery")
   if (process.env.CAMPUS_E2E_VISUAL === "1") {
     const orb = page.locator(".quota-orb")
+    // Electron's HTML does not have Vite's data-brand attribute. Material tokens
+    // must still reach the real shell and the quota overlay in packaged builds.
+    await expect(page.locator("body")).toHaveAttribute("data-campus-workspace", brand)
+    expect(await orb.evaluate((element) => getComputedStyle(element).getPropertyValue("--workspace-text").trim())).toBe(
+      "#f4f4f2",
+    )
     state.week = 100
     await page.setViewportSize({ width: 1586, height: 992 })
     for (const [value, level] of [
@@ -445,6 +452,8 @@ try {
     await page.setViewportSize({ width: 1200, height: 800 })
     const newSession = page.locator('[data-action="home-new-session"]')
     if (await newSession.isVisible()) await newSession.click()
+    // Navigating via a real control dismisses the outside-click quota popover.
+    await panel(page)
     const notice = page.locator(".reward-arrival")
     const orb = page.locator(".quota-orb")
     let sequence = 0
@@ -521,10 +530,16 @@ try {
       }, action)
     await composerState("fill")
     await expect(notice).toBeVisible()
-    expect(await composerState()).toMatchObject({ focused: true, text: expect.stringContaining("Reward focus retention test") })
+    expect(await composerState()).toMatchObject({
+      focused: true,
+      text: expect.stringContaining("Reward focus retention test"),
+    })
     state.usageDelay = 0
     await sleep(1800)
-    expect(await composerState()).toMatchObject({ focused: true, text: expect.stringContaining("Reward focus retention test") })
+    expect(await composerState()).toMatchObject({
+      focused: true,
+      text: expect.stringContaining("Reward focus retention test"),
+    })
     await page.getByRole("button", { name: "查看额度 ↗", exact: true }).click()
     await expect(page.locator(".quota-panel")).toBeVisible()
     await dismiss()

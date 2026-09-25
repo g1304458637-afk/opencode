@@ -72,6 +72,10 @@ export function QuotaOrb(props: { value: number | null | undefined; label: strin
       data-charge={props.phase === "fullPulse" && (props.value ?? 0) < 100 ? "settle" : props.phase}
       style={energyStyle(props.value)}
     >
+      <svg class="quota-orb-progress" viewBox="0 0 100 100" aria-hidden="true">
+        <circle class="quota-orb-progress-track" cx="50" cy="50" r="47" />
+        <circle class="quota-orb-progress-value" cx="50" cy="50" r="47" pathLength="100" />
+      </svg>
       <span class="quota-orb-aura" aria-hidden="true" />
       <span class="quota-orb-orbit" aria-hidden="true">
         <i />

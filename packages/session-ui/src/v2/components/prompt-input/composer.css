@@ -1,0 +1,4 @@
+/* Keep the empty editor caret measurable without a JSX escape sequence. */
+[data-component="prompt-input-v2"] [data-component="prompt-input"]:empty::before {
+  content: "\200B";
+}

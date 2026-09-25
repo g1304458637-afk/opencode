@@ -1,58 +1,53 @@
-# Quota Energy Glass — visual QA
+# Cinematic Glass Workspace — visual QA
+
+Source: `/Users/cccc/Downloads/ChatGPT Image 2026年9月26日 01_13_44.png`.
+Implementation evidence: `/Users/cccc/Desktop/共用/cinematic-workspace-review/`.
+Primary comparison: `hubu/workspace-1672x941.png`; supplementary `muc/workspace-1672x941.png`, `hubu/composer-detail.png`, `hubu/tool-detail.png`, and native Electron quota captures under `electron/`.
+
+## Capture and comparison
+
+Source and browser comparison are both 1672 × 941 pixels, CSS viewport 1672 × 941, deviceScaleFactor 1. No density normalization or browser chrome crop required. Electron captures use a 1586 × 992 CSS window; its separate 80 × 80 orb and panel captures verify native-only components, not geometry parity with the browser image.
+
+State: real Solid session renderer, schema-valid local fixtures for a Chinese writing session and completed Shell/Edit/Read, actual model header, empty composer. Fixtures exist only in tests; no product hardcoded conversations or model calls. Video served from the user-specified asset, actual existing university crests. Native quota and rewards use the existing isolated HTTP/IPC test harness.
+
+Both brands checked at 1672×941, 1366×768, 1440×900, 1512×982, 1920×1080, 2560×1080, 900×640, 390×720, 935×522. Composer/send remain in view and the document has no horizontal overflow. Narrow layouts keep existing session/review and titlebar controls; sidebar collapses to a rail, then hides. Low-height views scroll content instead of shrinking the editor to unusable dimensions.
+
+Full-view comparisons established the lake/glass/sunset palette, persistent shell, clear document hierarchy and floating composer. Detail comparisons checked tool trigger height, icon visibility, disabled send, composer controls, native orb ring and quota panel. Source text is readable at native resolution; no screenshot of the reference was used as a UI/background asset.
+
+## Findings and repair history
+
+- **P1, native material inheritance:** first Electron capture lacked token values because desktop HTML does not set the website's `data-brand`. Replaced that dependency with the actual campus workspace lifecycle attribute; added a native computed-token assertion. The corrected native quota screenshot has white text, glass surfaces and lake-blue/warm progress.
+- **P2, tool/card density:** first screenshot clipped Shell triggers to 32px and missed nested Edit containers. Scoped trigger min-height and descendant card rules now give 58px desktop rows and preserve real expansion. Read uses the existing grouped-context control with a real open-file icon.
+- **P2, theme text:** initial headers/portal text inherited light-theme aliases. Campus tokens now override both legacy and V2 Tailwind aliases, including nested color-scheme containers. Settings modal and session title remain legible.
+- **P2, narrow horizontal overflow:** original header negative margins exceeded the 390px window. Narrow header margins now match the shell's 6px padding. Both-brand matrix passes.
+- **P2, missing icon:** the initial Read symbol did not exist in the established icon registry. Changed to its existing `open-file` asset; typecheck and screenshot confirm it renders.
+
+All P1/P2 findings above have post-fix screenshots in the evidence directory. No actionable P0/P1/P2 visual findings remain.
+
+## Required fidelity surfaces
+
+- **Typography:** existing system/CJK font stack retained; 15px/1.8 body, 20px H2, 18px session title, 12–14px tool metadata. Real user request remains visible above the assistant, making the screen denser than the single-response reference; long content scrolls behind the fixed composer. No replacement fake content to force a pixel match.
+- **Layout rhythm:** 244px sidebar, 26px gap, 1180px maximum session workspace, 1000px reading column, 14/20/28px card/workspace/composer radii. Reference proportions adapted to actual tab and review controllers. Sticky title is more opaque to keep scrolling text readable.
+- **Colors/tokens:** blue-gray glass, off-white text, muted lake-blue, restrained sunset accents; semantic green/error tones preserved. Warm accent concentrated on focus, selected navigation and send; no broad neon/purple glow.
+- **Image/asset fidelity:** exact supplied lake video and a local still extracted from it, proper cover crop, original university crests. Static fallback remains available when offline or reduced motion is enabled. Existing icon library retained; quota ring is a percentage visualization, not decorative raster substitution.
+- **Copy/content:** all ordinary product text reuses existing localized strings; `workspaceName` comes from brand config. Model/duration/tool states/quotas remain real runtime values. Reference-only knowledge-base/tools/marketing shortcuts were not fabricated; navigation exposes existing sessions/new/project/commands/settings actions.
+
+## Interaction and accessibility evidence
+
+Browser tests cover tool running/success/error, Shell/Read expansion, Markdown/code block, streaming updates, multi-line draft and focus, actual stop endpoint, settings modal/Escape, responsive inputs and reduced motion; no browser page errors. Existing regressions cover project/model/attachment/send/session creation and tab switch/close. Native tests cover quota drag, keyboard open/close, reset confirmation, count/charge/reward events, input focus retention and static reduced motion. Final production artifact startup is recorded separately in the delivery report.
+
+## Follow-up polish / limits
+
+P3: the native existing 80px draggable quota control is quieter/smaller than the reference's large decorative orb; retained for input-area clearance and existing drag bounds. The reference footer and unimplemented navigation items are intentionally absent. Video frame changes make the exact sunset position nondeterministic. No claim of pixel-identical reproduction or long-duration multi-day soak testing.
+
+Implementation checklist: completed — material tokens; shell/background; real sidebar actions; document hierarchy; tool cards; composer; quota/reward material; responsive/reduced-motion; browser/native visual checks.
+
+## Home search surface follow-up — 2026-09-26
+
+P2: the home search/date sticky headers retained legacy opaque backgrounds and a solid fade, producing the dark rectangle reported in the user screenshot. Scoped campus styles now make the wrappers transparent at rest, retain a bordered glass search field, and give the existing search popup matching materials. The existing scroll controller exposes a boolean to raise rounded glass headers only while scrolled, keeping passing rows from interfering with the controls.
+
+Post-fix evidence: `home-glass-fixed.png`, `home-glass-scrolled.png`, `home-glass-search.png` (1600×1000, real renderer with 45 local fixture sessions). Search results and Escape dismissal passed. App typecheck, targeted lint, browser visual review, desktop production build and mac-arm64 package smoke passed. No real provider calls. Source changes are limited to home hooks/scroll state and campus CSS.
+
+Updated local 2.0.8 package: `packages/desktop/dist/cinematic-hubu-home-fix/hubu-ai-2.0.8-mac-arm64.dmg`. This does not replace the running preview or publish a release.
 
 final result: passed
-
-## Source and scope
-
-Source visual truth: `/Users/cccc/Downloads/Codex 图像 2026年9月23日 01_55_44.png`.
-Written requirements: `/Users/cccc/.codex/attachments/ee0ab062-20ca-4811-a5bd-a653e330b1d6/已粘贴的文本.txt`.
-Only one reference image was attached. The written brief explicitly requests maintainable layered CSS and restrained energy/glass material rather than literal pixel duplication. It overrides the generic skill's preference for raster assets. Existing Solid renderer is retained.
-
-Source pixels: 1586×992; original device density is not supplied. Browser implementation: 1586×992 viewport and saved full-view image. Native Electron captures also use 1586×992 for the quota states. No false assumption of source CSS density: layout is evaluated by component hierarchy and material treatment, not a claimed pixel-perfect score. Production panel width is 304 CSS px; orb is 80 CSS px.
-
-## Evidence
-
-- Full-view comparison, opened together with source: `/Users/cccc/Desktop/共用/quota-energy-review/browser/quota-final.png`.
-- Actual Electron full view: `/Users/cccc/Desktop/共用/quota-energy-review/muc/quota-100.png`.
-- Focused native panel: `/Users/cccc/Desktop/共用/quota-energy-review/muc/quota-panel-detail.png`.
-- Focused native orb: `/Users/cccc/Desktop/共用/quota-energy-review/muc/quota-orb-detail.png`.
-- Four states, charging, full pulse, reduced motion and responsive variants: `/Users/cccc/Desktop/共用/quota-energy-review/muc/` and `/Users/cccc/Desktop/共用/quota-energy-review/hubu/`.
-
-Comparison state: expanded panel with two windows at 100%, idle orb, dark quota material. The local browser fixture matches the reference's dark conversation-like backdrop and labels. Native captures show the existing lake new-session page and test subscription Pro; these surrounding-content differences are intentional and outside quota scope. Fixture data and real account data are not confused.
-
-Source, full implementation and focused implementation images were opened in the same review call; the native panel/orb captures were subsequently inspected at readable size. The intermediate browser `quota-detail.png` crop is unsuitable because browser clip coordinates were density-scaled; it is not used as fidelity evidence.
-
-## Required surfaces
-
-- Typography: existing native system font stack retained; quota heading 13px, orb value 21px, tabular numerals, high contrast light text, 10–11px secondary text. Source hierarchy preserved; numeric content stays separate from glow layers. Long plan header can wrap.
-- Layout: one plan header, brand/version/account row, two quota windows, status/fallback, reset credit/action, expiry, refresh, management action. Spacing and dividers are explicit. Panel opens above/below the draggable orb according to available room; low height scrolls internally.
-- Color/tokens: charcoal glass base; ruby/rose energy and pink-white reflection share scoped custom properties. Lower percentages reduce energy level/intensity. No broad red panel, strong neon, rapid flash or game-like particle burst.
-- Image/material quality: orb and bars are DOM/CSS gradients, as explicitly requested. A bounded blurred fluid layer, shell/refraction/highlight/inner shadow and subtle orbit produce depth. No raster sphere, Canvas, WebGL, generated icon assets or new animation dependency.
-- Copy/content: original business labels and real IPC data remain. Financial logic, endpoints, subscription and period values are unchanged. Fixture controls never enter the desktop renderer bundle.
-
-## Findings and iteration history
-
-1. [P2, fixed] Assistive/synthetic clicks could toggle twice because both pointer-up and click toggled the panel. All toggling now occurs in click; pointer-up only persists a completed drag. Native keyboard Enter/Escape and drag-without-toggle checks pass.
-2. [P3, fixed] The aura approached the screen edge with the former 8px clearance. Increased shared clearance to 16px and adjusted narrow panel width. Final browser full view and final native captures show the corrected clearance.
-3. Short full-pulse verification initially skipped the 350ms phase because test assertion polling backed off. The test now observes that phase each frame; production timing was not lengthened. Both brands pass charge/fullPulse/settle checks.
-
-No outstanding actionable P0/P1/P2 visual findings.
-
-## Interaction and accessibility checks
-
-Real Electron, both brands: 100/75/30/10; empty/stale/no subscription; reset confirmation and cancel; lost-response reconciliation and double-click protection; automatic period rollover animation; unchanged refresh and panel reopening do not replay it; reduced motion yields zero scoped animations; keyboard opening/closing; dragging near top; 768×640, 420×600 and 1000×420 panel bounds/no document overflow. The in-app browser additionally exercised four debug values and Reset preview by hand.
-
-Final in-app browser reload: no new error logs. Earlier Vite HMR reconnect errors during batch formatting were resolved by reload. Quota E2E scope intentionally does not test live update feeds or real providers.
-
-## Performance and limits
-
-Only CSS idle transform/opacity loops. JS RAF exists only during the 2200ms charge and is canceled on completion, hidden document, reduced-motion change and disposal. One 3px fluid blur plus one panel backdrop blur. Final 5-second Electron samples: renderer CPU MUC 0.571%, HUBU 0.480%; GPU process CPU MUC 2.406%, HUBU 1.984%. No obvious process CPU anomaly in this sample. GPU hardware utilization and long-duration thermal/battery behavior were not measured.
-
-## Implementation checklist
-
-- [x] Production components and unified tokens integrated.
-- [x] True reset/increased-quota detection; no fabricated 100%.
-- [x] Development-only preview isolated from production build.
-- [x] Lint, typecheck, unit tests, two builds and both native E2E suites passed.
-- [x] Full and focused visual evidence reviewed; edge and click issues corrected.
-- [x] Interactive local preview retained at http://127.0.0.1:4486.
