@@ -1,10 +1,11 @@
 import { Show, onCleanup, onMount } from "solid-js"
 import { createStore } from "solid-js/store"
+import lakePoster from "@/assets/lake-poster.jpg"
 
 const lakeVideo =
   "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260826_124724_bc041163-d651-425f-aea3-2acc1efc2c96.mp4"
 
-export function NewSessionBackground() {
+export function NewSessionBackground(props: { workspace?: boolean }) {
   // Start without a source so reduced-motion users never download the video.
   const [state, setState] = createStore({ reduced: true, failed: false })
 
@@ -17,7 +18,8 @@ export function NewSessionBackground() {
   })
 
   return (
-    <div class="campus-new-session__background" aria-hidden="true">
+    <div class={props.workspace ? "campus-workspace__background" : "campus-new-session__background"} aria-hidden="true">
+      <img src={lakePoster} alt="" />
       <Show when={!state.reduced && !state.failed}>
         <LakeVideo onError={() => setState("failed", true)} />
       </Show>

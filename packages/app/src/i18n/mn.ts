@@ -764,6 +764,7 @@ export const dict = {
   "session.revertDock.collapse": "Буцаасан мессежүүдийг буулгах",
   "session.revertDock.expand": "Буцаасан мессежүүдийг дэлгэх",
   "session.revertDock.restore": "Зурвасыг сэргээх",
+  "session.new.hero.title": "Санаагаа тайлбарлаад, бүтээж эхлээрэй.",
   "session.new.title": "Юу ч барина",
   "session.new.project.new": "Шинэ төсөл",
   "session.new.project.search": "Төсөл хайх",

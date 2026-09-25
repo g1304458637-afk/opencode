@@ -763,6 +763,7 @@ export const dict = {
   "session.revertDock.collapse": "Orqaga qaytarilgan xabarlarni yig'ish",
   "session.revertDock.expand": "Orqaga qaytarilgan xabarlarni yoyish",
   "session.revertDock.restore": "Xabarni tiklash",
+  "session.new.hero.title": "Gʻoyangizni tasvirlang. Yaratishni boshlang.",
   "session.new.title": "Har qanday narsani qurish",
   "session.new.project.new": "Yangi loyiha",
   "session.new.project.search": "Loyihalarni qidirish",

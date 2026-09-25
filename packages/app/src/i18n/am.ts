@@ -745,6 +745,7 @@ export const dict = {
   "session.revertDock.collapse": "የተመለሱ መልዕክቶችን ሰብስብ",
   "session.revertDock.expand": "የተጠቀለሉ መልዕክቶችን ዘርጋ",
   "session.revertDock.restore": "መልዕክት እነበረበት መልስ",
+  "session.new.hero.title": "ሃሳብዎን ይግለጹ። መፍጠር ይጀምሩ።",
   "session.new.title": "ማንኛውም ነገር ገንባ",
   "session.new.project.new": "አዲስ ፕሮጀክት",
   "session.new.project.search": "የፍለጋ ፕሮጀክቶች",

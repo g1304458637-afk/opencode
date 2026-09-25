@@ -677,6 +677,7 @@ export const dict = {
   "session.revertDock.expand": "Utvid tilbakestilte meldinger",
   "session.revertDock.restore": "Gjenopprett melding",
 
+  "session.new.hero.title": "Beskriv ideen din. Begynn å skape.",
   "session.new.title": "Bygg hva som helst",
   "session.new.worktree.main": "Hovedgren",
   "session.new.worktree.mainWithBranch": "Hovedgren ({{branch}})",

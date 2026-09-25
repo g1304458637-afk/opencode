@@ -770,6 +770,7 @@ export const dict = {
   "session.revertDock.collapse": "واپس لیے گئے پیغامات سمیٹیں",
   "session.revertDock.expand": "واپس لیے گئے پیغامات پھیلائیں",
   "session.revertDock.restore": "پیغام کو بحال کریں۔",
+  "session.new.hero.title": "اپنے خیال کو بیان کریں۔ تخلیق شروع کریں۔",
   "session.new.title": "کچھ بھی بنائیں",
   "session.new.project.new": "نیا پروجیکٹ",
   "session.new.project.search": "پروجیکٹس تلاش کریں۔",

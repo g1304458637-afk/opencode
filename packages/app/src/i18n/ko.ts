@@ -513,6 +513,7 @@ export const dict = {
   "session.revertDock.collapse": "롤백된 메시지 접기",
   "session.revertDock.expand": "롤백된 메시지 펼치기",
   "session.revertDock.restore": "메시지 복원",
+  "session.new.hero.title": "아이디어를 설명하고, 창작을 시작하세요.",
   "session.new.title": "무엇이든 만들기",
   "session.new.worktree.main": "메인 브랜치",
   "session.new.worktree.mainWithBranch": "메인 브랜치 ({{branch}})",

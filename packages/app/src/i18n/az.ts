@@ -768,6 +768,7 @@ export const dict = {
   "session.revertDock.collapse": "Geri alınmış mesajları yığcamlaşdırın",
   "session.revertDock.expand": "Geri qaytarılmış mesajları genişləndirin",
   "session.revertDock.restore": "Mesajı bərpa edin",
+  "session.new.hero.title": "Fikrini təsvir et. Yaratmağa başla.",
   "session.new.title": "İstədiyinizi qurun",
   "session.new.project.new": "Yeni layihə",
   "session.new.project.search": "Layihələri axtarın",

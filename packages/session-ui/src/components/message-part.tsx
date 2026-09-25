@@ -1068,9 +1068,13 @@ export function ContextToolGroup(props: {
       variant="ghost"
       class="tool-collapsible"
       data-timeline-part-ids={props.parts.map((part) => part.id).join(",")}
+      data-status={pending() ? "running" : "completed"}
     >
       <Collapsible.Trigger>
         <div data-component="context-tool-group-trigger">
+          <span data-slot="campus-tool-icon" aria-hidden="true">
+            <Icon name="open-file" size="normal" />
+          </span>
           <span
             data-slot="context-tool-group-title"
             class="min-w-0 flex items-center gap-2 text-14-medium text-text-strong"
@@ -1569,7 +1573,12 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
 
   return (
     <Show when={!hideQuestion()}>
-      <div data-component="tool-part-wrapper" data-timeline-part-id={part().id}>
+      <div
+        data-component="tool-part-wrapper"
+        data-timeline-part-id={part().id}
+        data-tool={part().tool}
+        data-status={part().state.status}
+      >
         <Switch>
           <Match when={part().state.status === "error" && (part().state as any).error}>
             {(error) => {
@@ -1711,6 +1720,11 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
       .at(-1)
     return last?.id === part().id
   })
+  const firstText = createMemo(
+    () =>
+      (data.store.part?.[props.message.id] ?? []).find((item) => item?.type === "text" && !!item.text?.trim())?.id ===
+      part().id,
+  )
   const showCopy = createMemo(() => {
     if (props.message.role !== "assistant") return isLastTextPart()
     if (props.showAssistantCopyPartID === null) return false
@@ -1731,6 +1745,13 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
   return (
     <Show when={text()}>
       <div data-component="text-part" data-timeline-part-id={part().id}>
+        <Show when={props.message.role === "assistant" && firstText()}>
+          <div data-slot="campus-model-header">
+            <Icon name="brain" size="normal" />
+            <strong>{model()}</strong>
+            <span>{duration()}</span>
+          </div>
+        </Show>
         <div data-slot="text-part-body">
           <PacedMarkdown text={text()} cacheKey={part().id} streaming={streaming()} />
         </div>

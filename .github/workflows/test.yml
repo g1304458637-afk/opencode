@@ -215,6 +215,30 @@ jobs:
           PLAYWRIGHT_WORKERS: ${{ runner.os == 'Windows' && '2' || '5' }}
         timeout-minutes: 30
 
+      - name: Run HUBU campus UI e2e tests
+        if: runner.os == 'Linux'
+        run: >-
+          bun --cwd packages/app test:e2e:local -- e2e/regression/campus-new-session.spec.ts
+          e2e/regression/campus-workspace.spec.ts --output=e2e/test-results/campus-hubu
+        env:
+          CI: true
+          BRAND: hubu
+          OPENCODE_CHANNEL: hubu
+          PLAYWRIGHT_WORKERS: "1"
+        timeout-minutes: 20
+
+      - name: Run MUCode campus UI e2e tests
+        if: runner.os == 'Linux'
+        run: >-
+          bun --cwd packages/app test:e2e:local -- e2e/regression/campus-new-session.spec.ts
+          e2e/regression/campus-workspace.spec.ts --output=e2e/test-results/campus-muc
+        env:
+          CI: true
+          BRAND: muc
+          OPENCODE_CHANNEL: muc
+          PLAYWRIGHT_WORKERS: "1"
+        timeout-minutes: 20
+
       - name: Upload Playwright artifacts
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

@@ -768,6 +768,7 @@ export const dict = {
   "session.revertDock.collapse": "Thu gọn tin nhắn đã hoàn tác",
   "session.revertDock.expand": "Mở rộng tin nhắn đã hoàn tác",
   "session.revertDock.restore": "Khôi phục tin nhắn",
+  "session.new.hero.title": "Mô tả ý tưởng của bạn. Bắt đầu sáng tạo.",
   "session.new.title": "Xây dựng bất cứ thứ gì",
   "session.new.project.new": "Dự án mới",
   "session.new.project.search": "Tìm kiếm dự án",

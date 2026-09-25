@@ -806,6 +806,7 @@ export const dict = {
   "session.revertDock.expand": "Развернуть возвращённые сообщения",
   "session.revertDock.restore": "Восстановить сообщение",
 
+  "session.new.hero.title": "Опишите свою идею. Начните создавать.",
   "session.new.title": "Создавайте что угодно",
   "session.new.project.new": "Новый проект",
   "session.new.project.search": "Поиск проектов",

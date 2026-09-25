@@ -681,6 +681,7 @@ export const dict = {
   "session.revertDock.expand": "Udvid tilbagerullede beskeder",
   "session.revertDock.restore": "Gendan besked",
 
+  "session.new.hero.title": "Beskriv din idé. Begynd at skabe.",
   "session.new.title": "Byg hvad som helst",
   "session.new.project.new": "Nyt projekt",
   "session.new.project.search": "Søg efter projekter",

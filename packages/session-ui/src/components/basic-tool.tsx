@@ -4,6 +4,7 @@ import { useI18n } from "@opencode-ai/ui/context/i18n"
 import { createStore } from "solid-js/store"
 import { Collapsible } from "@opencode-ai/ui/collapsible"
 import type { IconProps } from "@opencode-ai/ui/icon"
+import { Icon } from "@opencode-ai/ui/icon"
 import { TextShimmer } from "@opencode-ai/ui/text-shimmer"
 
 export type TriggerTitle = {
@@ -155,6 +156,11 @@ export function BasicTool(props: BasicToolProps) {
       (isOpen) => {
         if (!props.animated || !contentRef) return
         heightAnim?.stop()
+        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+          contentRef.style.height = isOpen ? "auto" : "0px"
+          contentRef.style.overflow = isOpen ? "visible" : "hidden"
+          return
+        }
         if (isOpen) {
           contentRef.style.overflow = "hidden"
           heightAnim = animate(contentRef, { height: "auto" }, SPRING)
@@ -189,6 +195,9 @@ export function BasicTool(props: BasicToolProps) {
       data-hide-details={props.hideDetails ? "true" : undefined}
     >
       <div data-slot="basic-tool-tool-trigger-content">
+        <span data-slot="campus-tool-icon" aria-hidden="true">
+          <Icon name={props.icon} size="normal" />
+        </span>
         <div data-slot="basic-tool-tool-info">
           <Switch>
             <Match when={dynamicTrigger !== undefined}>{dynamicTrigger}</Match>
@@ -248,6 +257,11 @@ export function BasicTool(props: BasicToolProps) {
           </Switch>
         </div>
       </div>
+      <Show when={props.status === "completed" || pending()}>
+        <span data-slot="campus-tool-status" aria-hidden="true">
+          <Icon name={pending() ? "dash" : "check"} size="small" />
+        </span>
+      </Show>
       <Show when={hasChildren() && !props.hideDetails && !props.locked && (!pending() || props.allowOpenWhilePending)}>
         <Collapsible.Arrow />
       </Show>

@@ -1,3 +1,6 @@
+import { createHash } from "node:crypto"
+import { getStore } from "../store"
+import { collectRewardArrivals, parseRewardReceiptState } from "../../shared/reward-arrival"
 import { APP_VERSION } from "../constants"
 // MUC Harness: muc://connect 深链 + 凭据 IPC。
 // 渲染层通过这些通道查询连接状态、发起连接、断开账户、查询余额用量、
@@ -13,12 +16,7 @@ import { parseCampusUrl } from "./deep-link"
 import { isMucExchangeError } from "./controller"
 import { resolveBrand } from "@opencode-ai/brand"
 import { fetchMucUsage } from "./usage"
-import {
-  checkMucUpdate,
-  MUC_DOWNLOAD_PAGE,
-  MUC_UPDATE_CHECK_TTL_MS,
-  type MucUpdateCheckResult,
-} from "./update-check"
+import { checkMucUpdate, MUC_DOWNLOAD_PAGE, MUC_UPDATE_CHECK_TTL_MS, type MucUpdateCheckResult } from "./update-check"
 
 export type MucDeps = {
   getPendingConnectCode: () => string | null
@@ -36,7 +34,7 @@ async function checkMucUpdateCached(): Promise<MucUpdateCheckResult> {
   }
   if (!updateInFlight) {
     updateInFlight = checkMucUpdate(localVersion)
-      .then(result => {
+      .then((result) => {
         updateCache = { at: Date.now(), result }
         return result
       })
@@ -51,11 +49,14 @@ async function checkMucUpdateCached(): Promise<MucUpdateCheckResult> {
 // 低于 minSupported 弹强制升级对话框（每次启动都会出现，直到升级）。
 // 全程 fire-and-forget，任何失败静默——不阻塞启动、不打扰用户。
 function scheduleMucUpdateAnnouncement(): void {
+  // Installed-package smoke tests must be deterministic and never open native
+  // update dialogs or notifications from a live release manifest.
+  if (process.env[`${resolveBrand().id.toUpperCase()}_DISABLE_AUTO_UPDATE`] === "1") return
   if (announcementScheduled) return
   announcementScheduled = true
   setTimeout(() => {
     void checkMucUpdateCached()
-      .then(async result => {
+      .then(async (result) => {
         if (result.status === "forced" && result.manifest) {
           dialog.showMessageBoxSync({
             type: "warning",
@@ -96,10 +97,7 @@ export function registerMucIpcHandlers(userDataDir: string, deps: MucDeps): MucC
   })
 
   ipcMain.handle("muc:connect", async (_event, code: unknown) => {
-    if (
-      typeof code !== "string" ||
-      !parseCampusUrl(`${resolveBrand().protocolScheme}://connect?code=${code}`)
-    ) {
+    if (typeof code !== "string" || !parseCampusUrl(`${resolveBrand().protocolScheme}://connect?code=${code}`)) {
       return { ok: false, error: "invalid_code" as const }
     }
     try {
@@ -125,6 +123,22 @@ export function registerMucIpcHandlers(userDataDir: string, deps: MucDeps): MucC
     if (!cred) return { ok: false as const, error: "not_connected" as const }
     const usage = await fetchMucUsage(cred.gateway, cred.apiKey, APP_VERSION)
     if (!usage) return { ok: false as const, error: "unavailable" as const }
+    if (usage.rewardFeed) {
+      try {
+        const key = createHash("sha256").update(`${cred.gateway}:${usage.rewardFeed.accountId}`).digest("hex")
+        const receipts = getStore("campus.reward-arrivals")
+        const previous = parseRewardReceiptState(receipts.get(key))
+        const result = collectRewardArrivals(usage.rewardFeed, previous, Date.now())
+        // Persist before delivery. No disk writes on unchanged polls; another window sees the claim.
+        if (!previous || JSON.stringify(previous.seen) !== JSON.stringify(result.state.seen))
+          receipts.set(key, result.state)
+        usage.rewardArrivals = result.arrivals
+      } catch {
+        // A notification/persistence failure must never make valid quota data unavailable.
+        usage.rewardArrivals = []
+      }
+      delete usage.rewardFeed
+    }
     return { ok: true as const, usage }
   })
 
@@ -182,9 +196,16 @@ export function registerMucIpcHandlers(userDataDir: string, deps: MucDeps): MucC
     if (cred) resets.acknowledge(cred.gateway, cred.apiKey, id as number, operation)
   })
 
-  ipcMain.handle("muc:get-brand", () => ({
-    id: brand.id, name: brand.productName, protocol: brand.protocolScheme, version: APP_VERSION,
-  } satisfies Awaited<ReturnType<ElectronAPI["mucGetBrand"]>>))
+  ipcMain.handle(
+    "muc:get-brand",
+    () =>
+      ({
+        id: brand.id,
+        name: brand.productName,
+        protocol: brand.protocolScheme,
+        version: APP_VERSION,
+      }) satisfies Awaited<ReturnType<ElectronAPI["mucGetBrand"]>>,
+  )
 
   ipcMain.handle("muc:open-account", async () => {
     await shell.openExternal(new URL("/dashboard", brand.updates.downloadPage).href)

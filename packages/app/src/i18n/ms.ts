@@ -756,6 +756,7 @@ export const dict = {
   "session.revertDock.collapse": "Runtuhkan mesej dipulangkan semula",
   "session.revertDock.expand": "Kembangkan mesej dipulangkan semula",
   "session.revertDock.restore": "Pulihkan mesej",
+  "session.new.hero.title": "Huraikan idea anda. Mula berkarya.",
   "session.new.title": "Bina apa sahaja",
   "session.new.project.new": "Projek baharu",
   "session.new.project.search": "Cari projek",
