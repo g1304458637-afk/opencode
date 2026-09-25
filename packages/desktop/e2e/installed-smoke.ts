@@ -91,6 +91,7 @@ const app = await _electron
       ...process.env,
       OPENCODE_TEST_ONBOARDING: "1",
       OPENCODE_TEST_ONBOARDING_ID: `ci-${brand.id}`,
+      [`${brand.id.toUpperCase()}_DISABLE_AUTO_UPDATE`]: "1",
       OPENCODE_SIDECAR_V2: "1",
     },
     timeout: 90_000,
