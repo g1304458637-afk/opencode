@@ -6,6 +6,11 @@ const inputSelector = '[data-component="prompt-input"]'
 const submitSelector = '[data-action="prompt-submit"]'
 const brand = process.env.BRAND === "hubu" ? "HUBUCode" : "MUCode"
 
+test.skip(
+  !["hubu", "muc"].includes(process.env.BRAND ?? ""),
+  "Campus UI regressions require a campus-branded app build",
+)
+
 test("keeps long project names and long prompts inside a narrow, short window", async ({ page }, testInfo) => {
   const projectName = "Campus-research-project-with-a-very-long-name-and-no-breaks"
   await setupCampusSession(page, { projectName })

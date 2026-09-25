@@ -36,6 +36,11 @@ const shell = (state: "running" | "completed") =>
         { output: "29928 total\n21 chapters" },
       )
 
+test.skip(
+  !["hubu", "muc"].includes(process.env.BRAND ?? ""),
+  "Campus UI regressions require a campus-branded app build",
+)
+
 // Real renderer and schema-validated API fixtures. Never calls a model provider.
 test("campus workspace keeps controls, tool state and streaming usable across sizes", async ({ page }, info) => {
   const errors: string[] = []
