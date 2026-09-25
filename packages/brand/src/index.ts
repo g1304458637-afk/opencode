@@ -45,6 +45,7 @@ export interface BrandConfig {
   englishName: string
   shortName: string
   productName: string
+  workspaceName: string
   /** 校训（规范写法，含逗号） */
   motto: string
   /** 展示用校训（分隔符版） */
@@ -94,6 +95,7 @@ const MUC: BrandConfig = {
   englishName: "Minzu University of China",
   shortName: "MUC",
   productName: "MUC AI Harness",
+  workspaceName: "MUCode",
   motto: "美美与共，知行合一",
   mottoDisplay: "美美与共 · 知行合一",
   founded: "1941",
@@ -150,6 +152,7 @@ const HUBU: BrandConfig = {
   englishName: "Hubei University",
   shortName: "HUBU",
   productName: "HUBU AI",
+  workspaceName: "HUBUCode",
   motto: "日思日睿，笃志笃行",
   mottoDisplay: "日思日睿 · 笃志笃行",
   founded: "1931",
@@ -210,6 +213,7 @@ const OPENCODE: BrandConfig = {
   englishName: "OpenCode",
   shortName: "OpenCode",
   productName: "OpenCode",
+  workspaceName: "OpenCode",
   motto: "",
   mottoDisplay: "",
   founded: "",

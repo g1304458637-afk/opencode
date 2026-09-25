@@ -7,6 +7,7 @@ import hubuCrest from "@/assets/hubu/crest.png"
 import { NewSessionBackground } from "./new-session-background"
 import "./new-session.css"
 import { resolveBrand } from "@opencode-ai/brand"
+import { useSettings } from "@/context/settings"
 
 const campusBrand = resolveBrand()
 const campusCrest = campusBrand.id === "hubu" ? hubuCrest : mucCrest
@@ -40,6 +41,7 @@ export function NewSessionView(props: {
   workspace: NewSessionWorkspaceController
 }) {
   const language = useLanguage()
+  const settings = useSettings()
 
   return (
     <div class="@container relative flex flex-col min-h-0 h-full flex-1">
@@ -48,13 +50,15 @@ export function NewSessionView(props: {
         class="campus-new-session relative flex-1 min-h-0 overflow-hidden rounded-[10px]"
         data-brand={campusBrand.id}
       >
-        <NewSessionBackground />
+        <Show when={!settings.general.newLayoutDesigns()}>
+          <NewSessionBackground />
+        </Show>
         <div class="campus-new-session__scroll">
           <header class="campus-new-session__brand">
             <span class="campus-new-session__crest">
               <img src={campusCrest} alt={campusBrand.name} />
             </span>
-            <span>{campusBrand.id === "hubu" ? "HUBUCode" : "MUCode"}</span>
+            <span>{campusBrand.workspaceName}</span>
           </header>
           <div class="campus-new-session__hero">
             <h1>{language.t("session.new.hero.title")}</h1>

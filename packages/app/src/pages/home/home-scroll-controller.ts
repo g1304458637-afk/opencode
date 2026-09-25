@@ -10,6 +10,7 @@ export function createHomeScrollController(groups: Accessor<HomeSessionGroup[]>)
   const [thumbTrack, setThumbTrack] = createSignal<HTMLDivElement>()
   const [hoverTarget, setHoverTarget] = createSignal<HTMLElement>()
   const [state, setState] = createStore({
+    scrolled: false,
     titleOpacity: {} as Partial<Record<HomeSessionGroup["id"], number>>,
   })
   const headerRefs = new Map<HomeSessionGroup["id"], HTMLDivElement>()
@@ -70,6 +71,7 @@ export function createHomeScrollController(groups: Accessor<HomeSessionGroup[]>)
   }
 
   function update(scrollTop: number) {
+    setState("scrolled", scrollTop > 0)
     const items = groups()
     items.forEach((group, index) => {
       const nextOffset = items
@@ -110,6 +112,7 @@ export function createHomeScrollController(groups: Accessor<HomeSessionGroup[]>)
 
   return {
     viewport: {
+      scrolled: () => state.scrolled,
       thumbTrack,
       hoverTarget,
       setThumbTrack,

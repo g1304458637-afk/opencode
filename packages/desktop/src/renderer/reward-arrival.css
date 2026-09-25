@@ -289,3 +289,13 @@
     transform: none !important;
   }
 }
+
+[data-campus-workspace] .reward-arrival-glass {
+  color: var(--workspace-text);
+  background: var(--workspace-glass-floating);
+  border-color: var(--workspace-border);
+  box-shadow: var(--workspace-shadow-floating);
+}
+[data-campus-workspace] .reward-arrival-copy p {
+  color: var(--workspace-secondary);
+}

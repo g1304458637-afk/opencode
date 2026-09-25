@@ -26,12 +26,14 @@ test("keeps the real composer usable at desktop, tablet, narrow and short sizes"
   await page.goto(`/new-session?draftId=${campusFixture.draftID}`)
   const hero = page.locator(heroSelector)
   await expect(hero.getByRole("heading", { name: "描述你的想法，开始创造。" })).toBeVisible()
-  await expect(hero.getByText(brand, { exact: true })).toBeVisible()
+  await expect(page.locator(".campus-sidebar__name")).toHaveText(brand)
   await expect(hero.locator(inputSelector)).toBeEditable()
   await expect(hero.locator('[data-action="prompt-model"]')).toContainText("Sonnet 4.5")
   await expect(hero.locator(submitSelector)).toBeDisabled()
   if (process.env.CAMPUS_LIVE_VIDEO === "1") {
-    await expect(hero.locator("video")).toHaveAttribute("data-playing", "true", { timeout: 30000 })
+    await expect(page.locator(".campus-workspace__background video")).toHaveAttribute("data-playing", "true", {
+      timeout: 30000,
+    })
   }
   for (const viewport of [
     { width: 1560, height: 1008 },
@@ -56,22 +58,22 @@ test("keeps the real composer usable at desktop, tablet, narrow and short sizes"
   await expect(hero.locator(submitSelector)).toBeInViewport()
   await page.screenshot({ path: testInfo.outputPath(`${brand}-long-prompt.png`), animations: "disabled" })
   if (process.env.CAMPUS_LIVE_VIDEO === "1") {
-    const video = await hero.locator("video").elementHandle()
+    const video = await page.locator(".campus-workspace__background video").elementHandle()
     if (!video) throw new Error("The playing background is missing")
     await page.emulateMedia({ reducedMotion: "reduce" })
-    await expect(hero.locator("video")).toHaveCount(0)
+    await expect(page.locator(".campus-workspace__background video")).toHaveCount(0)
     expect(
       await video.evaluate((node) => node instanceof HTMLVideoElement && node.paused && !node.hasAttribute("src")),
     ).toBe(true)
     await page.emulateMedia({ reducedMotion: "no-preference" })
-    await expect(hero.locator("video")).toHaveAttribute("data-playing", "true")
-    const resumed = await hero.locator("video").elementHandle()
+    await expect(page.locator(".campus-workspace__background video")).toHaveAttribute("data-playing", "true")
+    const resumed = await page.locator(".campus-workspace__background video").elementHandle()
     if (!resumed) throw new Error("The resumed background is missing")
-    await page.getByRole("button", { name: "主页", exact: true }).click()
+    await page.locator(".campus-sidebar__brand").click()
     await expect(hero).toHaveCount(0)
-    expect(
-      await resumed.evaluate((node) => node instanceof HTMLVideoElement && node.paused && !node.hasAttribute("src")),
-    ).toBe(true)
+    expect(await resumed.evaluate((node) => node instanceof HTMLVideoElement && node.isConnected && !node.paused)).toBe(
+      true,
+    )
   }
 })
 
@@ -110,7 +112,7 @@ test("supports project, model and attachment controls and promotes a submitted d
   })
   await expect(hero).toHaveCount(0)
   await expect(page.locator(inputSelector)).toBeEditable()
-  await expect(page.locator(submitSelector)).not.toHaveCSS("border-radius", "50%")
+  await expect(page.locator(submitSelector)).toHaveCSS("border-radius", "50%")
 })
 
 test("does not request video or animate with reduced motion and reacts to preference changes", async ({ page }) => {
@@ -123,13 +125,13 @@ test("does not request video or animate with reduced motion and reacts to prefer
   await page.goto(`/new-session?draftId=${campusFixture.draftID}`)
   const hero = page.locator(heroSelector)
   await expect(hero.locator(inputSelector)).toBeEditable()
-  await expect(hero.locator("video")).toHaveCount(0)
+  await expect(page.locator(".campus-workspace__background video")).toHaveCount(0)
   await expect(hero.getByRole("heading")).toHaveCSS("animation-name", "none")
   expect(requests).toBe(0)
   await page.emulateMedia({ reducedMotion: "no-preference" })
   await expect.poll(() => requests).toBeGreaterThan(0)
-  await expect(hero.locator("video")).toHaveCount(0)
-  await expect(hero).toHaveCSS("background-color", "rgb(10, 13, 18)")
+  await expect(page.locator(".campus-workspace__background video")).toHaveCount(0)
+  await expect(page.locator(".campus-workspace__background img")).toBeVisible()
   await hero.locator(inputSelector).fill("视频失败后仍可输入")
   await expect(hero.locator(submitSelector)).toBeEnabled()
 })
