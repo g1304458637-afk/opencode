@@ -109,6 +109,9 @@ const require = __cjs_mod__.createRequire(import.meta.url);
   },
   renderer: {
     define: {
+      "import.meta.env.VITE_CAMPUS_REWARD_PREVIEW": JSON.stringify(
+        process.env.CAMPUS_LOCAL_BUILD === "1" && process.env.CAMPUS_REWARD_PREVIEW === "1",
+      ),
       // MUC Harness: 渲染层通道（titlebar 徽标按此判断；muc 不显示 DEV 徽标）
       "import.meta.env.VITE_OPENCODE_CHANNEL": JSON.stringify(channel),
       __CAMPUS_BRAND_CONFIG__: JSON.stringify(campus.brand),

@@ -1,4 +1,12 @@
 export const dict = {
+  "reward.preview.title": "动效预览",
+  "reward.preview.close": "收起动效预览",
+  "reward.preview.notice": "本地模拟，不发放奖励、不消耗卡片、不改变真实额度。",
+  "reward.preview.card": "获得重置卡",
+  "reward.preview.reset": "全额重置",
+  "reward.preview.quota": "预览额度",
+  "reward.preview.cards": "预览卡数",
+
   "reward.motion.cardBody": "已存入账户，可在需要时使用。",
   "reward.motion.resetBody": "额度已恢复，可以继续使用。",
 

@@ -1,4 +1,12 @@
 export const dict = {
+  "reward.preview.title": "Motion preview",
+  "reward.preview.close": "Collapse motion preview",
+  "reward.preview.notice": "Local simulation. No rewards granted, cards consumed, or account balances changed.",
+  "reward.preview.card": "Receive reset card",
+  "reward.preview.reset": "Full reset",
+  "reward.preview.quota": "Preview quota",
+  "reward.preview.cards": "Preview cards",
+
   "reward.motion.cardBody": "Stored in your account, ready when you need it.",
   "reward.motion.resetBody": "Your quota has been restored. You can continue working.",
 
