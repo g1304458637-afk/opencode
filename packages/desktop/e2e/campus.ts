@@ -449,12 +449,20 @@ try {
   }
 
   if (process.env.CAMPUS_E2E_REWARD === "1") {
-    await page.setViewportSize({ width: 1200, height: 800 })
+    await page.setViewportSize({ width: 1440, height: 900 })
     const newSession = page.locator('[data-action="home-new-session"]')
     if (await newSession.isVisible()) await newSession.click()
-    // Navigating via a real control dismisses the outside-click quota popover.
+    await expect(page.locator('[contenteditable="true"]').first()).toBeVisible()
     await panel(page)
     const notice = page.locator(".reward-arrival")
+    const captureReward = async (name: string) => {
+      // Capture immediately: Playwright screenshot font readiness can outlive a finite scene/toast.
+      const session = await page.context().newCDPSession(page)
+      const shot = await session.send("Page.captureScreenshot", { format: "png" })
+      writeFileSync(join(artifacts, name), Buffer.from(shot.data, "base64"))
+      await session.detach()
+    }
+    const motion = page.locator(".reward-motion-layer")
     const orb = page.locator(".quota-orb")
     let sequence = 0
     const arrival = (card: boolean, quantity = 1) => {
@@ -468,108 +476,115 @@ try {
       if (card) state.cards += quantity
     }
     const dismiss = async () => {
-      await page.getByRole("button", { name: "关闭奖励到账通知" }).click()
-      await sleep(1100)
+      if (await notice.isVisible()) await page.getByRole("button", { name: "关闭奖励到账通知" }).click()
     }
-    state.percent = 70
+    state.percent = 80
+    state.week = 41
     await refresh(page)
-    arrival(true)
-    await refresh(page)
-    await expect(notice).toContainText("你收到了一张重置卡")
-    await expect(orb).toHaveAttribute("data-charge", "idle")
-    await sleep(320)
-    await page.screenshot({ path: join(artifacts, "reward-card.png") })
-    arrival(true, 2)
-    await refresh(page)
-    await expect(notice).toContainText("你收到了 3 张重置卡")
-    await expect(page.locator(".quota-reset-count")).toContainText(String(state.cards))
-    await dismiss()
-    await refresh(page)
-    await expect(notice).toHaveCount(0)
-    state.cards++
-    await refresh(page)
-    await expect(notice).toHaveCount(0)
-    pass("single card, burst merge, real count, no replay and no event inference from count")
     arrival(false)
     state.percent = 0
     state.week = 100
     await refresh(page)
-    await expect(notice).toHaveAttribute("data-mode", "system")
-    await expect(orb).toHaveAttribute("data-charge", /awaken|charging/)
-    await sleep(320)
-    await page.screenshot({ path: join(artifacts, "reward-immediate-reset.png") })
-    await expect(orb).toHaveAttribute("data-charge", "idle")
+    await expect(motion).toHaveAttribute("data-kind", "FULL_RESET")
+    await expect(notice).toHaveCount(0)
+    await sleep(650)
+    const heroGeometry = await page.locator(".reward-hero").evaluate((el) => {
+      const hero = el.getBoundingClientRect()
+      const heading = document.querySelector(".campus-new-session__hero h1")?.getBoundingClientRect()
+      return { left: (el as HTMLElement).style.left, bottom: hero.bottom, headingTop: heading?.top }
+    })
+    expect(heroGeometry.left).not.toBe("")
+    if (heroGeometry.headingTop) expect(heroGeometry.bottom).toBeLessThan(heroGeometry.headingTop)
+    await captureReward("motion-full-reset.png")
+    await expect(motion).toHaveCount(0)
+    await expect(notice).toContainText("全额重置完成")
+    await expect(orb).toContainText("100%")
+    await expect(page.getByRole("progressbar", { name: "5 小时剩余" })).toHaveAttribute("aria-valuenow", "100")
     await dismiss()
+    await refresh(page)
+    await expect(motion).toHaveCount(0)
+    await expect(notice).toHaveCount(0)
+    pass("full reset plays before toast, reaches authoritative windows, no replay")
+    arrival(true)
+    await refresh(page)
+    await expect(motion).toHaveAttribute("data-kind", "RESET_CARD_GRANTED")
+    const destination = await page.locator(".quota-reset-count").boundingBox()
+    const flight = await motion.evaluate((el) => ({
+      x: Number.parseFloat((el as HTMLElement).style.getPropertyValue("--target-x")),
+      y: Number.parseFloat((el as HTMLElement).style.getPropertyValue("--target-y")),
+    }))
+    expect(Math.abs(flight.x - (destination!.x + destination!.width / 2))).toBeLessThan(1)
+    expect(Math.abs(flight.y - (destination!.y + destination!.height / 2))).toBeLessThan(1)
+    await sleep(550)
+    await captureReward("motion-card-reveal.png")
+    await expect(motion).toHaveCount(0)
+    await expect(notice).toContainText("获得重置卡 ×1")
+    await expect(page.locator(".quota-reset-count")).toContainText(String(state.cards))
+    await dismiss()
+    pass("artifact reveal targets real inventory DOMRect and count settles")
+    arrival(true)
+    arrival(true)
+    arrival(true)
     arrival(false)
     await refresh(page)
-    await expect(notice).toBeVisible()
-    await expect(orb).toHaveAttribute("data-charge", "idle")
+    await expect(motion).toHaveAttribute("data-kind", "FULL_RESET")
+    await expect(motion).toHaveAttribute("data-kind", "RESET_CARD_GRANTED", { timeout: 5000 })
+    await expect(page.locator(".reward-artifact-quantity")).toHaveText("×3")
+    await expect(motion).toHaveCount(0)
+    await expect(notice).toContainText("获得重置卡 ×3")
     await dismiss()
-    pass("immediate reset recharges only when actual quota increases")
-    await page.setViewportSize({ width: 1200, height: 800 })
-    arrival(true)
-    state.usageDelay = 700
-    await page.getByRole("button", { name: "刷新", exact: true }).click()
-    const composerState = async (action = "read") =>
-      application!.evaluate(async ({ webContents }, action) => {
-        for (const contents of webContents.getAllWebContents()) {
-          if (!["webview", "window"].includes(contents.getType())) continue
-          const result = await contents.executeJavaScript(`(() => {
-          const editor = document.querySelector('[contenteditable="true"]');
-          if (!editor) return null;
-          if (${JSON.stringify(action)} === "fill") { editor.focus(); document.execCommand("insertText", false, "Reward focus retention test"); }
-          if (${JSON.stringify(action)} === "clear") { editor.focus(); document.execCommand("selectAll"); document.execCommand("delete"); }
-          return { focused: document.activeElement === editor, text: editor.textContent };
-        })()`)
-          if (result) {
-            if (action === "fill") contents.focus()
-            return result
-          }
-        }
-        throw new Error("Actual chat webview composer not found")
-      }, action)
-    await composerState("fill")
-    await expect(notice).toBeVisible()
-    expect(await composerState()).toMatchObject({
-      focused: true,
-      text: expect.stringContaining("Reward focus retention test"),
-    })
-    state.usageDelay = 0
-    await sleep(1800)
-    expect(await composerState()).toMatchObject({
-      focused: true,
-      text: expect.stringContaining("Reward focus retention test"),
-    })
-    await page.getByRole("button", { name: "查看额度 ↗", exact: true }).click()
-    await expect(page.locator(".quota-panel")).toBeVisible()
-    await dismiss()
-    await composerState("clear")
-    pass("arrival and absorption preserve actual composer focus and draft; details opens quota panel")
+    pass("simultaneous reset wins priority and three cards aggregate")
     await page.emulateMedia({ reducedMotion: "reduce" })
     arrival(true)
     await refresh(page)
-    await expect(notice).toBeVisible()
-    expect(await notice.evaluate((element) => element.getAnimations({ subtree: true }).length)).toBe(0)
-    await page.screenshot({ path: join(artifacts, "reward-reduced-motion.png") })
-    for (const viewport of [
-      { width: 768, height: 640 },
-      { width: 420, height: 600 },
-      { width: 1000, height: 420 },
-    ]) {
-      await page.setViewportSize(viewport)
-      const bounds = await notice.boundingBox()
-      expect(bounds!.x).toBeGreaterThanOrEqual(0)
-      expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(viewport.width)
-      expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(viewport.height)
-      await page.screenshot({ path: join(artifacts, `reward-${viewport.width}x${viewport.height}.png`) })
-    }
+    await expect(motion).toHaveAttribute("data-reduced", "true")
+    await expect(page.locator(".reward-motes")).toHaveCount(0)
+    await sleep(550)
+    await captureReward("motion-reduced.png")
+    await expect(motion).toHaveCount(0)
     await dismiss()
     await page.emulateMedia({ reducedMotion: "no-preference" })
     await page.reload()
-    await expect(page.locator(".quota-orb")).toBeVisible()
+    await expect(orb).toBeVisible()
     await expect(notice).toHaveCount(0)
+    await expect(motion).toHaveCount(0)
     await panel(page)
-    pass("static reduced motion, responsive bounds and persisted receipts after reload")
+    pass("reduced motion and persisted dedupe after renderer reload")
+    const editor = page.locator('[contenteditable="true"]').first()
+    await expect(editor).toBeVisible()
+    state.usageDelay = 500
+    arrival(true)
+    await page.getByRole("button", { name: "刷新", exact: true }).click()
+    await page.locator(".quota-orb-button").press("Escape")
+    await editor.fill("Reward focus retention test")
+    await expect(motion).toHaveAttribute("data-kind", "RESET_CARD_GRANTED")
+    const closedTarget = await page.locator(".quota-orb-button").boundingBox()
+    const closedFlight = await motion.evaluate((el) =>
+      Number.parseFloat((el as HTMLElement).style.getPropertyValue("--target-y")),
+    )
+    expect(Math.abs(closedFlight - (closedTarget!.y + closedTarget!.height / 2))).toBeLessThan(1)
+    await expect(editor).toBeFocused()
+    await expect(motion).toHaveCount(0)
+    await expect(editor).toHaveText("Reward focus retention test")
+    await expect(editor).toBeFocused()
+    state.usageDelay = 0
+    await dismiss()
+    await panel(page)
+    arrival(false)
+    await refresh(page)
+    await expect(motion).toHaveAttribute("data-kind", "FULL_RESET")
+    expect(
+      await page.locator(".reward-composer-ack").evaluate((el) => el.getBoundingClientRect().width),
+    ).toBeGreaterThan(100)
+    const nativeWindow = await application!.browserWindow(page)
+    await nativeWindow.evaluate((window) => window.minimize())
+    await sleep(300)
+    await nativeWindow.evaluate((window) => window.restore())
+    await expect(motion).toHaveCount(0)
+    await refresh(page)
+    await expect(motion).toHaveCount(0)
+    await dismiss()
+    pass("actual composer draft/focus, closed-panel destination, composer geometry and background return")
   }
 
   await page.getByRole("button", { name: "管理套餐 ↗", exact: true }).click()

@@ -1,4 +1,5 @@
-import { createRewardArrivalAnimator, RewardArrivalLayer } from "./reward-arrival"
+import { RewardArrivalLayer } from "./reward-arrival"
+import { createRewardMotionController, RewardMotionLayer } from "./reward-motion"
 import { initI18n } from "./i18n"
 import { isSystemReward } from "../shared/reward-arrival"
 import { resolveBrand } from "@opencode-ai/brand"
@@ -8,7 +9,7 @@ import { resolveBrand } from "@opencode-ai/brand"
 //
 // 额度面板只显示剩余百分比；金额留在网站钱包及管理员账单。
 
-import { Show, createSignal, onCleanup, onMount, Index } from "solid-js"
+import { Show, createSignal, onCleanup, onMount, Index, batch } from "solid-js"
 import type { MucUpdateState, MucUsageSnapshot } from "../preload/types"
 import { QuotaOrb, EnergyProgressBar, QuotaPanel, createResetChargeEffect } from "./quota-energy"
 import { quotaReadings } from "./quota-energy-state"
@@ -97,7 +98,7 @@ const defaultPos = (): Pos => ({ x: EDGE, y: window.innerHeight - BALL_SIZE - ED
 
 export function MucStatus() {
   const charge = createResetChargeEffect()
-  const rewards = createRewardArrivalAnimator()
+  const rewards = createRewardMotionController()
   const [paused, setPaused] = createSignal(document.hidden)
   const [viewport, setViewport] = createSignal({ width: window.innerWidth, height: window.innerHeight })
   const [open, setOpen] = createSignal(false)
@@ -144,6 +145,7 @@ export function MucStatus() {
       if (disposed || sequence !== refreshSequence) return false
       if (!res.ok) {
         charge.cancel()
+        rewards.cancel()
         setStale(true)
         return false
       }
@@ -151,15 +153,20 @@ export function MucStatus() {
       const rewardedReset = arrivals.some(
         (event) => isSystemReward(event) && event.subscriptionId === res.usage.subscriptionStatus?.id,
       )
-      charge.observe(usage()?.subscriptionStatus, res.usage.subscriptionStatus, confirmedReset || rewardedReset)
-      rewards.receive(arrivals)
-      setUsage(res.usage)
+      const previous = usage()
+      if (rewardedReset) charge.cancel()
+      else charge.observe(previous?.subscriptionStatus, res.usage.subscriptionStatus, confirmedReset)
+      batch(() => {
+        rewards.receive(arrivals, previous, res.usage)
+        setUsage(res.usage)
+      })
       setFetchedAt(new Date().toISOString())
       setStale(false)
       return true
     } catch {
       if (!disposed && sequence === refreshSequence) {
         charge.cancel()
+        rewards.cancel()
         setStale(true)
       }
       return false
@@ -202,12 +209,19 @@ export function MucStatus() {
     return windows.sort((a, b) => a.data!.remainingPercent - b.data!.remainingPercent)[0]
   }
   const visualWindow = (index: number) =>
-    stale() ? null : (charge.values()[index] ?? quotaReadings(subscriptionStatus())[index]?.value)
+    stale()
+      ? null
+      : (rewards.quota()?.[index] ?? charge.values()[index] ?? quotaReadings(subscriptionStatus())[index]?.value)
   const visualRemaining = () => {
     if (stale()) return null
     const readings = quotaReadings(subscriptionStatus()).map((_, index) => visualWindow(index))
     if (!readings.length || readings.some((value) => value == null)) return null
     return Math.min(...readings.filter((value): value is number => value != null))
+  }
+  const rewardCharge = () => {
+    if (rewards.active()?.type !== "FULL_RESET") return charge.phase()
+    const time = rewards.time()
+    return time < 260 ? "awaken" : time < 720 ? "charging" : time < 1050 ? "fullPulse" : "settle"
   }
   const remainingText = () => fmtPercent(visualRemaining())
   const remainingLabel = () =>
@@ -284,6 +298,23 @@ export function MucStatus() {
         } catch {}
       }
     })
+    if (import.meta.env.DEV) {
+      const qaRefresh = () => void refresh()
+      const qaSpeed = (event: Event) => {
+        if (event instanceof CustomEvent && typeof event.detail === "number") rewards.setSpeed(event.detail)
+      }
+      const qaReduced = (event: Event) => {
+        if (event instanceof CustomEvent && typeof event.detail === "boolean") rewards.setReducedForQA(event.detail)
+      }
+      window.addEventListener("reward-qa-refresh", qaRefresh)
+      window.addEventListener("reward-qa-speed", qaSpeed)
+      window.addEventListener("reward-qa-reduced", qaReduced)
+      onCleanup(() => {
+        window.removeEventListener("reward-qa-refresh", qaRefresh)
+        window.removeEventListener("reward-qa-speed", qaSpeed)
+        window.removeEventListener("reward-qa-reduced", qaReduced)
+      })
+    }
     void refresh()
     void refreshUpdate()
     const timer = setInterval(() => {
@@ -372,14 +403,10 @@ export function MucStatus() {
 
   return (
     <>
-      <RewardArrivalLayer
-        animator={rewards}
-        charge={charge.phase()}
-        orb={{ x: pos().x + BALL_SIZE / 2, y: pos().y + BALL_SIZE / 2 }}
-        onDetails={() => setOpen(true)}
-      />
+      <RewardMotionLayer controller={rewards} />
+      <RewardArrivalLayer controller={rewards} onDetails={() => setOpen(true)} />
       <Show when={open()}>
-        <QuotaPanel style={panelStyle()} phase={charge.phase()} paused={paused()}>
+        <QuotaPanel style={panelStyle()} phase={rewardCharge()} paused={paused()}>
           <div class="quota-panel-header mb-2 flex items-center justify-between">
             <span class="flex items-center gap-1.5 text-[13px] font-semibold">
               <Show when={subscriptionStatus()}>
@@ -452,11 +479,7 @@ export function MucStatus() {
                               <span>{w().label}</span>
                               <span>{fmtPercent(visualWindow(index))}</span>
                             </div>
-                            <EnergyProgressBar
-                              value={visualWindow(index)}
-                              label={w().label}
-                              phase={charge.values()[index] == null ? "idle" : charge.phase()}
-                            />
+                            <EnergyProgressBar value={visualWindow(index)} label={w().label} phase={rewardCharge()} />
                             <div class="quota-window-reset">
                               {w().data?.resetsAt
                                 ? `${fmtDate(w().data!.resetsAt)} 恢复`
@@ -489,12 +512,11 @@ export function MucStatus() {
                       <div class="quota-reset-row mt-1.5 flex items-center justify-between">
                         <span
                           class="quota-reset-count text-[11px]"
-                          data-reward={
-                            rewards.active() && !isSystemReward(rewards.active()!) ? rewards.phase() : undefined
-                          }
+                          data-reward-anchor="inventory"
+                          data-reward={rewards.frame()?.phase}
                           style={{ color: "var(--muc-gold)" }}
                         >
-                          重置卡 ×{usage()?.resetCardsAvailable ?? "—"}
+                          重置卡 ×{rewards.cards() ?? usage()?.resetCardsAvailable ?? "—"}
                         </span>
                         <button
                           type="button"
@@ -612,7 +634,8 @@ export function MucStatus() {
         type="button"
         title="订阅剩余额度（可拖动）"
         class="muc-status-scope quota-orb-button"
-        data-reward={rewards.active() && !isSystemReward(rewards.active()!) ? rewards.phase() : undefined}
+        data-reward-anchor="orb"
+        data-reward={rewards.frame()?.phase}
         aria-expanded={open()}
         data-energy-paused={paused()}
         style={{ left: `${pos().x}px`, top: `${pos().y}px`, width: `${BALL_SIZE}px`, height: `${BALL_SIZE}px` }}
@@ -625,7 +648,7 @@ export function MucStatus() {
           moved = false
         }}
       >
-        <QuotaOrb value={visualRemaining()} label={remainingLabel()} text={remainingText()} phase={charge.phase()} />
+        <QuotaOrb value={visualRemaining()} label={remainingLabel()} text={remainingText()} phase={rewardCharge()} />
         <Show when={updateAvailable()}>
           <span class="absolute left-1 top-1 flex size-3.5 items-center justify-center rounded-full bg-sky-400 text-[8px] font-bold leading-none text-white">
             新
