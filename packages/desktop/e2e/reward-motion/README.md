@@ -34,3 +34,14 @@ For MUC use `OPENCODE_CHANNEL=muc`, `MUC_MANIFEST_URL=http://127.0.0.1:18765/dow
 ## Scope of evidence
 
 Native Electron checks cover reward queue, persisted dedupe after reload, DOM destination equality, actual composer focus/draft, hero geometry, minimize/restore, reset-card use and retry ordering, subscription refresh, account navigation, model catalog and update checks. Browser checks cover the larger motion/value matrix, recordings, responsive sizes and DPR2 frame pacing. Neither establishes Windows native performance, production reward delivery, paid chat-generation correctness, or an exhaustive heap-leak proof. Run the same native suite on Windows before a cross-platform release.
+
+## Clickable preview in the complete local desktop client
+
+To show the two replay buttons in the actual client (not the browser QA shell):
+
+```sh
+OPENCODE_CHANNEL=hubu CAMPUS_LOCAL_BUILD=1 CAMPUS_REWARD_PREVIEW=1 node_modules/.bin/electron-vite build
+OPENCODE_CHANNEL=hubu BRAND=hubu MUC_CDP_PORT=0 node_modules/.bin/electron .
+```
+
+The bottom-right **动效预览** panel has **获得重置卡** and **全额重置**. It starts expanded, works offline, and can be collapsed/reopened. Each click replays a separate presentation controller using explicitly synthetic 20→100 quota or 0→1 card snapshots. The orb temporarily labels its simulated value **预览额度**; account values return after playback. Closing cancels the preview and its confirmation. No account store writes, reward requests, card consumption, or grant API calls occur. Real reward receipts take precedence and cancel a preview. Both build flags are required; normal builds have no preview entry.

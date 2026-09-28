@@ -13,6 +13,7 @@ export default defineConfig({
     },
   },
   define: {
+    "import.meta.env.VITE_CAMPUS_REWARD_PREVIEW": JSON.stringify(process.env.CAMPUS_REWARD_PREVIEW === "1"),
     __CAMPUS_BRAND_CONFIG__: JSON.stringify(resolveBrand({ OPENCODE_CHANNEL: process.env.OPENCODE_CHANNEL || "hubu" })),
   },
   server: {

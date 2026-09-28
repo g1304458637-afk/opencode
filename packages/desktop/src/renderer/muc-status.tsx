@@ -1,6 +1,7 @@
 import { RewardArrivalLayer } from "./reward-arrival"
 import { createRewardMotionController, RewardMotionLayer } from "./reward-motion"
-import { initI18n } from "./i18n"
+import { initI18n, t } from "./i18n"
+import { RewardPreview } from "./reward-preview"
 import { isSystemReward } from "../shared/reward-arrival"
 import { resolveBrand } from "@opencode-ai/brand"
 // MUC Harness: sub2api 余额/用量悬浮球。
@@ -99,6 +100,8 @@ const defaultPos = (): Pos => ({ x: EDGE, y: window.innerHeight - BALL_SIZE - ED
 export function MucStatus() {
   const charge = createResetChargeEffect()
   const rewards = createRewardMotionController()
+  const preview = import.meta.env.VITE_CAMPUS_REWARD_PREVIEW ? createRewardMotionController() : undefined
+  const motion = () => (preview?.active() ? preview : rewards)
   const [paused, setPaused] = createSignal(document.hidden)
   const [viewport, setViewport] = createSignal({ width: window.innerWidth, height: window.innerHeight })
   const [open, setOpen] = createSignal(false)
@@ -150,6 +153,10 @@ export function MucStatus() {
         return false
       }
       const arrivals = res.usage.rewardArrivals ?? []
+      if (arrivals.length) {
+        preview?.cancel()
+        preview?.dismiss()
+      }
       const rewardedReset = arrivals.some(
         (event) => isSystemReward(event) && event.subscriptionId === res.usage.subscriptionStatus?.id,
       )
@@ -209,23 +216,33 @@ export function MucStatus() {
     return windows.sort((a, b) => a.data!.remainingPercent - b.data!.remainingPercent)[0]
   }
   const visualWindow = (index: number) =>
-    stale()
-      ? null
-      : (rewards.quota()?.[index] ?? charge.values()[index] ?? quotaReadings(subscriptionStatus())[index]?.value)
+    preview?.active()?.type === "FULL_RESET"
+      ? preview.frame()?.quota[index]
+      : stale()
+        ? null
+        : (rewards.quota()?.[index] ?? charge.values()[index] ?? quotaReadings(subscriptionStatus())[index]?.value)
   const visualRemaining = () => {
+    if (preview?.active()?.type === "FULL_RESET")
+      return Math.min(...(preview.frame()?.quota.filter((n): n is number => n !== null) ?? [20]))
     if (stale()) return null
     const readings = quotaReadings(subscriptionStatus()).map((_, index) => visualWindow(index))
     if (!readings.length || readings.some((value) => value == null)) return null
     return Math.min(...readings.filter((value): value is number => value != null))
   }
   const rewardCharge = () => {
-    if (rewards.active()?.type !== "FULL_RESET") return charge.phase()
-    const time = rewards.time()
+    if (motion().active()?.type !== "FULL_RESET") return charge.phase()
+    const time = motion().time()
     return time < 260 ? "awaken" : time < 720 ? "charging" : time < 1050 ? "fullPulse" : "settle"
   }
   const remainingText = () => fmtPercent(visualRemaining())
   const remainingLabel = () =>
-    stale() ? "待刷新" : subscriptionStatus() ? (limitingWindow()?.label ?? "额度状态") : "未订阅"
+    preview?.active()?.type === "FULL_RESET"
+      ? t("reward.preview.quota")
+      : stale()
+        ? "待刷新"
+        : subscriptionStatus()
+          ? (limitingWindow()?.label ?? "额度状态")
+          : "未订阅"
 
   // 重置卡：确认 → API 成功 → 播放 AVAILABLE QUOTA 动画
   const confirmResetCard = async () => {
@@ -403,6 +420,15 @@ export function MucStatus() {
 
   return (
     <>
+      <Show when={preview}>
+        {(controller) => (
+          <RewardPreview
+            controller={controller()}
+            busy={!!rewards.active() || !!rewards.confirmation()}
+            onStart={() => charge.cancel()}
+          />
+        )}
+      </Show>
       <RewardMotionLayer controller={rewards} />
       <RewardArrivalLayer controller={rewards} onDetails={() => setOpen(true)} />
       <Show when={open()}>
@@ -513,7 +539,7 @@ export function MucStatus() {
                         <span
                           class="quota-reset-count text-[11px]"
                           data-reward-anchor="inventory"
-                          data-reward={rewards.frame()?.phase}
+                          data-reward={motion().frame()?.phase}
                           style={{ color: "var(--muc-gold)" }}
                         >
                           重置卡 ×{rewards.cards() ?? usage()?.resetCardsAvailable ?? "—"}
@@ -635,7 +661,7 @@ export function MucStatus() {
         title="订阅剩余额度（可拖动）"
         class="muc-status-scope quota-orb-button"
         data-reward-anchor="orb"
-        data-reward={rewards.frame()?.phase}
+        data-reward={motion().frame()?.phase}
         aria-expanded={open()}
         data-energy-paused={paused()}
         style={{ left: `${pos().x}px`, top: `${pos().y}px`, width: `${BALL_SIZE}px`, height: `${BALL_SIZE}px` }}
