@@ -67,3 +67,51 @@
   color: #dcc996;
   font-variant-numeric: tabular-nums;
 }
+
+.reward-preview-controls {
+  border: 0;
+  padding: 0;
+  margin: 12px 0 0;
+  display: grid;
+  gap: 8px;
+}
+.reward-preview-controls label,
+.reward-preview-sound {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 11px;
+  color: #dbd8cf;
+}
+.reward-preview-controls select {
+  background: #273340;
+  border: 1px solid #d1b47660;
+  color: #fff0d0;
+  border-radius: 5px;
+  padding: 4px 8px;
+  min-width: 85px;
+}
+.reward-preview-controls summary {
+  cursor: pointer;
+  color: #d1b477;
+  margin: 6px 0;
+}
+.reward-preview-controls details label {
+  margin-top: 8px;
+}
+.reward-preview-controls input[type="range"] {
+  width: 100px;
+  accent-color: #d5b77b;
+}
+.reward-preview-controls input[type="checkbox"],
+.reward-preview-sound input {
+  accent-color: #d5b77b;
+}
+.reward-preview-sound {
+  margin: 8px 0;
+}
+.reward-preview:has(.reward-preview-controls) {
+  max-height: calc(100vh - 80px);
+  overflow: auto;
+}

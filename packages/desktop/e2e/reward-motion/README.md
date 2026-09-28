@@ -1,5 +1,7 @@
 # Reward Motion QA
 
+Current cinematic V2: [research](../../docs/REWARD_CINEMATIC_RESEARCH.md), [results](../../docs/REWARD_CINEMATIC_RESULT.md). Per the latest user instruction, keep the interactive local client and do not record videos. `verify.mjs` below is a historical V1 recording script; do not run it for this round.
+
 Run from `packages/desktop`, with repository dependencies installed:
 
 ```sh
@@ -45,3 +47,26 @@ OPENCODE_CHANNEL=hubu BRAND=hubu MUC_CDP_PORT=0 node_modules/.bin/electron .
 ```
 
 The bottom-right **动效预览** panel has **获得重置卡** and **全额重置**. It starts expanded, works offline, and can be collapsed/reopened. Each click replays a separate presentation controller using explicitly synthetic 20→100 quota or 0→1 card snapshots. The orb temporarily labels its simulated value **预览额度**; account values return after playback. Closing cancels the preview and its confirmation. No account store writes, reward requests, card consumption, or grant API calls occur. Real reward receipts take precedence and cancel a preview. Both build flags are required; normal builds have no preview entry.
+
+## Cinematic V2 controls and checks (no video)
+
+The complete-client panel now provides Low / Medium / High / MAX (default **High**), 1× / 0.5× / 0.25×, particle count, bloom strength, shockwave strength, screen impact, Reduced Motion and opt-in reward sound. Advanced controls are disabled while playing; either replay button restarts its own preview. Production builds omit the panel; the production account panel retains the sound preference.
+
+For isolated browser QA:
+
+```sh
+CAMPUS_REWARD_PREVIEW=1 OPENCODE_CHANNEL=hubu node_modules/.bin/vite --config e2e/reward-motion/vite.config.ts --port 4199
+node e2e/reward-motion/cinematic.mjs
+node e2e/reward-motion/preview.mjs
+node e2e/reward-motion/matrix.mjs
+```
+
+`cinematic.mjs` checks High and MAX for both events, slow motion, focus/draft preservation, exact restoration of account values, Reduced Motion, and AudioContext completion/cancellation. It writes JSON and diagnostic stills under `e2e/artifacts/reward-cinematic`, with **no video recording**. The stills are engineering evidence; visual acceptance is interactive in the complete local client. Frame samples include a diagnostic screenshot and are not a stable-60fps certification.
+
+For current native reward regression, build the local client with normal update URLs, compile `e2e/campus.ts` as above, then run:
+
+```sh
+OPENCODE_CHANNEL=hubu CAMPUS_E2E_REWARD=1 CAMPUS_E2E_SCOPE=quota CAMPUS_E2E_ARTIFACTS=e2e/artifacts/reward-cinematic-electron node e2e/artifacts/campus-run.mjs
+```
+
+This skips updater tests, which were checked in V1 and are unchanged. No videos are configured in this native harness.

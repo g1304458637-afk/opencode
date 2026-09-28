@@ -1,4 +1,22 @@
 export const dict = {
+  "reward.fx.Low": "Low",
+  "reward.fx.Medium": "Medium",
+  "reward.fx.High": "High",
+  "reward.fx.MAX": "MAX",
+  "reward.fx.controls": "More FX controls",
+
+  "reward.fx.fullReset": "FULL RESET",
+  "reward.fx.ready": "RESTORED",
+  "reward.fx.rarity": "S · SYSTEM REWARD",
+  "reward.fx.intensity": "FX intensity",
+  "reward.fx.speed": "Playback speed",
+  "reward.fx.particles": "Particle count",
+  "reward.fx.bloom": "Bloom strength",
+  "reward.fx.shockwave": "Shockwave strength",
+  "reward.fx.impact": "Screen impact",
+  "reward.fx.sound": "Reward sound",
+  "reward.fx.reduced": "Reduced motion",
+
   "reward.preview.title": "Motion preview",
   "reward.preview.close": "Collapse motion preview",
   "reward.preview.notice": "Local simulation. No rewards granted, cards consumed, or account balances changed.",

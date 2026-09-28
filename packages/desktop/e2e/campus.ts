@@ -487,14 +487,13 @@ try {
     await refresh(page)
     await expect(motion).toHaveAttribute("data-kind", "FULL_RESET")
     await expect(notice).toHaveCount(0)
-    await sleep(650)
+    await sleep(1250)
     const heroGeometry = await page.locator(".reward-hero").evaluate((el) => {
       const hero = el.getBoundingClientRect()
-      const heading = document.querySelector(".campus-new-session__hero h1")?.getBoundingClientRect()
-      return { left: (el as HTMLElement).style.left, bottom: hero.bottom, headingTop: heading?.top }
+      return { width: hero.width, font: parseFloat(getComputedStyle(el.querySelector(".reward-hero-value")!).fontSize) }
     })
-    expect(heroGeometry.left).not.toBe("")
-    if (heroGeometry.headingTop) expect(heroGeometry.bottom).toBeLessThan(heroGeometry.headingTop)
+    expect(heroGeometry.width).toBeGreaterThan(300)
+    expect(heroGeometry.font).toBeGreaterThanOrEqual(100)
     await captureReward("motion-full-reset.png")
     await expect(motion).toHaveCount(0)
     await expect(notice).toContainText("全额重置完成")
