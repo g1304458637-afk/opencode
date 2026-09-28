@@ -1,4 +1,18 @@
 export const dict = {
+  "reward.motion.cardBody": "Stored in your account, ready when you need it.",
+  "reward.motion.resetBody": "Your quota has been restored. You can continue working.",
+
+  "reward.motion.restore": "SYSTEM RESTORE",
+  "reward.motion.restored": "Full reset complete",
+  "reward.motion.short": "5-hour remaining",
+  "reward.motion.week": "Weekly remaining",
+  "reward.motion.credential": "SYSTEM ACCESS",
+  "reward.motion.card": "RESET CARD",
+  "reward.motion.cardName": "Reset card",
+  "reward.motion.received": "Reward received",
+  "reward.motion.cardTitle": "Reset cards received ×{{count}}",
+  "reward.motion.held": "Currently held ×{{count}}",
+
   "reward.card.one.title": "You received a reset card",
   "reward.card.one.body": "Your reset card is ready. Use it whenever you need to reset your quota.",
   "reward.card.many.title": "You received {{count}} reset cards",

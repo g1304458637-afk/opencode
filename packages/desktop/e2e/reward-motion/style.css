@@ -1,0 +1,162 @@
+@import "../../../app/src/index.css";
+:root {
+  color-scheme: dark;
+}
+body {
+  margin: 0;
+  background: #101722;
+  color: #e7e9ed;
+  font-family:
+    Inter,
+    -apple-system,
+    BlinkMacSystemFont,
+    "PingFang SC",
+    sans-serif;
+}
+main {
+  min-height: 100vh;
+  background: radial-gradient(ellipse at 60% 10%, #28385066, transparent 65%);
+}
+nav {
+  position: fixed;
+  inset: 0 auto 0 0;
+  width: 220px;
+  padding: 38px 24px;
+  border-right: 1px solid #ffffff0c;
+  background: #0f151ecc;
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  font-size: 12px;
+  color: #b8bfcb;
+}
+nav b {
+  font-size: 18px;
+  color: #eee;
+}
+nav small {
+  margin-top: 80px;
+  font-size: 10px;
+  line-height: 1.8;
+  color: #a99d7b;
+}
+.qa-workspace {
+  margin-left: 220px;
+  padding: 74px 7vw 30px;
+  max-width: 1350px;
+}
+.qa-eyebrow {
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  color: #b5a680;
+}
+h1 {
+  font-size: 26px;
+  font-weight: 400;
+  margin: 15px 0;
+}
+p {
+  font-size: 12px;
+  color: #919baa;
+  line-height: 1.8;
+}
+.qa-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 25px;
+  padding: 16px;
+  background: #ffffff04;
+  border: 1px solid #ffffff0c;
+  border-radius: 12px;
+}
+.qa-controls label {
+  font-size: 10px;
+  color: #a6adba;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.qa-controls input {
+  width: 65px;
+}
+.qa-controls button,
+.qa-controls input,
+.qa-controls select {
+  border: 1px solid #ffffff20;
+  border-radius: 5px;
+  background: #172130;
+  padding: 7px;
+  color: #d6d8de;
+  font-size: 10px;
+}
+.qa-controls button {
+  cursor: pointer;
+}
+.qa-chat {
+  margin: 35px 0;
+  min-height: 80px;
+}
+.qa-composer {
+  position: fixed;
+  bottom: 32px;
+  left: max(248px, 27vw);
+  right: 6vw;
+  border: 1px solid #ffffff25;
+  border-radius: 18px;
+  background: #1c263399;
+  padding: 18px;
+}
+.qa-composer textarea {
+  resize: none;
+  background: none;
+  border: 0;
+  outline: 0;
+  color: #eee;
+  width: 100%;
+  height: 66px;
+  font-size: 13px;
+}
+.qa-composer footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.qa-composer select,
+.qa-composer button {
+  font-size: 11px;
+  background: transparent;
+  border: 0;
+  color: #adb7c6;
+}
+@media (max-width: 800px) {
+  nav {
+    width: 120px;
+    padding: 28px 14px;
+  }
+  .qa-workspace {
+    margin-left: 120px;
+    padding: 52px 20px;
+  }
+  .qa-composer {
+    left: 145px;
+    right: 20px;
+  }
+  .qa-chat {
+    display: none;
+  }
+  h1 {
+    font-size: 20px;
+  }
+}
+@media (max-height: 700px) {
+  .qa-workspace {
+    padding-top: 45px;
+  }
+  .qa-chat {
+    display: none;
+  }
+  .qa-composer textarea {
+    height: 35px;
+  }
+}

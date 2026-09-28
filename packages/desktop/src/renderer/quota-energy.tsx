@@ -120,7 +120,11 @@ export function EnergyProgressBar(props: { value: number | null | undefined; lab
     >
       <div
         class="energy-fill"
-        style={{ width: `${props.value == null ? 0 : Math.max(0, Math.min(100, props.value))}%` }}
+        style={{
+          width: "100%",
+          "transform-origin": "left",
+          transform: `scaleX(${props.value == null ? 0 : Math.max(0, Math.min(100, props.value)) / 100})`,
+        }}
       >
         <span class="energy-fill-glow" />
         <span class="energy-fill-core" />

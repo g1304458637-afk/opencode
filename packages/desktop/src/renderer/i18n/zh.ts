@@ -1,4 +1,18 @@
 export const dict = {
+  "reward.motion.cardBody": "已存入账户，可在需要时使用。",
+  "reward.motion.resetBody": "额度已恢复，可以继续使用。",
+
+  "reward.motion.restore": "SYSTEM RESTORE",
+  "reward.motion.restored": "全额重置完成",
+  "reward.motion.short": "5 小时剩余",
+  "reward.motion.week": "本周剩余",
+  "reward.motion.credential": "SYSTEM ACCESS",
+  "reward.motion.card": "RESET CARD",
+  "reward.motion.cardName": "重置卡",
+  "reward.motion.received": "奖励到账",
+  "reward.motion.cardTitle": "获得重置卡 ×{{count}}",
+  "reward.motion.held": "当前持有 ×{{count}}",
+
   "reward.card.one.title": "你收到了一张重置卡",
   "reward.card.one.body": "恭喜你获得一张重置卡，你可以随时使用来重置你的额度",
   "reward.card.many.title": "你收到了 {{count}} 张重置卡",
