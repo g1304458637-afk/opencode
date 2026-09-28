@@ -1,7 +1,9 @@
-import { createSignal, onMount, Show } from "solid-js"
+import { createSignal, onMount, Show, For } from "solid-js"
 import type { MucUsageSnapshot } from "../preload/types"
 import { RewardArrivalLayer } from "./reward-arrival"
 import { RewardMotionLayer, type RewardMotionController } from "./reward-motion"
+import { rewardFxPresets, rewardFxIntensities } from "./reward-fx"
+import { rewardSoundEnabled, setRewardSoundEnabled } from "./reward-sound"
 import { initI18n, t } from "./i18n"
 import "./reward-preview.css"
 
@@ -94,6 +96,102 @@ export function RewardPreview(props: { controller: RewardMotionController; busy:
               {t("reward.preview.reset")}
             </button>
           </div>
+          <fieldset class="reward-preview-controls" disabled={!!props.controller.active()}>
+            <label>
+              {t("reward.fx.intensity")}
+              <select
+                aria-label={t("reward.fx.intensity")}
+                value={props.controller.fx().intensity}
+                onChange={(event) => {
+                  const value = rewardFxIntensities.find((option) => option === event.currentTarget.value)
+                  if (value) props.controller.configureFx({ intensity: value, ...rewardFxPresets[value] })
+                }}
+              >
+                <For each={rewardFxIntensities}>
+                  {(value) => <option value={value}>{t(`reward.fx.${value}`)}</option>}
+                </For>
+              </select>
+            </label>
+            <label>
+              {t("reward.fx.speed")}
+              <select
+                aria-label={t("reward.fx.speed")}
+                value={props.controller.playbackSpeed()}
+                onChange={(event) => props.controller.setSpeed(Number(event.currentTarget.value))}
+              >
+                <option value="1">1×</option>
+                <option value="0.5">0.5×</option>
+                <option value="0.25">0.25×</option>
+              </select>
+            </label>
+            <details>
+              <summary>{t("reward.fx.controls")}</summary>
+              <label>
+                {t("reward.fx.particles")} {props.controller.fx().particles}
+                <input
+                  type="range"
+                  min="32"
+                  max="160"
+                  step="8"
+                  value={props.controller.fx().particles}
+                  aria-label={t("reward.fx.particles")}
+                  onInput={(event) => props.controller.configureFx({ particles: Number(event.currentTarget.value) })}
+                />
+              </label>
+              <label>
+                {t("reward.fx.bloom")} {props.controller.fx().bloom}
+                <input
+                  type="range"
+                  min="0"
+                  max="2.5"
+                  step="0.1"
+                  value={props.controller.fx().bloom}
+                  aria-label={t("reward.fx.bloom")}
+                  onInput={(event) => props.controller.configureFx({ bloom: Number(event.currentTarget.value) })}
+                />
+              </label>
+              <label>
+                {t("reward.fx.shockwave")} {props.controller.fx().shockwave}
+                <input
+                  type="range"
+                  min="0"
+                  max="2"
+                  step="0.1"
+                  value={props.controller.fx().shockwave}
+                  aria-label={t("reward.fx.shockwave")}
+                  onInput={(event) => props.controller.configureFx({ shockwave: Number(event.currentTarget.value) })}
+                />
+              </label>
+              <label>
+                {t("reward.fx.impact")} {props.controller.fx().impact}
+                <input
+                  type="range"
+                  min="0"
+                  max="4"
+                  step="1"
+                  value={props.controller.fx().impact}
+                  aria-label={t("reward.fx.impact")}
+                  onInput={(event) => props.controller.configureFx({ impact: Number(event.currentTarget.value) })}
+                />
+              </label>
+            </details>
+            <label>
+              <span>{t("reward.fx.reduced")}</span>
+              <input
+                type="checkbox"
+                checked={props.controller.reduced()}
+                onChange={(event) => props.controller.setReducedForQA(event.currentTarget.checked)}
+              />
+            </label>
+          </fieldset>
+          <label class="reward-preview-sound">
+            <span>{t("reward.fx.sound")}</span>
+            <input
+              type="checkbox"
+              checked={rewardSoundEnabled()}
+              onChange={(event) => setRewardSoundEnabled(event.currentTarget.checked)}
+            />
+          </label>
           <div class="reward-preview-readings" aria-live="off">
             <span>
               {t("reward.preview.quota")}{" "}

@@ -1,4 +1,22 @@
 export const dict = {
+  "reward.fx.Low": "Low",
+  "reward.fx.Medium": "Medium",
+  "reward.fx.High": "High",
+  "reward.fx.MAX": "MAX",
+  "reward.fx.controls": "更多 FX 参数",
+
+  "reward.fx.fullReset": "FULL RESET",
+  "reward.fx.ready": "RESTORED",
+  "reward.fx.rarity": "S · SYSTEM REWARD",
+  "reward.fx.intensity": "FX 强度",
+  "reward.fx.speed": "播放速度",
+  "reward.fx.particles": "粒子数量",
+  "reward.fx.bloom": "溢光强度",
+  "reward.fx.shockwave": "冲击波强度",
+  "reward.fx.impact": "画面冲击",
+  "reward.fx.sound": "奖励音效",
+  "reward.fx.reduced": "减少动态效果",
+
   "reward.preview.title": "动效预览",
   "reward.preview.close": "收起动效预览",
   "reward.preview.notice": "本地模拟，不发放奖励、不消耗卡片、不改变真实额度。",

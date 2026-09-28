@@ -15,19 +15,19 @@ describe("reward presentation contract", () => {
     test(`${old} to 100 uses only snapshot interpolation`, () => {
       const [event] = rewardEvents([reset], { ...before, quota: [old, 41] }, after)
       expect(rewardFrame(event, 0).quota).toEqual([old, 41])
-      expect(rewardFrame(event, 400).quota[0]).toBeGreaterThanOrEqual(old)
-      expect(rewardFrame(event, 720).quota).toEqual([100, 100])
+      expect(rewardFrame(event, 850).quota[0]).toBeGreaterThanOrEqual(old)
+      expect(rewardFrame(event, 1150).quota).toEqual([100, 100])
     })
   test("partial reset and non-100 targets are preserved", () => {
     const [event] = rewardEvents([reset], before, { ...after, quota: [83, 41] })
-    expect(rewardFrame(event, 720).quota).toEqual([83, 41])
-    expect(rewardFrame(event, 450).quota[1]).toBe(41)
+    expect(rewardFrame(event, 1150).quota).toEqual([83, 41])
+    expect(rewardFrame(event, 850).quota[1]).toBe(41)
   })
   for (const n of [0, 1, 5])
     test(`card ${n} to ${n + 1} lands then counts`, () => {
       const [event] = rewardEvents([card], { ...before, cards: n }, { ...after, cards: n + 1 })
-      expect(rewardFrame(event, 1100).cards).toBe(n)
-      expect(rewardFrame(event, 1260).cards).toBe(n + 1)
+      expect(rewardFrame(event, 1900).cards).toBe(n)
+      expect(rewardFrame(event, 2130).cards).toBe(n + 1)
     })
   test("priority, duplicates and burst aggregation", () => {
     const seen = new Set<string>()
@@ -54,7 +54,7 @@ describe("reward presentation contract", () => {
   })
   test("reduced motion changes to exact server value without counting", () => {
     const [event] = rewardEvents([reset], before, after)
-    expect(rewardFrame(event, 300, true).quota).toEqual(before.quota)
-    expect(rewardFrame(event, 500, true).quota).toEqual(after.quota)
+    expect(rewardFrame(event, 700, true).quota).toEqual(before.quota)
+    expect(rewardFrame(event, 950, true).quota).toEqual(after.quota)
   })
 })

@@ -3,14 +3,14 @@ import type { MucUsageSnapshot } from "../preload/types"
 import { quotaReadings } from "./quota-energy-state"
 
 export const rewardMotionTokens = {
-  duration: { FULL_RESET: 1650, RESET_CARD_GRANTED: 1450 },
+  duration: { FULL_RESET: 2600, RESET_CARD_GRANTED: 2300 },
   gap: 200,
   toast: 6000,
-  restore: [260, 720],
-  count: [1120, 1260],
+  restore: [650, 1150],
+  count: [1950, 2130],
   tiers: {
-    FULL_RESET: { tier: "S", priority: 100 },
-    RESET_CARD_GRANTED: { tier: "A", priority: 80 },
+    FULL_RESET: { tier: "S+", priority: 100 },
+    RESET_CARD_GRANTED: { tier: "S", priority: 80 },
     STANDARD: { tier: "B", priority: 20 },
   },
 } as const
@@ -100,20 +100,21 @@ export function rewardFrame(event: RewardEvent, time: number, reduced = false) {
     ? ([
         [0, "prepare"],
         [80, "energy_build"],
-        [260, "restore"],
-        [720, "impact"],
-        [1050, "settle"],
-        [1450, "confirm"],
+        [650, "restore"],
+        [1150, "impact"],
+        [1750, "settle"],
+        [2400, "confirm"],
       ] as const)
     : ([
         [0, "reveal"],
-        [120, "card_form"],
-        [280, "card_flip"],
-        [620, "highlight"],
-        [800, "transfer"],
-        [1120, "land"],
-        [1260, "count_update"],
-        [1350, "confirm"],
+        [160, "card_form"],
+        [300, "card_flip"],
+        [800, "highlight"],
+        [1100, "celebrate"],
+        [1450, "transfer"],
+        [1950, "land"],
+        [2130, "count_update"],
+        [2200, "confirm"],
       ] as const)
   const phase = [...phases].reverse().find(([at]) => time >= at)?.[1] ?? phases[0][1]
   const progress = rewardProgress(time, rewardMotionTokens.restore, reduced)

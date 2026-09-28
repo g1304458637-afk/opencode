@@ -19,7 +19,7 @@
   box-shadow:
     0 16px 48px #0004,
     inset 0 1px #fff1;
-  animation: reward-notice-in 240ms ease-out both;
+  animation: reward-notice-in 340ms ease-out both;
 }
 .reward-arrival[data-mode="system"] .reward-arrival-glass {
   border-top-color: color-mix(in srgb, var(--reward-gold), transparent 45%);
@@ -84,7 +84,12 @@
 @keyframes reward-notice-in {
   from {
     opacity: 0;
-    transform: translateY(10px) scale(0.99);
+    transform: translateY(14px) scale(0.88);
+  }
+  65% {
+    opacity: 1;
+    transform: translateY(0) scale(1.03);
+    box-shadow: 0 0 26px #e8c08255;
   }
   to {
     opacity: 1;

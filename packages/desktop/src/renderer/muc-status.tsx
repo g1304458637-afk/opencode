@@ -1,6 +1,7 @@
 import { RewardArrivalLayer } from "./reward-arrival"
 import { createRewardMotionController, RewardMotionLayer } from "./reward-motion"
 import { initI18n, t } from "./i18n"
+import { rewardSoundEnabled, setRewardSoundEnabled } from "./reward-sound"
 import { RewardPreview } from "./reward-preview"
 import { isSystemReward } from "../shared/reward-arrival"
 import { resolveBrand } from "@opencode-ai/brand"
@@ -232,7 +233,7 @@ export function MucStatus() {
   const rewardCharge = () => {
     if (motion().active()?.type !== "FULL_RESET") return charge.phase()
     const time = motion().time()
-    return time < 260 ? "awaken" : time < 720 ? "charging" : time < 1050 ? "fullPulse" : "settle"
+    return time < 650 ? "awaken" : time < 1150 ? "charging" : time < 1750 ? "fullPulse" : "settle"
   }
   const remainingText = () => fmtPercent(visualRemaining())
   const remainingLabel = () =>
@@ -467,6 +468,14 @@ export function MucStatus() {
               账户 ↗
             </button>
           </div>
+          <label class="mb-2 flex items-center justify-between text-[10px] text-white/60">
+            {t("reward.fx.sound")}
+            <input
+              type="checkbox"
+              checked={rewardSoundEnabled()}
+              onChange={(event) => setRewardSoundEnabled(event.currentTarget.checked)}
+            />
+          </label>
           <Show when={updateUnavailable()}>
             <p class="text-[10px] text-white/60">更新检查暂不可用</p>
           </Show>

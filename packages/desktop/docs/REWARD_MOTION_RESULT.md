@@ -1,4 +1,6 @@
-# Reward Motion 交付与验收记录
+# Reward Motion V1 历史交付与验收记录
+
+> 本文记录上一轮克制版，视觉方案已被 [Cinematic V2](REWARD_CINEMATIC_RESULT.md) 替代。当前入口、时长、粒子、Motion 和声音以 V2 为准。
 
 日期：2026-09-29。代码基线为实时核对的 `fork/hubu-main`：`1cbfa6bfc63893165194c43779bc1e8300d02f75`，HUBU 2.1.0；工作分支 `feat/reward-motion-system`。
 
