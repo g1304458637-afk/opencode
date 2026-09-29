@@ -135,13 +135,15 @@ export function MucStatus() {
     "idle" | "confirming" | "submitting" | "success" | "failed" | "refreshing"
   >("idle")
   const resetConfirming = () => resetPhase() === "confirming" || resetPhase() === "submitting"
-  const resetBusy = () => ["submitting", "success", "refreshing"].includes(resetPhase())
+  const resetBusy = () =>
+    ["submitting", "success", "refreshing"].includes(resetPhase()) || rewards.active()?.type === "RESET_CARD_USED"
   let disposed = false
   let refreshSequence = 0
   let animationTimer: ReturnType<typeof setTimeout> | undefined
   const [resetError, setResetError] = createSignal("")
+  let pendingReset: { operationId: string; subscriptionId: number; before: MucUsageSnapshot } | undefined
 
-  const refresh = async (confirmedReset = false) => {
+  const refresh = async (redemption?: { operationId: string; subscriptionId: number; before: MucUsageSnapshot }) => {
     const sequence = ++refreshSequence
     setLoading(true)
     try {
@@ -154,7 +156,7 @@ export function MucStatus() {
         return false
       }
       const arrivals = res.usage.rewardArrivals ?? []
-      if (arrivals.length) {
+      if (arrivals.length || redemption) {
         preview?.cancel()
         preview?.dismiss()
       }
@@ -162,15 +164,19 @@ export function MucStatus() {
         (event) => isSystemReward(event) && event.subscriptionId === res.usage.subscriptionStatus?.id,
       )
       const previous = usage()
-      if (rewardedReset) charge.cancel()
-      else charge.observe(previous?.subscriptionStatus, res.usage.subscriptionStatus, confirmedReset)
+      if (rewardedReset || redemption) charge.cancel()
+      else charge.observe(previous?.subscriptionStatus, res.usage.subscriptionStatus)
+      let confirmed = !redemption
       batch(() => {
+        // Concurrent system receipts remain queued; the controller serializes complete scenes.
         rewards.receive(arrivals, previous, res.usage)
+        if (redemption)
+          confirmed = rewards.redeem(redemption.operationId, redemption.subscriptionId, redemption.before, res.usage)
         setUsage(res.usage)
       })
       setFetchedAt(new Date().toISOString())
       setStale(false)
-      return true
+      return confirmed
     } catch {
       if (!disposed && sequence === refreshSequence) {
         charge.cancel()
@@ -217,13 +223,13 @@ export function MucStatus() {
     return windows.sort((a, b) => a.data!.remainingPercent - b.data!.remainingPercent)[0]
   }
   const visualWindow = (index: number) =>
-    preview?.active()?.type === "FULL_RESET"
+    preview?.active() && preview.active()?.type !== "RESET_CARD_GRANTED"
       ? preview.frame()?.quota[index]
       : stale()
         ? null
         : (rewards.quota()?.[index] ?? charge.values()[index] ?? quotaReadings(subscriptionStatus())[index]?.value)
   const visualRemaining = () => {
-    if (preview?.active()?.type === "FULL_RESET")
+    if (preview?.active() && preview.active()?.type !== "RESET_CARD_GRANTED")
       return Math.min(...(preview.frame()?.quota.filter((n): n is number => n !== null) ?? [20]))
     if (stale()) return null
     const readings = quotaReadings(subscriptionStatus()).map((_, index) => visualWindow(index))
@@ -231,13 +237,17 @@ export function MucStatus() {
     return Math.min(...readings.filter((value): value is number => value != null))
   }
   const rewardCharge = () => {
+    if (motion().active()?.type === "RESET_CARD_USED") {
+      const time = motion().time()
+      return time < 800 ? "awaken" : time < 1450 ? "charging" : time < 1750 ? "fullPulse" : "settle"
+    }
     if (motion().active()?.type !== "FULL_RESET") return charge.phase()
     const time = motion().time()
     return time < 650 ? "awaken" : time < 1150 ? "charging" : time < 1750 ? "fullPulse" : "settle"
   }
   const remainingText = () => fmtPercent(visualRemaining())
   const remainingLabel = () =>
-    preview?.active()?.type === "FULL_RESET"
+    preview?.active() && preview.active()?.type !== "RESET_CARD_GRANTED"
       ? t("reward.preview.quota")
       : stale()
         ? "待刷新"
@@ -245,21 +255,24 @@ export function MucStatus() {
           ? (limitingWindow()?.label ?? "额度状态")
           : "未订阅"
 
-  // 重置卡：确认 → API 成功 → 播放 AVAILABLE QUOTA 动画
+  // The receipt and refreshed snapshot authorize presentation; animation never consumes a card.
   const confirmResetCard = async () => {
     if (resetBusy()) return
-    const target = subscriptionStatus()
+    const before = pendingReset?.before ?? usage()
+    const target = before?.subscriptionStatus
     if (!target || target.weeklyUsagePercent === null) {
       setResetPhase("idle")
       return
     }
+    if (!before) return
     setResetPhase("submitting")
     ++refreshSequence
     setResetError("")
     try {
-      const res = await window.api.mucResetCard(target.id)
+      // A confirmed operation awaiting refresh/ack must never spend another card on retry.
+      const res = pendingReset ?? (await window.api.mucResetCard(target.id))
       if (disposed) return
-      if (!res.ok) {
+      if ("ok" in res && !res.ok) {
         setResetError(
           res.error === "reconciliation_required"
             ? "上次重置结果尚未确认。请重新核对；若持续无法确认，请联系站点管理员核查，勿重复用卡。"
@@ -268,13 +281,19 @@ export function MucStatus() {
         setResetPhase("failed")
         return
       }
+      pendingReset = { operationId: res.operationId, subscriptionId: target.id, before }
       setResetPhase("refreshing")
-      const refreshed = await refresh(true)
+      const refreshed = await refresh(pendingReset)
       if (disposed) return
       if (refreshed) {
         await window.api.mucAcknowledgeReset(target.id, res.operationId)
+        pendingReset = undefined
       }
-      if (!refreshed) setResetError("重置已成功，状态刷新失败；请刷新或重试确认结果。")
+      if (!refreshed) {
+        setResetError("重置已成功，状态刷新失败；请刷新或重试确认结果。")
+        setResetPhase("failed")
+        return
+      }
       setResetPhase("success")
       clearTimeout(animationTimer)
       animationTimer = setTimeout(() => {

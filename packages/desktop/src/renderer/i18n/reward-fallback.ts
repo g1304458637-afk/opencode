@@ -2,6 +2,13 @@ import { dict } from "./en"
 
 // Explicit English fallback until the new reward copy receives locale review.
 export const rewardMotionFallback = {
+  "reward.preview.use": dict["reward.preview.use"],
+  "reward.use.label": dict["reward.use.label"],
+  "reward.use.title": dict["reward.use.title"],
+  "reward.use.activate": dict["reward.use.activate"],
+  "reward.use.held": dict["reward.use.held"],
+  "reward.use.skip": dict["reward.use.skip"],
+
   "reward.fx.Low": dict["reward.fx.Low"],
   "reward.fx.Medium": dict["reward.fx.Medium"],
   "reward.fx.High": dict["reward.fx.High"],

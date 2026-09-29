@@ -12,6 +12,7 @@ import {
   rewardFrame,
   rewardMotionTokens,
   rewardSnapshot,
+  resetCardEvent,
   type RewardEvent,
 } from "./reward-motion-state"
 import { t } from "./i18n"
@@ -55,6 +56,8 @@ export function createRewardMotionController() {
     if (!active() && now >= gapUntil) {
       const [next, ...rest] = pending()
       if (!next) return
+      // A new scene owns the stage; an earlier confirmation must not cover it.
+      dismiss()
       setPending(rest)
       start = now
       previousFrame = now
@@ -116,16 +119,42 @@ export function createRewardMotionController() {
       })
     } else if (current) {
       const changed =
-        current.type === "FULL_RESET"
+        current.type !== "RESET_CARD_GRANTED"
           ? current.payload.after.subscriptionId !== snapshot.subscriptionId ||
-            JSON.stringify(current.payload.after.quota) !== JSON.stringify(snapshot.quota)
+            current.payload.after.policy !== snapshot.policy ||
+            JSON.stringify(current.payload.after.quota) !== JSON.stringify(snapshot.quota) ||
+            (current.type === "RESET_CARD_USED" && current.payload.after.cards !== snapshot.cards)
           : current.payload.after.cards !== snapshot.cards
       // Newer authoritative state wins immediately over stale interpolation.
       if (changed) setActive(undefined)
     }
-    setPending((items) => items.map((item) => ({ ...item, payload: { ...item.payload, after: snapshot } })))
+    setPending((items) =>
+      items
+        .filter(
+          (item) =>
+            item.type !== "RESET_CARD_USED" ||
+            (item.payload.after.subscriptionId === snapshot.subscriptionId &&
+              item.payload.after.policy === snapshot.policy &&
+              snapshot.cards !== null &&
+              snapshot.quota.length > 0 &&
+              snapshot.quota.every((n) => n !== null)),
+        )
+        .map((item) => ({ ...item, payload: { ...item.payload, after: snapshot } })),
+    )
     setPending((items) => enqueueRewards(items, incoming, seen))
     wake()
+  }
+  const redeem = (operationId: string, subscriptionId: number, before: MucUsageSnapshot, after: MucUsageSnapshot) => {
+    if (disposed) return false
+    const event = resetCardEvent(operationId, subscriptionId, rewardSnapshot(before), rewardSnapshot(after))
+    if (!event) return false
+    setPending((items) => enqueueRewards(items, [event], seen))
+    wake()
+    return true
+  }
+  const skip = () => {
+    finish()
+    gapUntil = performance.now() + rewardMotionTokens.gap / speed
   }
   onMount(() => {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)")
@@ -141,9 +170,14 @@ export function createRewardMotionController() {
     }
     media.addEventListener("change", motion)
     document.addEventListener("visibilitychange", visibility)
+    const keyboard = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && active()?.type === "RESET_CARD_USED") skip()
+    }
+    document.addEventListener("keydown", keyboard)
     onCleanup(() => {
       media.removeEventListener("change", motion)
       document.removeEventListener("visibilitychange", visibility)
+      document.removeEventListener("keydown", keyboard)
     })
   })
   onCleanup(() => {
@@ -164,6 +198,8 @@ export function createRewardMotionController() {
     lowPower,
     confirmation,
     receive,
+    redeem,
+    skip,
     dismiss,
     cancel,
     playbackSpeed,
@@ -173,13 +209,13 @@ export function createRewardMotionController() {
         setFx((value) => ({ ...value, ...change }))
     },
     quota: () =>
-      active()?.type === "FULL_RESET"
+      active() && active()?.type !== "RESET_CARD_GRANTED"
         ? frame()?.quota
-        : pending().find((event) => event.type === "FULL_RESET")?.payload.before.quota,
+        : pending().find((event) => event.type !== "RESET_CARD_GRANTED")?.payload.before.quota,
     cards: () =>
-      active()?.type === "RESET_CARD_GRANTED"
+      active() && active()?.type !== "FULL_RESET"
         ? frame()?.cards
-        : pending().find((event) => event.type === "RESET_CARD_GRANTED")?.payload.before.cards,
+        : pending().find((event) => event.type !== "FULL_RESET")?.payload.before.cards,
     // Called only by the separate development QA entry, never exposed on window in production.
     setReducedForQA: (value: boolean) => {
       if (import.meta.env.DEV || import.meta.env.VITE_CAMPUS_REWARD_PREVIEW)
@@ -201,12 +237,19 @@ export function RewardMotionLayer(props: { controller: RewardMotionController })
       <Show when={props.controller.active()}>
         {(event) => <RewardScene event={event()} controller={props.controller} />}
       </Show>
+      <Show when={props.controller.active()?.type === "RESET_CARD_USED"}>
+        <button type="button" class="reward-use-skip" onClick={props.controller.skip}>
+          {t("reward.use.skip")}
+        </button>
+      </Show>
     </Portal>
   )
 }
 function RewardScene(props: { event: RewardEvent; controller: RewardMotionController }) {
   const brand = resolveBrand()
   const reset = props.event.type === "FULL_RESET"
+  const used = props.event.type === "RESET_CARD_USED"
+  const restores = reset || used
   let layer!: HTMLDivElement
   let artifact!: HTMLDivElement
   let canvas!: HTMLCanvasElement
@@ -262,6 +305,10 @@ function RewardScene(props: { event: RewardEvent; controller: RewardMotionContro
         "--target-height": destination?.height ?? 40,
         "--flight-x": geometry.dx,
         "--flight-y": geometry.dy,
+        "--source-x": geometry.dx,
+        "--source-y": geometry.dy,
+        "--use-orb-x": geometry.ox - x,
+        "--use-orb-y": geometry.oy - y,
       }).forEach(([key, value]) => layer.style.setProperty(key, `${value}px`))
       if (composerRect && reset) {
         const ack = layer.querySelector<HTMLElement>(".reward-composer-ack")!
@@ -281,12 +328,12 @@ function RewardScene(props: { event: RewardEvent; controller: RewardMotionContro
   )
   createEffect(() => {
     if (!ready() || props.controller.reduced()) return
-    const painter = createRewardPainter(canvas, reset, geometry, { x: geometry.ox, y: geometry.oy })
+    const painter = createRewardPainter(canvas, props.event.type, geometry, { x: geometry.ox, y: geometry.oy })
     createEffect(() => painter.draw(props.controller.time(), props.controller.fx(), props.controller.lowPower()))
     onCleanup(painter.dispose)
   })
   createEffect(() => {
-    if (!ready() || props.controller.reduced()) return
+    if (!ready() || props.controller.reduced() || used) return
     const g = geometry
     const fx = props.controller.fx()
     const scene = reset
@@ -371,8 +418,29 @@ function RewardScene(props: { event: RewardEvent; controller: RewardMotionContro
     })
   })
   createEffect(() => {
+    if (!ready() || !used || props.controller.reduced() || props.controller.fx().impact === 0) return
+    const impact = props.controller.fx().impact
+    const camera = animate(
+      layer,
+      {
+        transform: [
+          "translate(0px,0px)",
+          `translate(${-impact}px,1px)`,
+          `translate(${impact * 0.7}px,-1px)`,
+          "translate(0px,0px)",
+        ],
+      },
+      { delay: 0.8, duration: 0.12, ease: "linear" },
+    )
+    camera.pause()
+    createEffect(() => {
+      camera.time = props.controller.time() / 1000
+    })
+    onCleanup(() => camera.cancel())
+  })
+  createEffect(() => {
     if (!ready() || !rewardSoundEnabled() || props.controller.reduced()) return
-    const stop = playRewardSound(reset, props.controller.playbackSpeed())
+    const stop = playRewardSound(props.event.type, props.controller.playbackSpeed())
     onCleanup(stop)
   })
   const percent = (n: number | null) => (n === null ? "—" : `${Math.floor(n)}%`)
@@ -400,16 +468,18 @@ function RewardScene(props: { event: RewardEvent; controller: RewardMotionContro
       <div class="reward-window-rim" />
       <div class="reward-flash" />
       <canvas ref={canvas} class="reward-fx-canvas" />
-      <Show when={reset}>
-        <div class="reward-core" />
-        <div class="reward-composer-ack" />
-        <span class="reward-ready">{t("reward.fx.ready")}</span>
+      <Show when={restores}>
+        <Show when={reset}>
+          <div class="reward-core" />
+          <div class="reward-composer-ack" />
+          <span class="reward-ready">{t("reward.fx.ready")}</span>
+        </Show>
         <div class="reward-hero">
-          <span class="reward-technical">{t("reward.fx.fullReset")}</span>
+          <span class="reward-technical">{t(used ? "reward.use.label" : "reward.fx.fullReset")}</span>
           <strong class="reward-hero-value">
             {percent(Math.min(...(props.controller.frame()?.quota ?? []).filter((n): n is number => n !== null)))}
           </strong>
-          <h2>{t("reward.motion.restored")}</h2>
+          <h2>{t(used ? "reward.use.title" : "reward.motion.restored")}</h2>
           <div class="reward-hero-windows">
             <For each={props.controller.frame()?.quota}>
               {(value, i) => (
@@ -429,9 +499,12 @@ function RewardScene(props: { event: RewardEvent; controller: RewardMotionContro
               )}
             </For>
           </div>
+          <Show when={used}>
+            <p class="reward-use-balance">{t("reward.use.held", { count: props.event.payload.after.cards ?? "—" })}</p>
+          </Show>
         </div>
       </Show>
-      <Show when={!reset}>
+      <Show when={!restores}>
         <div class="reward-portal" />
         <div class="reward-orbit" />
       </Show>
@@ -439,7 +512,7 @@ function RewardScene(props: { event: RewardEvent; controller: RewardMotionContro
         <div ref={artifact} class="reward-artifact">
           <header>
             <span>{brand.shortName}</span>
-            <span class="reward-technical">{t("reward.fx.rarity")}</span>
+            <span class="reward-technical">{t(used ? "reward.use.label" : "reward.fx.rarity")}</span>
           </header>
           <svg class="reward-restore-glyph" viewBox="0 0 80 80" fill="none">
             <path d="M59 25a26 26 0 1 0 7 26M58 12l3 16-16 1" stroke="currentColor" stroke-width="1.6" />
@@ -455,10 +528,16 @@ function RewardScene(props: { event: RewardEvent; controller: RewardMotionContro
           <div class="reward-card-grain" />
         </div>
         <span class="reward-artifact-caption">
-          {t("reward.motion.cardTitle", { count: props.event.payload.arrival.quantity })}
+          {used
+            ? t("reward.use.activate")
+            : t("reward.motion.cardTitle", { count: props.event.payload.arrival.quantity })}
         </span>
       </div>
-      <Show when={!reset && anchored()}>
+      <Show when={used}>
+        <span class="reward-use-caption">{t("reward.use.activate")}</span>
+        <span class="reward-use-seal" />
+      </Show>
+      <Show when={!restores && anchored()}>
         <div class="reward-landing" />
         <div class="reward-inventory-badge">
           +{props.event.payload.arrival.quantity} · {t("reward.motion.cardName")} ×

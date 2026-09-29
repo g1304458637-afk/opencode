@@ -15,7 +15,7 @@ export function setRewardSoundEnabled(value: boolean) {
 }
 
 /** Short synthesized rise, low impact and crystal shimmer; no downloads or permanent audio loop. */
-export function playRewardSound(reset: boolean, speed: number) {
+export function playRewardSound(kind: "FULL_RESET" | "RESET_CARD_GRANTED" | "RESET_CARD_USED", speed: number) {
   if (!rewardSoundEnabled()) return () => {}
   const context = new AudioContext()
   const master = context.createGain()
@@ -57,6 +57,16 @@ export function playRewardSound(reset: boolean, speed: number) {
     nodes.push(node)
     gains.push(gain)
     return node
+  }
+  const reset = kind === "FULL_RESET"
+  if (kind === "RESET_CARD_USED") {
+    tone(0.02, 0.15, 520, 280, 0.14, "triangle")
+    tone(0.24, 0.54, 55, 360, 0.48, "sine")
+    tone(0.8, 0.36, 100, 32, 0.9, "sine")
+    tone(0.81, 0.3, 1800, 900, 0.1, "triangle")
+    tone(1.45, 0.4, 1800, 2400, 0.06, "sine").onended = stop
+    void context.resume().catch(stop)
+    return stop
   }
   tone(0.06, 0.8, 48, 190, 0.5, "sine")
   tone(0.22, 0.7, 140, 720, 0.13, "triangle")

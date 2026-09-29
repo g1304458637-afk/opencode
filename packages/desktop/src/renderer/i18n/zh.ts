@@ -1,4 +1,11 @@
 export const dict = {
+  "reward.preview.use": "模拟使用重置卡",
+  "reward.use.label": "RESET CARD ACTIVATED",
+  "reward.use.title": "重置卡已生效",
+  "reward.use.activate": "重置卡启动",
+  "reward.use.held": "剩余重置卡 ×{{count}}",
+  "reward.use.skip": "跳过演出",
+
   "reward.fx.Low": "Low",
   "reward.fx.Medium": "Medium",
   "reward.fx.High": "High",

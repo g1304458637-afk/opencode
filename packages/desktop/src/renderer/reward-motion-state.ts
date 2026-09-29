@@ -3,14 +3,17 @@ import type { MucUsageSnapshot } from "../preload/types"
 import { quotaReadings } from "./quota-energy-state"
 
 export const rewardMotionTokens = {
-  duration: { FULL_RESET: 2600, RESET_CARD_GRANTED: 2300 },
+  duration: { FULL_RESET: 2600, RESET_CARD_GRANTED: 2300, RESET_CARD_USED: 2100 },
   gap: 200,
   toast: 6000,
   restore: [650, 1150],
   count: [1950, 2130],
+  useRestore: [800, 1450],
+  useCount: [800, 900],
   tiers: {
     FULL_RESET: { tier: "S+", priority: 100 },
     RESET_CARD_GRANTED: { tier: "S", priority: 80 },
+    RESET_CARD_USED: { tier: "S", priority: 90 },
     STANDARD: { tier: "B", priority: 20 },
   },
 } as const
@@ -20,13 +23,54 @@ export type RewardSnapshot = {
   quota: (number | null)[]
   cards: number | null
 }
+export type ResetCardUseReceipt = {
+  id: string
+  type: "reset_card_used"
+  quantity: number
+  occurredAt: string
+  subscriptionId: number
+}
 export type RewardEvent = {
   id: string
   ids: string[]
-  type: "FULL_RESET" | "RESET_CARD_GRANTED"
+  type: "FULL_RESET" | "RESET_CARD_GRANTED" | "RESET_CARD_USED"
   createdAt: string
-  source: "usage"
-  payload: { before: RewardSnapshot; after: RewardSnapshot; arrival: RewardArrival }
+  source: "usage" | "redemption"
+  payload: { before: RewardSnapshot; after: RewardSnapshot; arrival: RewardArrival | ResetCardUseReceipt }
+}
+/** Called only with a successful operation receipt and the subsequent authoritative usage snapshot. */
+export function resetCardEvent(
+  operationId: string,
+  subscriptionId: number,
+  before: RewardSnapshot,
+  after: RewardSnapshot,
+): RewardEvent | undefined {
+  if (
+    !operationId ||
+    before.subscriptionId !== subscriptionId ||
+    after.subscriptionId !== subscriptionId ||
+    before.policy !== after.policy ||
+    !after.quota.length ||
+    after.quota.some((n) => n === null || !Number.isFinite(n) || n < 0 || n > 100) ||
+    after.cards === null ||
+    !Number.isSafeInteger(after.cards) ||
+    after.cards < 0
+  )
+    return
+  const id = `used:${subscriptionId}:${operationId}`
+  const occurredAt = new Date().toISOString()
+  return {
+    id,
+    ids: [id],
+    type: "RESET_CARD_USED",
+    createdAt: occurredAt,
+    source: "redemption",
+    payload: {
+      before,
+      after,
+      arrival: { id, type: "reset_card_used", quantity: 1, occurredAt, subscriptionId },
+    },
+  }
 }
 export function rewardSnapshot(usage: MucUsageSnapshot | null): RewardSnapshot {
   return {
@@ -66,7 +110,10 @@ export function enqueueRewards(queue: RewardEvent[], incoming: RewardEvent[], se
     event.ids.forEach((id) => seen.add(id))
     while (seen.size > 4096) seen.delete(seen.values().next().value!)
     const index = result.findIndex(
-      (item) => item.type === event.type && item.payload.after.subscriptionId === event.payload.after.subscriptionId,
+      (item) =>
+        event.type !== "RESET_CARD_USED" &&
+        item.type === event.type &&
+        item.payload.after.subscriptionId === event.payload.after.subscriptionId,
     )
     if (index < 0) {
       result.push(event)
@@ -96,33 +143,43 @@ export function rewardProgress(time: number, range: readonly [number, number], r
 }
 export function rewardFrame(event: RewardEvent, time: number, reduced = false) {
   const reset = event.type === "FULL_RESET"
-  const phases = reset
+  const used = event.type === "RESET_CARD_USED"
+  const phases = used
     ? ([
-        [0, "prepare"],
-        [80, "energy_build"],
-        [650, "restore"],
-        [1150, "impact"],
-        [1750, "settle"],
-        [2400, "confirm"],
+        [0, "draw"],
+        [250, "charge"],
+        [650, "activate"],
+        [800, "restore"],
+        [1450, "settle"],
+        [1950, "confirm"],
       ] as const)
-    : ([
-        [0, "reveal"],
-        [160, "card_form"],
-        [300, "card_flip"],
-        [800, "highlight"],
-        [1100, "celebrate"],
-        [1450, "transfer"],
-        [1950, "land"],
-        [2130, "count_update"],
-        [2200, "confirm"],
-      ] as const)
+    : reset
+      ? ([
+          [0, "prepare"],
+          [80, "energy_build"],
+          [650, "restore"],
+          [1150, "impact"],
+          [1750, "settle"],
+          [2400, "confirm"],
+        ] as const)
+      : ([
+          [0, "reveal"],
+          [160, "card_form"],
+          [300, "card_flip"],
+          [800, "highlight"],
+          [1100, "celebrate"],
+          [1450, "transfer"],
+          [1950, "land"],
+          [2130, "count_update"],
+          [2200, "confirm"],
+        ] as const)
   const phase = [...phases].reverse().find(([at]) => time >= at)?.[1] ?? phases[0][1]
-  const progress = rewardProgress(time, rewardMotionTokens.restore, reduced)
+  const progress = rewardProgress(time, used ? rewardMotionTokens.useRestore : rewardMotionTokens.restore, reduced)
   return {
     phase,
     quota: event.payload.after.quota.map((value, i) => {
       const old = event.payload.before.quota[i]
-      return !reset || value === null || old == null
+      return (!reset && !used) || value === null || old == null
         ? value
         : Math.max(0, Math.min(100, old + (value - old) * progress))
     }),
@@ -132,7 +189,7 @@ export function rewardFrame(event: RewardEvent, time: number, reduced = false) {
         : Math.round(
             event.payload.before.cards +
               ((event.payload.after.cards ?? 0) - event.payload.before.cards) *
-                rewardProgress(time, rewardMotionTokens.count, reduced),
+                rewardProgress(time, used ? rewardMotionTokens.useCount : rewardMotionTokens.count, reduced),
           ),
   }
 }

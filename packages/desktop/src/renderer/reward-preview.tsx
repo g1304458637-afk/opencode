@@ -68,6 +68,13 @@ export function RewardPreview(props: { controller: RewardMotionController; busy:
     props.controller.dismiss()
     setOpen(false)
   }
+  const useCard = () => {
+    if (props.busy) return
+    props.onStart()
+    props.controller.cancel()
+    props.controller.dismiss()
+    props.controller.redeem(`preview:${crypto.randomUUID()}`, -1, snapshot(20, 3), snapshot(100, 2))
+  }
   return (
     <Show when={ready()}>
       <RewardMotionLayer controller={props.controller} />
@@ -94,6 +101,9 @@ export function RewardPreview(props: { controller: RewardMotionController; busy:
             </button>
             <button type="button" disabled={props.busy} onClick={() => play(true)}>
               {t("reward.preview.reset")}
+            </button>
+            <button type="button" class="reward-preview-use" disabled={props.busy} onClick={useCard}>
+              {t("reward.preview.use")}
             </button>
           </div>
           <fieldset class="reward-preview-controls" disabled={!!props.controller.active()}>

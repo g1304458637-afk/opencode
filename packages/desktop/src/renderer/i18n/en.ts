@@ -1,4 +1,11 @@
 export const dict = {
+  "reward.preview.use": "Simulate using a reset card",
+  "reward.use.label": "RESET CARD ACTIVATED",
+  "reward.use.title": "Reset card activated",
+  "reward.use.activate": "Activating reset card",
+  "reward.use.held": "Remaining reset cards ×{{count}}",
+  "reward.use.skip": "Skip animation",
+
   "reward.fx.Low": "Low",
   "reward.fx.Medium": "Medium",
   "reward.fx.High": "High",

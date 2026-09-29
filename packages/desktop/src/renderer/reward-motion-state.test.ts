@@ -1,5 +1,12 @@
 import { describe, expect, test } from "bun:test"
-import { enqueueRewards, rewardEvents, rewardFrame, type RewardSnapshot } from "./reward-motion-state"
+import {
+  enqueueRewards,
+  rewardEvents,
+  rewardFrame,
+  resetCardEvent,
+  rewardMotionTokens,
+  type RewardSnapshot,
+} from "./reward-motion-state"
 const before: RewardSnapshot = { subscriptionId: 1, policy: "dual_window_v1", quota: [20, 41], cards: 0 }
 const after: RewardSnapshot = { ...before, quota: [100, 100], cards: 1 }
 const reset = {
@@ -56,5 +63,56 @@ describe("reward presentation contract", () => {
     const [event] = rewardEvents([reset], before, after)
     expect(rewardFrame(event, 700, true).quota).toEqual(before.quota)
     expect(rewardFrame(event, 950, true).quota).toEqual(after.quota)
+  })
+})
+
+describe("confirmed reset-card redemption", () => {
+  const old = { ...before, cards: 3 }
+  const restored = { ...after, quota: [80, 90], cards: 2 }
+  test("card consumption and both quota windows follow the confirmed snapshot", () => {
+    const event = resetCardEvent("operation-1", 1, old, restored)!
+    expect(event.type).toBe("RESET_CARD_USED")
+    expect(event.source).toBe("redemption")
+    expect(rewardFrame(event, 0)).toEqual({ phase: "draw", quota: old.quota, cards: 3 })
+    expect(rewardFrame(event, 799).quota).toEqual(old.quota)
+    expect(rewardFrame(event, 1000).quota[0]).toBeGreaterThan(20)
+    expect(rewardFrame(event, 1000).quota[0]).toBeLessThan(80)
+    expect(rewardFrame(event, 900).cards).toBe(2)
+    expect(rewardFrame(event, 1450)).toEqual({ phase: "settle", quota: [80, 90], cards: 2 })
+    expect(rewardMotionTokens.duration.RESET_CARD_USED / 0.5).toBe(4200)
+  })
+  test("unknown or changed subscription state cannot authorize an effect", () => {
+    for (const value of [
+      { ...restored, subscriptionId: 2 },
+      { ...restored, policy: "legacy" },
+      { ...restored, quota: [] },
+      { ...restored, quota: [null, 90] },
+      { ...restored, quota: [NaN, 90] },
+      { ...restored, cards: null },
+      { ...restored, cards: -1 },
+    ])
+      expect(resetCardEvent("operation", 1, old, value)).toBeUndefined()
+    expect(resetCardEvent("", 1, old, restored)).toBeUndefined()
+  })
+  test("same operation is deduplicated, distinct uses retain separate receipts", () => {
+    const seen = new Set<string>()
+    const first = resetCardEvent("operation-1", 1, old, restored)!
+    const second = resetCardEvent("operation-2", 1, restored, { ...restored, cards: 1 })!
+    const queue = enqueueRewards([], [first, first, second], seen)
+    expect(queue).toHaveLength(2)
+    expect(queue.map((event) => event.payload.arrival.quantity)).toEqual([1, 1])
+    expect(enqueueRewards(queue, [first, second], seen)).toEqual(queue)
+  })
+  test("concurrent grants and already-full quota never fabricate a decrement or refill", () => {
+    const full = { ...old, quota: [100, 100] }
+    const event = resetCardEvent("operation-1", 1, full, { ...full, cards: 5 })!
+    expect(rewardFrame(event, 2100).cards).toBe(5)
+    expect(rewardFrame(event, 1000).quota).toEqual([100, 100])
+  })
+  test("reduced motion snaps to server state instead of counting", () => {
+    const event = resetCardEvent("operation-1", 1, old, restored)!
+    expect(rewardFrame(event, 800, true).quota).toEqual(old.quota)
+    expect(rewardFrame(event, 1200, true).quota).toEqual(restored.quota)
+    expect(rewardFrame(event, 900, true).cards).toBe(2)
   })
 })

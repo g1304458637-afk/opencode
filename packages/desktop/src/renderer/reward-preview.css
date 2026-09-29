@@ -51,8 +51,14 @@
   font-size: 18px;
 }
 .reward-preview-actions {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 8px;
+}
+.reward-preview-actions .reward-preview-use {
+  grid-column: 1 / -1;
+  background: #bda66b20;
+  color: #ffe2a6;
 }
 .reward-preview-actions button {
   flex: 1;

@@ -20,10 +20,12 @@ export const defaultRewardFx: RewardFxOptions = { intensity: "MAX", ...rewardFxP
 /** One bounded canvas, analytic particles, cached glow sprites; no per-particle signals or RAF. */
 export function createRewardPainter(
   canvas: HTMLCanvasElement,
-  reset: boolean,
+  kind: "FULL_RESET" | "RESET_CARD_GRANTED" | "RESET_CARD_USED",
   center: { x: number; y: number; dx: number; dy: number; ax: number; ay: number },
   orb: { x: number; y: number },
 ) {
+  const reset = kind === "FULL_RESET"
+  const used = kind === "RESET_CARD_USED"
   const width = innerWidth,
     height = innerHeight
   const dpr = Math.min(devicePixelRatio || 1, 1.25, 1800 / width)
@@ -70,6 +72,87 @@ export function createRewardPainter(
   const draw = (time: number, fx: RewardFxOptions, low: boolean) => {
     context.clearRect(0, 0, width, height)
     context.globalCompositeOperation = "lighter"
+    if (used) {
+      const count = Math.floor(Math.min(fx.particles, 96) * (low ? 0.5 : 1))
+      canvas.dataset.particles = String(count)
+      const sourceX = center.x + center.dx
+      const sourceY = center.y + center.dy
+      const approach = clamp(time / 250)
+      const charge = clamp((time - 250) / 400)
+      const activation = clamp((time - 690) / 110)
+      const restore = clamp((time - 800) / 650)
+      const settle = clamp((time - 1450) / 500)
+      if (time < 650) {
+        const cardX = sourceX + (center.x - sourceX) * (1 - (1 - approach) ** 3)
+        const cardY = sourceY + (center.y - sourceY) * (1 - (1 - approach) ** 3)
+        bloom(cardX, cardY, (170 + charge * 160) * fx.bloom, 0.22 + charge * 0.3)
+        for (let i = 0; i < count; i++) {
+          const p = particles[i]
+          const radius = 36 + Math.abs(p.seed) * 170
+          const inward = (charge + (i % 9) / 9) % 1
+          const distance = radius * (1 - inward) ** 1.4
+          const angle = p.angle + charge * 0.34
+          const x = cardX + Math.cos(angle) * distance
+          const y = cardY + Math.sin(angle) * distance * 0.64
+          context.globalAlpha = clamp((0.2 + charge * 0.7) * (1 - inward * 0.55))
+          context.strokeStyle = p.color
+          context.lineWidth = i % 6 === 0 ? 1.7 : 0.8
+          context.beginPath()
+          context.moveTo(x, y)
+          context.lineTo(x + Math.cos(angle) * 10, y + Math.sin(angle) * 6)
+          context.stroke()
+          if (i % 8 === 0) bloom(x, y, 12, context.globalAlpha * 0.6)
+        }
+      }
+      if (time >= 650 && time < 900) {
+        // Hold the fully charged card for 40 internal ms before the activation beat.
+        const ignition = time < 690 ? 0 : Math.sin(activation * Math.PI * 0.5)
+        bloom(center.x, center.y, (260 + ignition * 430) * fx.bloom, 0.3 + ignition * 0.48)
+        if (time >= 760) {
+          const age = (time - 760) / 140
+          const rw = 110 + age * Math.min(width * 1.35, 1500)
+          const rh = 70 + age * Math.min(height * 1.05, 900)
+          context.globalAlpha = clamp((1 - age) * fx.shockwave * 0.72)
+          context.drawImage(ringSprite, center.x - rw / 2, center.y - rh / 2, rw, rh)
+        }
+      }
+      if (time >= 800 && time < 1450) {
+        const eased = restore * restore * (3 - 2 * restore)
+        const headX = center.x + (orb.x - center.x) * eased
+        const headY = center.y + (orb.y - center.y) * eased
+        bloom(headX, headY, (100 + 110 * (1 - restore)) * fx.bloom, 0.55 * (1 - restore * 0.35))
+        for (let i = 0; i < count; i++) {
+          const p = particles[i]
+          const delay = (i % 12) / 24
+          const progress = clamp((restore - delay) / (1 - delay))
+          if (!progress) continue
+          const bend = Math.sin(progress * Math.PI) * (24 + Math.abs(p.seed) * 42) * (i % 2 ? 1 : -1)
+          const x = center.x + (orb.x - center.x) * progress + Math.cos(p.angle) * 20 * (1 - progress)
+          const y = center.y + (orb.y - center.y) * progress + bend + Math.sin(p.angle) * 14 * (1 - progress)
+          context.globalAlpha = clamp(Math.sin(progress * Math.PI) * 0.75)
+          context.strokeStyle = p.color
+          context.lineWidth = p.radius * 0.65
+          context.beginPath()
+          context.moveTo(x, y)
+          context.lineTo(x - (orb.x - center.x) * 0.025, y - (orb.y - center.y) * 0.025)
+          context.stroke()
+          if (i % 9 === 0) bloom(x, y, 16, context.globalAlpha * 0.55)
+        }
+        bloom(orb.x, orb.y, 250 * fx.bloom, restore * 0.58)
+      }
+      if (time >= 1450 && time < 2100) {
+        const afterglow = time < 1950 ? 1 - settle * 0.62 : ((2100 - time) / 150) * 0.38
+        bloom(orb.x, orb.y, 180 * fx.bloom, afterglow * 0.42)
+        if (time < 1950) {
+          const size = 85 + settle * 175
+          context.globalAlpha = (1 - settle) * 0.38
+          context.drawImage(ringSprite, orb.x - size / 2, orb.y - size / 2, size, size)
+        }
+      }
+      context.globalAlpha = 1
+      context.globalCompositeOperation = "source-over"
+      return
+    }
     const count = Math.floor(
       Math.min(reset ? fx.particles : Math.round(fx.particles * 0.75), reset ? 160 : 120) * (low ? 0.5 : 1),
     )
