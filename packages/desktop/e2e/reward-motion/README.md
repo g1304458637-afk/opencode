@@ -1,5 +1,7 @@
 # Reward Motion QA
 
+> 2026-09-29 用户截图确认：默认改为 **MAX / 0.5×**，粒子160、溢光1.9、冲击波1.6、画面冲击4；音效默认关闭。实际主动画时长为全额重置5.2秒、重置卡4.6秒。下方 High / 1× 的数值和验证为此前版本记录，时间轴内部关键帧单位保持不变。
+
 Current cinematic V2: [research](../../docs/REWARD_CINEMATIC_RESEARCH.md), [results](../../docs/REWARD_CINEMATIC_RESULT.md). Per the latest user instruction, keep the interactive local client and do not record videos. `verify.mjs` below is a historical V1 recording script; do not run it for this round.
 
 Run from `packages/desktop`, with repository dependencies installed:

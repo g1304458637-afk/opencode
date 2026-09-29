@@ -13,7 +13,9 @@ export type RewardFxOptions = {
   shockwave: number
   impact: number
 }
-export const defaultRewardFx: RewardFxOptions = { intensity: "High", ...rewardFxPresets.High }
+// Approved local review preset: MAX at half speed.
+export const defaultRewardPlaybackSpeed = 0.5
+export const defaultRewardFx: RewardFxOptions = { intensity: "MAX", ...rewardFxPresets.MAX }
 
 /** One bounded canvas, analytic particles, cached glow sprites; no per-particle signals or RAF. */
 export function createRewardPainter(
