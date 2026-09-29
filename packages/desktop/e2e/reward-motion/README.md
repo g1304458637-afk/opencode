@@ -41,6 +41,8 @@ Native Electron checks cover reward queue, persisted dedupe after reload, DOM de
 
 ## Clickable preview in the complete local desktop client
 
+When launched with `CAMPUS_E2E_PREVIEW_ONLY=1`, the complete client's account is explicitly named **本地预览** and connects only to the local synthetic gateway. Using a card through the quota panel resets **both windows to 100%** and consumes one synthetic card; those values remain after the animation and subsequent refreshes. The regular automated regression intentionally retains partial post-reset values to verify that production UI follows server data instead of inventing 100%. The bottom-right animation-only buttons do not change the account and return to its values after playback.
+
 To show the two replay buttons in the actual client (not the browser QA shell):
 
 ```sh
