@@ -7,6 +7,7 @@ import { join, resolve } from "node:path"
 
 const brand = process.env.OPENCODE_CHANNEL
 if (brand !== "muc" && brand !== "hubu") throw new Error("Set OPENCODE_CHANNEL=muc|hubu")
+const previewOnly = process.env.CAMPUS_E2E_PREVIEW_ONLY === "1"
 const profile = process.env.CAMPUS_E2E_PROFILE || mkdtempSync(join(tmpdir(), `campus-${brand}-e2e-`))
 const brandProfile = join(profile, brand === "muc" ? "cn.edu.muc.harness" : "cn.edu.hubu.harness")
 mkdirSync(brandProfile, { recursive: true })
@@ -44,7 +45,7 @@ function usage() {
   if (state.legacy) return { mode: "unrestricted", planName: "钱包余额", balance: 8.5, remaining: 8.5 }
   return {
     mode: "unrestricted",
-    planName: state.subscription ? "Pro" : "钱包余额",
+    planName: state.subscription ? (previewOnly ? "本地预览" : "Pro") : "钱包余额",
     wallet: { balance: state.wallet, canonical_currency: "USD" },
     reset_cards: { available: state.cards },
     reward_arrivals: { account_id: "123", events: rewardEvents },
@@ -53,7 +54,7 @@ function usage() {
           subscription_status: {
             id: 123,
             group_id: 13,
-            display_name: "Pro",
+            display_name: previewOnly ? "本地预览" : "Pro",
             quota_policy: "dual_window_v1",
             short_window: {
               remaining_percent: 100 - (state.percent ?? 0),
@@ -170,7 +171,13 @@ const fixture = await serveFixture({
       if (receipts.has(key)) return Response.json(receipts.get(key))
       if (!state.cards) return Response.json({ reason: "NO_CARD" }, { status: 409 })
       state.cards--
-      state.percent = 10
+      // Interactive use models a normal reset of both windows. Regression tests
+      // deliberately retain partial values to catch fabricated full-quota UI.
+      state.percent = previewOnly ? 0 : 10
+      if (previewOnly) {
+        state.week = 100
+        state.epoch = new Date().toISOString()
+      }
       const receipt = { data: { subscription_id: 123, weekly_period_ends_at: "2099-01-01T00:00:00Z" } }
       receipts.set(key, receipt)
       if (state.loseReset) {
@@ -240,7 +247,7 @@ async function refresh(page: Awaited<ReturnType<typeof launch>>) {
 }
 try {
   let page = await launch()
-  if (process.env.CAMPUS_E2E_PREVIEW_ONLY === "1") {
+  if (previewOnly) {
     // Keep the actual desktop client open against the same loopback-only fixture.
     // This profile and its credentials are synthetic; no production account is used.
     expect(await page.evaluate(() => window.api.mucConnect("local_preview_code_123456789"))).toMatchObject({ ok: true })
