@@ -2,7 +2,7 @@ name: Campus RC
 
 on:
   push:
-    branches: [muc-main, hubu-main, feat/dual-window-quota, feat/hubu-dual-window-quota, feat/reward-motion-system]
+    branches: [muc-main, hubu-main, feat/dual-window-quota, feat/hubu-dual-window-quota, feat/reward-motion-system, release/muc-reward-2.1.1]
   pull_request:
     branches: [muc-main, hubu-main]
   workflow_dispatch:
@@ -42,7 +42,7 @@ jobs:
             candidate="${GITHUB_BASE_REF}"
           fi
           case "${candidate}" in
-            muc-main|hubu-main|feat/dual-window-quota|feat/hubu-dual-window-quota|feat/reward-motion-system) ;;
+            muc-main|hubu-main|feat/dual-window-quota|feat/hubu-dual-window-quota|feat/reward-motion-system|release/muc-reward-2.1.1) ;;
             *) echo "Campus RC requires a canonical branch or an explicit release candidate" >&2; exit 1 ;;
           esac
 

@@ -2,7 +2,7 @@ name: typecheck
 
 on:
   push:
-    branches: [dev, muc-main, hubu-main, feat/dual-window-quota, feat/hubu-dual-window-quota, feat/reward-motion-system]
+    branches: [dev, muc-main, hubu-main, feat/dual-window-quota, feat/hubu-dual-window-quota, feat/reward-motion-system, release/muc-reward-2.1.1]
   pull_request:
     branches: [muc-main, hubu-main]
   workflow_dispatch:

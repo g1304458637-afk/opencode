@@ -1,4 +1,7 @@
+import { rewardMotionFallback } from "./reward-fallback"
+
 export const dict = {
+  ...rewardMotionFallback,
   "reward.card.one.title": "You received a reset card",
   "reward.card.one.body": "Your reset card is ready. Use it whenever you need to reset your quota.",
   "reward.card.many.title": "You received {{count}} reset cards",
