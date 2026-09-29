@@ -205,6 +205,7 @@ function App() {
             速度
             <select
               aria-label="speed"
+              value="0.5"
               onChange={(e) =>
                 window.dispatchEvent(new CustomEvent("reward-qa-speed", { detail: +e.currentTarget.value }))
               }

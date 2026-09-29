@@ -1,6 +1,6 @@
 import { createSignal, createEffect, onCleanup, onMount, Show, For } from "solid-js"
 import { animate } from "@opencode-ai/ui/motion-timeline"
-import { createRewardPainter, defaultRewardFx, type RewardFxOptions } from "./reward-fx"
+import { createRewardPainter, defaultRewardFx, defaultRewardPlaybackSpeed, type RewardFxOptions } from "./reward-fx"
 import { playRewardSound, rewardSoundEnabled } from "./reward-sound"
 import { Portal } from "solid-js/web"
 import { resolveBrand } from "@opencode-ai/brand"
@@ -34,8 +34,8 @@ export function createRewardMotionController() {
   let slowFrames = 0
   let disposed = false
   let toastTimer: ReturnType<typeof setTimeout> | undefined
-  let speed = 1
-  const [playbackSpeed, setPlaybackSpeed] = createSignal(1)
+  let speed: number = defaultRewardPlaybackSpeed
+  const [playbackSpeed, setPlaybackSpeed] = createSignal<number>(defaultRewardPlaybackSpeed)
   const dismiss = () => {
     clearTimeout(toastTimer)
     toastTimer = undefined

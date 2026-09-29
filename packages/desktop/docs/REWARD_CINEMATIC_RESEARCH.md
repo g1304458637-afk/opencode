@@ -1,5 +1,7 @@
 # Cinematic Reward V2 — source audit and reference decisions
 
+> 2026-09-29 用户截图确认：默认改为 **MAX / 0.5×**，粒子160、溢光1.9、冲击波1.6、画面冲击4；音效默认关闭。实际主动画时长为全额重置5.2秒、重置卡4.6秒。下方 High / 1× 的数值和验证为此前版本记录，时间轴内部关键帧单位保持不变。
+
 2026-09-29. This brief supersedes the restrained visual direction in `REWARD_MOTION_RESEARCH.md`. Business receipts, persistence, queue priority ordering, authoritative snapshots and account APIs remain the existing implementation. User's latest instruction keeps the local interactive client and explicitly drops video recording for this round.
 
 ## What changed in the audit
