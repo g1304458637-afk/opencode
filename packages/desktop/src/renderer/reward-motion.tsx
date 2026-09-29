@@ -35,7 +35,7 @@ export function createRewardMotionController() {
   let disposed = false
   let toastTimer: ReturnType<typeof setTimeout> | undefined
   let speed: number = defaultRewardPlaybackSpeed
-  const [playbackSpeed, setPlaybackSpeed] = createSignal<number>(defaultRewardPlaybackSpeed)
+  const [playbackSpeed, setPlaybackSpeed] = createSignal(defaultRewardPlaybackSpeed)
   const dismiss = () => {
     clearTimeout(toastTimer)
     toastTimer = undefined
