@@ -3,10 +3,12 @@ import { Portal } from "solid-js/web"
 import { resolveBrand } from "@opencode-ai/brand"
 import { isSystemReward, type RewardArrival } from "../shared/reward-arrival"
 import type { RewardMotionController } from "./reward-motion"
+import type { ResetCardUseReceipt } from "./reward-motion-state"
 import { t } from "./i18n"
 import "./reward-arrival.css"
 
-export function rewardCopy(event: RewardArrival) {
+export function rewardCopy(event: RewardArrival | ResetCardUseReceipt) {
+  if (event.type === "reset_card_used") return { title: t("reward.use.title"), body: t("reward.motion.resetBody") }
   if (isSystemReward(event)) return { title: t("reward.motion.restored"), body: t("reward.motion.resetBody") }
   return { title: t("reward.motion.cardTitle", { count: event.quantity }), body: t("reward.motion.cardBody") }
 }
@@ -28,11 +30,17 @@ export function RewardArrivalLayer(props: { controller: RewardMotionController; 
               </span>
               <div class="reward-arrival-copy" role="status" aria-live="polite" aria-atomic="true">
                 <span class="reward-eyebrow" aria-hidden="true">
-                  {t(event.type === "FULL_RESET" ? "reward.system.label" : "reward.card.label")}
+                  {t(
+                    event.type === "RESET_CARD_USED"
+                      ? "reward.use.label"
+                      : event.type === "FULL_RESET"
+                        ? "reward.system.label"
+                        : "reward.card.label",
+                  )}
                 </span>
                 <strong>{rewardCopy(event.payload.arrival).title}</strong>
                 <p>{rewardCopy(event.payload.arrival).body}</p>
-                <Show when={event.type === "RESET_CARD_GRANTED"}>
+                <Show when={event.type !== "FULL_RESET"}>
                   <p>{t("reward.motion.held", { count: event.payload.after.cards ?? "—" })}</p>
                 </Show>
               </div>
@@ -45,7 +53,7 @@ export function RewardArrivalLayer(props: { controller: RewardMotionController; 
                 ×
               </button>
               <div class="reward-footer">
-                <span>{t(event.type === "FULL_RESET" ? "reward.status.full" : "reward.status.received")}</span>
+                <span>{t(event.type === "RESET_CARD_GRANTED" ? "reward.status.received" : "reward.status.full")}</span>
                 <button type="button" onClick={props.onDetails}>
                   {t("reward.action.details")} ↗
                 </button>

@@ -66,7 +66,7 @@ Object.defineProperty(window, "api", {
       snapshot.resetCardsAvailable--
       snapshot.subscriptionStatus!.shortWindow = windowQuota(100)
       snapshot.subscriptionStatus!.weeklyWindow = windowQuota(100)
-      return { ok: true }
+      return { ok: true, operationId: `fixture-use-${++sequence}` }
     },
   },
 })

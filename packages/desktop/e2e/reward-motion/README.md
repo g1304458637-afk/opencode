@@ -48,11 +48,11 @@ OPENCODE_CHANNEL=hubu CAMPUS_LOCAL_BUILD=1 CAMPUS_REWARD_PREVIEW=1 node_modules/
 OPENCODE_CHANNEL=hubu BRAND=hubu MUC_CDP_PORT=0 node_modules/.bin/electron .
 ```
 
-The bottom-right **动效预览** panel has **获得重置卡** and **全额重置**. It starts expanded, works offline, and can be collapsed/reopened. Each click replays a separate presentation controller using explicitly synthetic 20→100 quota or 0→1 card snapshots. The orb temporarily labels its simulated value **预览额度**; account values return after playback. Closing cancels the preview and its confirmation. No account store writes, reward requests, card consumption, or grant API calls occur. Real reward receipts take precedence and cancel a preview. Both build flags are required; normal builds have no preview entry.
+The bottom-right **动效预览** panel has **获得重置卡**, **全额重置**, and **模拟使用重置卡**. It starts expanded, works offline, and can be collapsed/reopened. The use-card action plays a synthetic 20→100 quota and 3→2 card transition; at the default MAX / 0.5× speed it runs for 4.2 seconds. The other actions use synthetic 20→100 quota or 0→1 card snapshots. The orb temporarily labels its simulated value **预览额度**; account values return after playback. Closing cancels the preview and its confirmation. No account store writes, reward requests, card consumption, or grant API calls occur. Real reward receipts take precedence and cancel a preview. Both build flags are required; normal builds have no preview entry.
 
 ## Cinematic V2 controls and checks (no video)
 
-The complete-client panel now provides Low / Medium / High / MAX (default **High**), 1× / 0.5× / 0.25×, particle count, bloom strength, shockwave strength, screen impact, Reduced Motion and opt-in reward sound. Advanced controls are disabled while playing; either replay button restarts its own preview. Production builds omit the panel; the production account panel retains the sound preference.
+The complete-client panel now provides Low / Medium / High / MAX (default **MAX / 0.5×**), 1× / 0.5× / 0.25×, particle count, bloom strength, shockwave strength, screen impact, Reduced Motion and opt-in reward sound. Advanced controls are disabled while playing; replay buttons restart their own preview. Production builds omit the panel; the production account panel retains the sound preference.
 
 For isolated browser QA:
 
@@ -63,7 +63,7 @@ node e2e/reward-motion/preview.mjs
 node e2e/reward-motion/matrix.mjs
 ```
 
-`cinematic.mjs` checks High and MAX for both events, slow motion, focus/draft preservation, exact restoration of account values, Reduced Motion, and AudioContext completion/cancellation. It writes JSON and diagnostic stills under `e2e/artifacts/reward-cinematic`, with **no video recording**. The stills are engineering evidence; visual acceptance is interactive in the complete local client. Frame samples include a diagnostic screenshot and are not a stable-60fps certification.
+`preview.mjs` checks all three preview actions, the 4.2-second default use-card presentation, unchanged real fixture quota/cards, no use-card IPC call, reduced motion, and Escape skip. `cinematic.mjs` checks High and MAX for both grant/reset events, slow motion, focus/draft preservation, exact restoration of account values, Reduced Motion, and AudioContext completion/cancellation. These checks write JSON and diagnostic stills under `e2e/artifacts/reward-cinematic`, with **no video recording**. The stills are engineering evidence; visual acceptance is interactive in the complete local client. Frame samples include a diagnostic screenshot and are not a stable-60fps certification.
 
 For current native reward regression, build the local client with normal update URLs, compile `e2e/campus.ts` as above, then run:
 

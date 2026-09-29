@@ -36,6 +36,7 @@ const state = {
   legacy: false,
   offline: false,
   loseReset: false,
+  failResetRefresh: false,
   update: "none",
   exchange: "ok",
 }
@@ -176,6 +177,10 @@ const fixture = await serveFixture({
         state.loseReset = false
         return new Response("response lost", { status: 502 })
       }
+      if (state.failResetRefresh) {
+        state.failResetRefresh = false
+        state.offline = true
+      }
       await sleep(250)
       return Response.json(receipt)
     }
@@ -235,6 +240,19 @@ async function refresh(page: Awaited<ReturnType<typeof launch>>) {
 }
 try {
   let page = await launch()
+  if (process.env.CAMPUS_E2E_PREVIEW_ONLY === "1") {
+    // Keep the actual desktop client open against the same loopback-only fixture.
+    // This profile and its credentials are synthetic; no production account is used.
+    expect(await page.evaluate(() => window.api.mucConnect("local_preview_code_123456789"))).toMatchObject({ ok: true })
+    await page.reload()
+    await expect(page.locator(".reward-preview")).toBeVisible({ timeout: 60000 })
+    application!.on("close", () => {
+      fixture.stop()
+      process.exit(0)
+    })
+    console.log(`READY ${brand}: complete local client, synthetic account, three preview actions, no recording`)
+    await new Promise(() => {})
+  }
   expect(await page.evaluate(() => window.api.mucGetState())).toEqual({ connected: false })
   expect((await page.evaluate(() => window.api.mucGetBrand())).id).toBe(brand)
   expect((await page.evaluate(() => window.api.mucGetBrand())).version).toBe(
@@ -316,6 +334,7 @@ try {
   await page.getByRole("button", { name: "确认使用", exact: true }).click()
   await expect(page.getByText(/重置失败/)).toBeVisible()
   expect(state.cards).toBe(2)
+  await expect(page.locator('.reward-motion-layer[data-kind="RESET_CARD_USED"]')).toHaveCount(0)
   await close()
   page = await launch()
   await panel(page)
@@ -325,15 +344,40 @@ try {
     button.click()
     button.click()
   })
-  await expect(page.getByText("额度已恢复", { exact: true })).toBeVisible()
+  await expect(page.locator(".quota-reset-feedback")).toHaveText("额度已恢复")
+  await expect(page.locator('.reward-motion-layer[data-kind="RESET_CARD_USED"]')).toBeVisible()
   await expect(page.locator("button.muc-status-scope")).toContainText("80%", { timeout: 10000 })
   await page.screenshot({ path: join(artifacts, "reset-success.png") })
-  await expect(page.getByText("额度已恢复", { exact: true })).toHaveCount(0, { timeout: 10000 })
+  await expect(page.locator(".quota-reset-feedback")).toHaveCount(0, { timeout: 10000 })
+  await expect(page.locator('.reward-motion-layer[data-kind="RESET_CARD_USED"]')).toHaveCount(0, { timeout: 10000 })
   expect(state.cards).toBe(2)
   expect(new Set(calls.filter((x) => x.path.includes("reset-with-card")).map((x) => x.key)).size).toBe(1)
   await expect(page.getByText("重置卡 ×2", { exact: true })).toBeVisible()
-  await expect(page.getByText("90%", { exact: true })).toBeVisible()
+  await expect(page.locator(".quota-windows").getByText("90%", { exact: true })).toBeVisible()
   pass("lost response, restart retry, double click, one card, server refresh and animation")
+  // A successful API operation with a failed follow-up read must not celebrate or spend twice.
+  state.percent = 65
+  state.week = 50
+  await refresh(page)
+  state.failResetRefresh = true
+  const callsBeforeUse = calls.filter((x) => /reset-with-card\/123$/.test(x.path)).length
+  await page.getByRole("button", { name: "使用", exact: true }).click()
+  await page.getByRole("button", { name: "确认使用", exact: true }).click()
+  await expect(page.getByText(/重置已成功，状态刷新失败/)).toBeVisible()
+  await expect(page.locator('.reward-motion-layer[data-kind="RESET_CARD_USED"]')).toHaveCount(0)
+  expect(state.cards).toBe(1)
+  state.offline = false
+  await page.getByRole("button", { name: "重新核对", exact: true }).click()
+  await expect(page.locator('.reward-motion-layer[data-kind="RESET_CARD_USED"]')).toBeVisible()
+  await page.getByRole("button", { name: "跳过演出", exact: true }).click()
+  await expect(page.locator('.reward-motion-layer[data-kind="RESET_CARD_USED"]')).toHaveCount(0)
+  await expect(page.locator("button.muc-status-scope")).toContainText("50%")
+  expect(state.cards).toBe(1)
+  expect(calls.filter((x) => /reset-with-card\/123$/.test(x.path)).length).toBe(callsBeforeUse + 1)
+  await refresh(page)
+  await expect(page.locator('.reward-motion-layer[data-kind="RESET_CARD_USED"]')).toHaveCount(0)
+  pass("confirmed use refresh failure, reconciliation without another spend, skip and no replay")
+
   state.offline = true
   await refresh(page)
   await expect(page.getByText(/已过期/)).toBeVisible()
