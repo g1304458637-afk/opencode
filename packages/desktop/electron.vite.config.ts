@@ -2,6 +2,7 @@ import { campusConfig } from "./scripts/campus-config"
 import { sentryVitePlugin } from "@sentry/vite-plugin"
 import { defineConfig } from "electron-vite"
 import appPlugin from "@opencode-ai/app/vite"
+import { BRANDS } from "@opencode-ai/brand"
 import * as fs from "node:fs/promises"
 import { readFileSync } from "node:fs"
 
@@ -118,7 +119,17 @@ const require = __cjs_mod__.createRequire(import.meta.url);
       // MUC Harness: muc 渠道版本（与 Info.plist / latest*.yml 同源于 release.json）
       ...(mucVersion ? { "import.meta.env.MUC_VERSION": JSON.stringify(mucVersion) } : {}),
     },
-    plugins: [appPlugin, sentry],
+    plugins: [
+      appPlugin,
+      sentry,
+      {
+        name: "hubu:page-title",
+        transformIndexHtml(html) {
+          if (channel !== "hubu") return html
+          return html.replace("<title>OpenCode</title>", `<title>${BRANDS.hubu.appName}</title>`)
+        },
+      },
+    ],
     publicDir: "../../../app/public",
     root: "src/renderer",
     build: {
