@@ -11,7 +11,7 @@
   "appId": "cn.edu.hubu.harness",
   "appName": "HUBU AI",
   "protocolScheme": "hubu",
-  "gatewayURL": "http://localhost:8081",
+  "gatewayURL": "https://hubu.wuxuexi.top",
   "gatewayEnvVar": "HUBU_GATEWAY_URL",
   "apiKeyEnvVar": "HUBU_API_KEY",
   "exchangePath": "/api/v1/hubu/exchange",
