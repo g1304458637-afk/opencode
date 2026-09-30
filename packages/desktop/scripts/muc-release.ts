@@ -611,7 +611,16 @@ async function upload(execute: boolean, host: string, testFeed: boolean) {
     // 别名 = feed 内同一文件的 server 端拷贝（同一次 build 的同一字节，零二次传输）
     const alias = isMac ? `mucode-mac-${arch}.dmg` : `mucode-win-x64.exe`
     const aliasSrc = isMac ? `${finalDir}/mucode-${version}-mac-${arch}.dmg` : `${finalDir}/mucode-${version}-win-x64.exe`
-    await sh(["ssh", host, `sudo cp -f '${aliasSrc}' '${REMOTE_ROOT}/${alias}' && sudo chown www:www '${REMOTE_ROOT}/${alias}'`])
+    // Replace aliases atomically. Some production aliases are symlinks to a versioned
+    // filename; cp -f follows those links and overwrites the old release artifact.
+    // Moving a same-filesystem temporary file replaces the link itself and preserves rollback.
+    const aliasPath = `${REMOTE_ROOT}/${alias}`
+    const aliasTemp = `${REMOTE_ROOT}/.${alias}.${version}.tmp`
+    await sh([
+      "ssh",
+      host,
+      `sudo rm -f '${aliasTemp}' && sudo cp -f '${aliasSrc}' '${aliasTemp}' && sudo chown www:www '${aliasTemp}' && sudo mv -f '${aliasTemp}' '${aliasPath}'`,
+    ])
     await sh([
       "ssh",
       host,
