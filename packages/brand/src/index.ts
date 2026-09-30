@@ -159,8 +159,8 @@ const HUBU: BrandConfig = {
   appId: "cn.edu.hubu.harness",
   appName: "HUBU AI",
   protocolScheme: "hubu",
-  // 本地开发默认 localhost:8081；部署时可用 HUBU_GATEWAY_URL 覆盖
-  gatewayURL: "http://localhost:8081",
+  // 生产网关（HUBU 独立部署）；本地开发可用 HUBU_GATEWAY_URL 覆盖为 http://localhost:8081
+  gatewayURL: "https://hubu.wuxuexi.top",
   gatewayEnvVar: "HUBU_GATEWAY_URL",
   apiKeyEnvVar: "HUBU_API_KEY",
   exchangePath: "/api/v1/hubu/exchange",
