@@ -465,7 +465,7 @@ export function MucStatus() {
                   </span>
                 )}
               </Show>
-              {usage()?.planName || "sub2api 账户"}
+              {usage()?.planName || "campus ai 账户"}
               <Show when={stale()}>
                 <span class="rounded bg-amber-100 px-1 text-[10px] text-amber-700">缓存</span>
               </Show>
