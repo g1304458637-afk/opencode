@@ -1,6 +1,7 @@
 import { sentryVitePlugin } from "@sentry/vite-plugin"
 import { defineConfig } from "electron-vite"
 import appPlugin from "@opencode-ai/app/vite"
+import { BRANDS } from "@opencode-ai/brand"
 import * as fs from "node:fs/promises"
 
 const OPENCODE_SERVER_DIST = "../opencode/dist/node"
@@ -95,7 +96,17 @@ const require = __cjs_mod__.createRequire(import.meta.url);
       // MUC Harness: 渲染层通道（titlebar 徽标按此判断；muc 不显示 DEV 徽标）
       "import.meta.env.VITE_OPENCODE_CHANNEL": JSON.stringify(channel),
     },
-    plugins: [appPlugin, sentry],
+    plugins: [
+      appPlugin,
+      sentry,
+      {
+        name: "hubu:page-title",
+        transformIndexHtml(html) {
+          if (channel !== "hubu") return html
+          return html.replace("<title>OpenCode</title>", `<title>${BRANDS.hubu.appName}</title>`)
+        },
+      },
+    ],
     publicDir: "../../../app/public",
     root: "src/renderer",
     build: {

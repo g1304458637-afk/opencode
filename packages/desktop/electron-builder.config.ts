@@ -75,6 +75,8 @@ const getBase = (appId: string): Configuration => ({
   },
   files: ["out/**/*", "resources/**/*", "!resources/opencode-cli*"],
   extraResources: [
+    // BrowserWindow reads process.resourcesPath/icons in packaged builds.
+    ...(channel === "hubu" ? [{ from: "resources/icons", to: "icons" }] : []),
     ...(channel === "dev" || channel === "muc" || channel === "hubu"
       ? [
           {
@@ -194,9 +196,11 @@ function getConfig() {
         mac: { ...base.mac, icon: "resources/hubu/icon.icns", identity: null },
         afterSign: "scripts/after-sign-mac.js",
         dmg: { ...base.dmg, icon: "resources/hubu/icon.icns" },
-        // 与 muc 一致：跨平台构建免 wine（exe 不内嵌图标/版本信息，v1 可接受）
+        // Embed the HUBU icon and product metadata in the Windows executable.
+        // Cross-platform packaging needs Wine; native Windows builds do not.
         win: {
-          signAndEditExecutable: false,
+          ...base.win,
+          signAndEditExecutable: true,
           target: [{ target: "nsis", arch: ["x64"] }],
           icon: "resources/hubu/icon.ico",
         },
