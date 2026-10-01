@@ -84,6 +84,8 @@ const getBase = (appId: string): Configuration => ({
   },
   files: ["out/**/*", "resources/**/*", "!resources/opencode-cli*"],
   extraResources: [
+    // BrowserWindow loads these through process.resourcesPath, outside app.asar.
+    ...(channel === "hubu" ? [{ from: "icons/hubu/", to: "icons/", filter: ["icon.ico", "icon.png"] }] : []),
     ...(channel === "dev" || channel === "muc" || channel === "hubu"
       ? [
           {
@@ -242,9 +244,9 @@ function getConfig() {
         },
         ...(macSigningIdentity ? {} : { afterSign: "scripts/after-sign-mac.js" }),
         dmg: { ...base.dmg, icon: `resources/${brand.assets.iconDirectory}/icon.icns` },
-        // MUC Harness: 跨平台构建免 wine（exe 不内嵌图标/版本信息，v1 可接受）。
-        // 正式 Windows 签名：设 WIN_CSC_LINK(.pfx) + WIN_CSC_KEY_PASSWORD（或 CSC_LINK/CSC_KEY_PASSWORD）
-        // 后启用 signtool 签名与 exe 元数据编辑；无凭据时保持 unsigned（WAITING_FOR_WINDOWS_SIGNING_CERT）。
+        // HUBU must edit EXE resources even without a signing certificate; otherwise
+        // desktop shortcuts retain Electron's icon. Build on Windows or with Wine.
+        // Authenticode signing still requires WIN_CSC_LINK / CSC_LINK.
         win: {
           ...(winCertificate
             ? {
@@ -257,7 +259,7 @@ function getConfig() {
                   ...(process.env.WIN_PUBLISHER_NAME ? { publisherName: process.env.WIN_PUBLISHER_NAME } : {}),
                 },
               }
-            : { signAndEditExecutable: false }),
+            : { signAndEditExecutable: brand.id === "hubu" }),
           target: [{ target: "nsis", arch: ["x64"] }],
           icon: `resources/${brand.assets.iconDirectory}/icon.ico`,
         },
