@@ -1,7 +1,7 @@
 import { resolveBrand } from "@opencode-ai/brand"
 import { Icon } from "@opencode-ai/ui/icon"
 import { useNavigate } from "@solidjs/router"
-import { For } from "solid-js"
+import { For, Show } from "solid-js"
 import { useCommand } from "@/context/command"
 import { useLanguage } from "@/context/language"
 import { useLayout } from "@/context/layout"
@@ -9,10 +9,9 @@ import { useServer } from "@/context/server"
 import { useDirectoryPicker } from "@/components/directory-picker"
 import { useSettingsDialog } from "@/components/settings-dialog"
 import mucCrest from "@/assets/muc/crest.png"
-import hubuCrest from "@/assets/hubu/crest.png"
+import hubuCrest from "@/assets/hubu/crest-official.jpg"
 
 const brand = resolveBrand()
-const crests: Record<string, string> = { muc: mucCrest, hubu: hubuCrest }
 
 export function WorkspaceSidebar() {
   const language = useLanguage()
@@ -70,7 +69,12 @@ export function WorkspaceSidebar() {
     <aside class="campus-sidebar" data-brand={brand.id}>
       <button class="campus-sidebar__brand" onClick={() => navigate("/")} aria-label={language.t("home.title")}>
         <span class="campus-sidebar__crest">
-          <img src={crests[brand.id]} alt="" />
+          <Show when={brand.id === "hubu"} fallback={<img src={mucCrest} alt="" />}>
+            {/* Frame the official image's circular emblem without stretching or redrawing it. */}
+            <svg viewBox="140 80 620 620" aria-hidden="true">
+              <image href={hubuCrest} width="904" height="822" />
+            </svg>
+          </Show>
         </span>
         <span class="campus-sidebar__name">{brand.workspaceName}</span>
       </button>

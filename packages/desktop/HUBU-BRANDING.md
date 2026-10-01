@@ -1,65 +1,57 @@
-# HUBU AI branding update (planned release 2.1.3)
+# HUBU AI 2.1.4 branding repair
 
-This change updates the HUBU campus banner emblem, replaces the application icon
-with the supplied blue/gold Wuxuexi book symbol, and uses HUBU AI for the Windows
-application menu heading and window/page title.
+The production HUBU client is built from `hubu-main`. Its 2.1.3 release included
+new icon files but still disabled unsigned Windows executable resource editing.
+The workspace sidebar also used a separate, distorted `crest.png`; updating the
+campus banner did not update that sidebar.
 
-## Assets
+## Active assets
 
-- The campus banner is synchronized in `../app/src/assets/hubu/hubu-hero.png`
-  and `src/renderer/assets/hubu-hero.png`.
-- The emblem reference is the university's official
-  [logo design standard](https://vi.hubu.edu.cn/info/1003/1015.htm).
-  The banner is an AI-assisted localized edit against that reference, not an
-  official university-issued banner or a newly downloaded vector emblem.
-- The desktop icon uses only the book symbol from the user-supplied Wuxuexi
-  brand sheet. `icons/hubu/icon.png` is the transparent square master;
-  `icon.ico` contains 16, 24, 32, 48, 64, 128 and 256 pixel representations.
-- PNG, ICO, ICNS and Dock variants live in `icons/hubu`. The ICO and ICNS copies
-  in `resources/hubu` must stay synchronized. Prebuild copies the complete icon
-  set to `resources/icons`; HUBU packaging also copies it outside the ASAR to
-  the `resources/icons` directory read by BrowserWindow.
-- Windows executable resource editing is enabled for HUBU. Cross-platform
-  Windows packaging therefore requires Wine; a native Windows build is supported.
+- `../app/src/assets/hubu/crest-official.jpg` is the unmodified image from the
+  [Hubei University emblem page](https://www.hubu.edu.cn/info/1024/1036.htm),
+  [direct image](https://www.hubu.edu.cn/__local/6/6F/56/0CAB2AB6DE17804A63CDDBE34E4_832687D0_2DBE0.jpg).
+  `WorkspaceSidebar` frames its circular emblem through an SVG viewBox, preserving
+  the original lettering and proportions. This sidebar emblem is not AI generated.
+- `icons/hubu` contains the blue/gold Wuxuexi book icon derived from the supplied
+  brand sheet. Windows EXE/installer icons come from `resources/hubu/icon.ico`.
+  That ICO must match `icons/hubu/icon.ico`.
+- `electron-builder.config.ts` copies `icons/hubu/icon.ico` and `icon.png` to the
+  packaged `resources/icons` directory, where BrowserWindow loads them.
+- HUBU Windows EXE resource editing is enabled with or without a certificate.
+  Signing credentials remain optional and are not committed. Cross-building
+  Windows packages requires Wine; native Windows builds are supported.
+- The Windows menu heading, window title and HTML title use `HUBU AI`.
+  The separate workspace name remains `HUBUCode`.
 
-## Build on Windows (PowerShell)
+## Build and verify
 
-Use Bun 1.3.14 or a compatible version. Git must check out real symbolic links;
-otherwise `packages/app/src/custom-elements.d.ts` is a pathname instead of a
-TypeScript declaration and public assets are also invalid.
+Use the repository's pinned Bun version and real Git symbolic links.
+From `packages/desktop`, run:
 
 ```powershell
-bun install --ignore-scripts --frozen-lockfile
-Set-Location packages/desktop
-$env:OPENCODE_CHANNEL = 'hubu'
-$env:OPENCODE_VERSION = '2.1.3'
-$env:BUN_CONFIG_REGISTRY = 'https://registry.npmjs.org'
-bun ./scripts/prepare.ts
-bun x electron-vite build
-bun run package:win --publish never '--config.artifactName=hubu-ai-2.1.3-win-x64.exe'
+# Production endpoints must be supplied by the existing release environment:
+# HUBU_GATEWAY_URL, HUBU_UPDATE_FEED_URL, HUBU_MANIFEST_URL,
+# HUBU_DOWNLOAD_BASE_URL, HUBU_WEBSITE_URL.
+bun scripts/campus-build.ts hubu win-x64 --package
 ```
 
-`prepare.ts` writes the desktop package version and performs prebuild. Setting
-`OPENCODE_VERSION` without running prepare does not update package.json. The
-package.json version change is a local release preparation step, not part of
-this branding commit.
+The desktop version comes from `resources/hubu/release.json`; neither
+`OPENCODE_VERSION` nor editing package.json is the release version source.
+Use `CAMPUS_LOCAL_BUILD=1` only for isolated testing. Do not publish those builds.
 
-## Release handoff
+Before release, run the packaging configuration tests and type checks, then:
 
-The operator must merge this branch into the tree used for production and keep
-their production update configuration. The public HUBU source currently disables
-the built-in updater in `src/main/constants.ts` and does not define a generic
-publish URL for HUBU. This branding change does not claim to fix that separate
-source/production difference. A local test installer is not a production release.
+1. Enter the real workspace with an isolated test profile and inspect the round
+   sidebar emblem, including its full Chinese/English text and 1931.
+2. Inspect the built EXE's native icon and ProductName, not just icon files inside
+   app.asar. Confirm `resources/icons/icon.ico` and `icon.png` exist outside ASAR.
+3. Verify a shortcut targeting that EXE resolves to the book icon; inspect the
+   Windows menu and taskbar title as well.
+4. Record the tested source SHA. This repair uses version 2.1.4; preserve the
+   already published 2.1.3 installers and history.
+   Keep the production endpoints, app ID, protocol and signing policy intact.
 
-Before releasing, confirm that 2.1.3 is still available; verify the production
-gateway, authorization flow, update URL and updater behavior; inspect the menu,
-taskbar preview, EXE, installed desktop shortcut and campus banner. Use the
-operator's signing workflow. Upload the installer and blockmap before latest.yml,
-and back up the previous update manifest first. Do not replace the existing app
-identity or protocol while integrating these changes.
-
-## Image generation record
+## Earlier image generation record
 
 The built-in imagegen tool was used (no API/CLI fallback). The final prompts were:
 
