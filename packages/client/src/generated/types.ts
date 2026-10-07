@@ -82,6 +82,15 @@ export type PermissionNotFoundError = {
 export const isPermissionNotFoundError = (value: unknown): value is PermissionNotFoundError =>
   typeof value === "object" && value !== null && "_tag" in value && value["_tag"] === "PermissionNotFoundError"
 
+export type SkillLibraryFailure = {
+  readonly _tag: "SkillLibraryFailure"
+  readonly code: string
+  readonly message: string
+  readonly stage: "resolving" | "downloading" | "validating" | "installing" | "refreshing" | "completed" | "failed"
+}
+export const isSkillLibraryFailure = (value: unknown): value is SkillLibraryFailure =>
+  typeof value === "object" && value !== null && "_tag" in value && value["_tag"] === "SkillLibraryFailure"
+
 export type PtyNotFoundError = { readonly _tag: "PtyNotFoundError"; readonly ptyID: string; readonly message: string }
 export const isPtyNotFoundError = (value: unknown): value is PtyNotFoundError =>
   typeof value === "object" && value !== null && "_tag" in value && value["_tag"] === "PtyNotFoundError"
@@ -397,6 +406,11 @@ export type SessionsPromptInput = {
         readonly name: string
         readonly source?: { readonly start: number; readonly end: number; readonly text: string }
       }>
+      readonly selectedSkills?: ReadonlyArray<{
+        readonly skillId: string
+        readonly revision: string
+        readonly contentHash: string
+      }>
     }
     readonly delivery?: "steer" | "queue" | null
     readonly resume?: boolean | null
@@ -414,6 +428,11 @@ export type SessionsPromptInput = {
       readonly agents?: ReadonlyArray<{
         readonly name: string
         readonly source?: { readonly start: number; readonly end: number; readonly text: string }
+      }>
+      readonly selectedSkills?: ReadonlyArray<{
+        readonly skillId: string
+        readonly revision: string
+        readonly contentHash: string
       }>
     }
     readonly delivery?: "steer" | "queue" | null
@@ -433,6 +452,11 @@ export type SessionsPromptInput = {
         readonly name: string
         readonly source?: { readonly start: number; readonly end: number; readonly text: string }
       }>
+      readonly selectedSkills?: ReadonlyArray<{
+        readonly skillId: string
+        readonly revision: string
+        readonly contentHash: string
+      }>
     }
     readonly delivery?: "steer" | "queue" | null
     readonly resume?: boolean | null
@@ -450,6 +474,11 @@ export type SessionsPromptInput = {
       readonly agents?: ReadonlyArray<{
         readonly name: string
         readonly source?: { readonly start: number; readonly end: number; readonly text: string }
+      }>
+      readonly selectedSkills?: ReadonlyArray<{
+        readonly skillId: string
+        readonly revision: string
+        readonly contentHash: string
       }>
     }
     readonly delivery?: "steer" | "queue" | null
@@ -474,6 +503,11 @@ export type SessionsPromptOutput = {
       readonly agents?: ReadonlyArray<{
         readonly name: string
         readonly source?: { readonly start: number; readonly end: number; readonly text: string }
+      }>
+      readonly selectedSkills?: ReadonlyArray<{
+        readonly skillId: string
+        readonly revision: string
+        readonly contentHash: string
       }>
     }
     readonly delivery: "steer" | "queue"
@@ -553,6 +587,11 @@ export type SessionsContextOutput = {
         readonly agents?: ReadonlyArray<{
           readonly name: string
           readonly source?: { readonly start: number; readonly end: number; readonly text: string }
+        }>
+        readonly selectedSkills?: ReadonlyArray<{
+          readonly skillId: string
+          readonly revision: string
+          readonly contentHash: string
         }>
         readonly type: "user"
       }
@@ -746,6 +785,11 @@ export type SessionsHistoryOutput = {
               readonly name: string
               readonly source?: { readonly start: number; readonly end: number; readonly text: string }
             }>
+            readonly selectedSkills?: ReadonlyArray<{
+              readonly skillId: string
+              readonly revision: string
+              readonly contentHash: string
+            }>
           }
           readonly delivery: "steer" | "queue"
         }
@@ -772,6 +816,11 @@ export type SessionsHistoryOutput = {
             readonly agents?: ReadonlyArray<{
               readonly name: string
               readonly source?: { readonly start: number; readonly end: number; readonly text: string }
+            }>
+            readonly selectedSkills?: ReadonlyArray<{
+              readonly skillId: string
+              readonly revision: string
+              readonly contentHash: string
             }>
           }
           readonly delivery: "steer" | "queue"
@@ -1204,6 +1253,11 @@ export type SessionsEventsOutput =
             readonly name: string
             readonly source?: { readonly start: number; readonly end: number; readonly text: string }
           }>
+          readonly selectedSkills?: ReadonlyArray<{
+            readonly skillId: string
+            readonly revision: string
+            readonly contentHash: string
+          }>
         }
         readonly delivery: "steer" | "queue"
       }
@@ -1230,6 +1284,11 @@ export type SessionsEventsOutput =
           readonly agents?: ReadonlyArray<{
             readonly name: string
             readonly source?: { readonly start: number; readonly end: number; readonly text: string }
+          }>
+          readonly selectedSkills?: ReadonlyArray<{
+            readonly skillId: string
+            readonly revision: string
+            readonly contentHash: string
           }>
         }
         readonly delivery: "steer" | "queue"
@@ -1632,6 +1691,11 @@ export type SessionsMessageOutput = {
           readonly name: string
           readonly source?: { readonly start: number; readonly end: number; readonly text: string }
         }>
+        readonly selectedSkills?: ReadonlyArray<{
+          readonly skillId: string
+          readonly revision: string
+          readonly contentHash: string
+        }>
         readonly type: "user"
       }
     | {
@@ -1803,6 +1867,11 @@ export type MessagesListOutput = {
         readonly agents?: ReadonlyArray<{
           readonly name: string
           readonly source?: { readonly start: number; readonly end: number; readonly text: string }
+        }>
+        readonly selectedSkills?: ReadonlyArray<{
+          readonly skillId: string
+          readonly revision: string
+          readonly contentHash: string
         }>
         readonly type: "user"
       }
@@ -2536,6 +2605,351 @@ export type SkillsListOutput = {
     readonly location: string
     readonly content: string
   }>
+}
+
+export type SkillsInstalledInput = {
+  readonly location?: {
+    readonly location?: { readonly directory?: string | undefined; readonly workspace?: string | undefined } | undefined
+  }["location"]
+}
+
+export type SkillsInstalledOutput = {
+  readonly location: {
+    readonly directory: string
+    readonly workspaceID?: string
+    readonly project: { readonly id: string; readonly directory: string }
+  }
+  readonly data: ReadonlyArray<{
+    readonly id: string
+    readonly name: string
+    readonly description: string
+    readonly sourceType: "github" | "local" | "project" | "builtin"
+    readonly repository: string
+    readonly path: string
+    readonly revision: string
+    readonly contentHash: string
+    readonly installedAt: number
+    readonly managed: boolean
+  }>
+}
+
+export type SkillsAvailableInput = {
+  readonly location?: {
+    readonly location?: { readonly directory?: string | undefined; readonly workspace?: string | undefined } | undefined
+  }["location"]
+}
+
+export type SkillsAvailableOutput = {
+  readonly location: {
+    readonly directory: string
+    readonly workspaceID?: string
+    readonly project: { readonly id: string; readonly directory: string }
+  }
+  readonly data: ReadonlyArray<{
+    readonly id: string
+    readonly name: string
+    readonly description: string
+    readonly sourceType: "github" | "local" | "project" | "builtin"
+    readonly repository: string
+    readonly path: string
+    readonly revision?: string
+    readonly contentHash?: string
+    readonly managed: boolean
+  }>
+}
+
+export type SkillsSearchInput = {
+  readonly location?: {
+    readonly location?: { readonly directory?: string | undefined; readonly workspace?: string | undefined } | undefined
+    readonly q: string
+  }["location"]
+  readonly q: {
+    readonly location?: { readonly directory?: string | undefined; readonly workspace?: string | undefined } | undefined
+    readonly q: string
+  }["q"]
+}
+
+export type SkillsSearchOutput = {
+  readonly location: {
+    readonly directory: string
+    readonly workspaceID?: string
+    readonly project: { readonly id: string; readonly directory: string }
+  }
+  readonly data: ReadonlyArray<{
+    readonly id: string
+    readonly name: string
+    readonly description: string
+    readonly sourceType: "github" | "local" | "project" | "builtin"
+    readonly repository: string
+    readonly path: string
+    readonly revision: string
+    readonly contentHash: string
+    readonly artifactUrl: string
+    readonly artifactHash: string
+    readonly upstreamRevision?: string
+    readonly installed?: boolean
+  }>
+}
+
+export type SkillsReadInput = {
+  readonly location?: {
+    readonly location?: { readonly directory?: string | undefined; readonly workspace?: string | undefined } | undefined
+  }["location"]
+  readonly source: {
+    readonly source:
+      | {
+          readonly type: "candidate"
+          readonly candidate: {
+            readonly repository: string
+            readonly path: string
+            readonly upstreamRevision: string
+            readonly url: string
+          }
+        }
+      | { readonly type: "url"; readonly url: string }
+      | { readonly type: "local"; readonly path: string }
+      | { readonly type: "registry"; readonly id: string; readonly revision: string }
+  }["source"]
+}
+
+export type SkillsReadOutput = {
+  readonly location: {
+    readonly directory: string
+    readonly workspaceID?: string
+    readonly project: { readonly id: string; readonly directory: string }
+  }
+  readonly data:
+    | {
+        readonly type: "preview"
+        readonly preview: {
+          readonly id: string
+          readonly name: string
+          readonly description: string
+          readonly sourceType: "github" | "local" | "project" | "builtin"
+          readonly repository: string
+          readonly path: string
+          readonly previewId: string
+          readonly revision: string
+          readonly contentHash: string
+          readonly upstreamRevision?: string
+          readonly skillMarkdown: string
+        }
+      }
+    | {
+        readonly type: "candidates"
+        readonly candidates: ReadonlyArray<{
+          readonly repository: string
+          readonly path: string
+          readonly upstreamRevision: string
+          readonly url: string
+        }>
+      }
+}
+
+export type SkillsContentInput = {
+  readonly location?: {
+    readonly location?: { readonly directory?: string | undefined; readonly workspace?: string | undefined } | undefined
+  }["location"]
+  readonly source: {
+    readonly source:
+      | { readonly type: "preview"; readonly previewId: string }
+      | {
+          readonly type: "revision"
+          readonly reference: { readonly skillId: string; readonly revision: string; readonly contentHash: string }
+        }
+      | { readonly type: "discovered"; readonly id: string; readonly contentHash: string }
+  }["source"]
+}
+
+export type SkillsContentOutput = {
+  readonly location: {
+    readonly directory: string
+    readonly workspaceID?: string
+    readonly project: { readonly id: string; readonly directory: string }
+  }
+  readonly data: {
+    readonly name: string
+    readonly description: string
+    readonly skillMarkdown: string
+    readonly contentHash: string
+  }
+}
+
+export type SkillsTranslateInput = {
+  readonly location?: {
+    readonly location?: { readonly directory?: string | undefined; readonly workspace?: string | undefined } | undefined
+  }["location"]
+  readonly source: {
+    readonly source:
+      | { readonly type: "preview"; readonly previewId: string }
+      | {
+          readonly type: "revision"
+          readonly reference: { readonly skillId: string; readonly revision: string; readonly contentHash: string }
+        }
+      | { readonly type: "discovered"; readonly id: string; readonly contentHash: string }
+    readonly includeMarkdown: boolean
+    readonly model?: { readonly providerID: string; readonly modelID: string } | undefined
+  }["source"]
+  readonly includeMarkdown: {
+    readonly source:
+      | { readonly type: "preview"; readonly previewId: string }
+      | {
+          readonly type: "revision"
+          readonly reference: { readonly skillId: string; readonly revision: string; readonly contentHash: string }
+        }
+      | { readonly type: "discovered"; readonly id: string; readonly contentHash: string }
+    readonly includeMarkdown: boolean
+    readonly model?: { readonly providerID: string; readonly modelID: string } | undefined
+  }["includeMarkdown"]
+  readonly model?: {
+    readonly source:
+      | { readonly type: "preview"; readonly previewId: string }
+      | {
+          readonly type: "revision"
+          readonly reference: { readonly skillId: string; readonly revision: string; readonly contentHash: string }
+        }
+      | { readonly type: "discovered"; readonly id: string; readonly contentHash: string }
+    readonly includeMarkdown: boolean
+    readonly model?: { readonly providerID: string; readonly modelID: string } | undefined
+  }["model"]
+}
+
+export type SkillsTranslateOutput = {
+  readonly location: {
+    readonly directory: string
+    readonly workspaceID?: string
+    readonly project: { readonly id: string; readonly directory: string }
+  }
+  readonly data: { readonly name: string; readonly description: string; readonly skillMarkdown?: string }
+}
+
+export type SkillsInstallInput = {
+  readonly location?: {
+    readonly location?: { readonly directory?: string | undefined; readonly workspace?: string | undefined } | undefined
+  }["location"]
+  readonly id?: {
+    readonly id?: string | undefined
+    readonly source: { readonly type: "preview"; readonly previewId: string }
+  }["id"]
+  readonly source: {
+    readonly id?: string | undefined
+    readonly source: { readonly type: "preview"; readonly previewId: string }
+  }["source"]
+}
+
+export type SkillsInstallOutput = {
+  readonly location: {
+    readonly directory: string
+    readonly workspaceID?: string
+    readonly project: { readonly id: string; readonly directory: string }
+  }
+  readonly data: {
+    readonly id: string
+    readonly stage: "resolving" | "downloading" | "validating" | "installing" | "refreshing" | "completed" | "failed"
+    readonly updatedAt: number
+    readonly result?: {
+      readonly id: string
+      readonly name: string
+      readonly description: string
+      readonly sourceType: "github" | "local" | "project" | "builtin"
+      readonly repository: string
+      readonly path: string
+      readonly revision: string
+      readonly contentHash: string
+      readonly installedAt: number
+      readonly managed: boolean
+    }
+    readonly alreadyInstalled?: boolean
+    readonly error?: {
+      readonly code: string
+      readonly message: string
+      readonly stage: "resolving" | "downloading" | "validating" | "installing" | "refreshing" | "completed" | "failed"
+    }
+  }
+}
+
+export type SkillsOperationInput = {
+  readonly id: { readonly id: string }["id"]
+  readonly location?: {
+    readonly location?: { readonly directory?: string | undefined; readonly workspace?: string | undefined } | undefined
+  }["location"]
+}
+
+export type SkillsOperationOutput = {
+  readonly location: {
+    readonly directory: string
+    readonly workspaceID?: string
+    readonly project: { readonly id: string; readonly directory: string }
+  }
+  readonly data: {
+    readonly id: string
+    readonly stage: "resolving" | "downloading" | "validating" | "installing" | "refreshing" | "completed" | "failed"
+    readonly updatedAt: number
+    readonly result?: {
+      readonly id: string
+      readonly name: string
+      readonly description: string
+      readonly sourceType: "github" | "local" | "project" | "builtin"
+      readonly repository: string
+      readonly path: string
+      readonly revision: string
+      readonly contentHash: string
+      readonly installedAt: number
+      readonly managed: boolean
+    }
+    readonly alreadyInstalled?: boolean
+    readonly error?: {
+      readonly code: string
+      readonly message: string
+      readonly stage: "resolving" | "downloading" | "validating" | "installing" | "refreshing" | "completed" | "failed"
+    }
+  } | null
+}
+
+export type SkillsRemoveInput = {
+  readonly id: { readonly id: string }["id"]
+  readonly location?: {
+    readonly location?: { readonly directory?: string | undefined; readonly workspace?: string | undefined } | undefined
+  }["location"]
+}
+
+export type SkillsRemoveOutput = {
+  readonly location: {
+    readonly directory: string
+    readonly workspaceID?: string
+    readonly project: { readonly id: string; readonly directory: string }
+  }
+  readonly data: boolean
+}
+
+export type SkillsPrepareInput = {
+  readonly location?: {
+    readonly location?: { readonly directory?: string | undefined; readonly workspace?: string | undefined } | undefined
+  }["location"]
+  readonly owner: {
+    readonly owner: string
+    readonly restoreFrom?: string | undefined
+    readonly skills: ReadonlyArray<{ readonly id: string; readonly revision?: string | undefined }>
+  }["owner"]
+  readonly restoreFrom?: {
+    readonly owner: string
+    readonly restoreFrom?: string | undefined
+    readonly skills: ReadonlyArray<{ readonly id: string; readonly revision?: string | undefined }>
+  }["restoreFrom"]
+  readonly skills: {
+    readonly owner: string
+    readonly restoreFrom?: string | undefined
+    readonly skills: ReadonlyArray<{ readonly id: string; readonly revision?: string | undefined }>
+  }["skills"]
+}
+
+export type SkillsPrepareOutput = {
+  readonly location: {
+    readonly directory: string
+    readonly workspaceID?: string
+    readonly project: { readonly id: string; readonly directory: string }
+  }
+  readonly data: ReadonlyArray<{ readonly skillId: string; readonly revision: string; readonly contentHash: string }>
 }
 
 export type EventsSubscribeOutput = OpenCodeEventEncoded

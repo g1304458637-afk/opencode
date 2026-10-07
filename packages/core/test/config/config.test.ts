@@ -71,6 +71,11 @@ describe("Config", () => {
       expect(ConfigMigrateV1.isV1({ snapshot: false })).toBe(true)
       expect(ConfigMigrateV1.isV1({ snapshot: false, agents: {} })).toBe(true)
       expect(ConfigMigrateV1.isV1({ reference: {} })).toBe(true)
+      expect(ConfigMigrateV1.isV1({ model: "sub2api/glm-5.3-flash", skills: { paths: ["/skills"] } })).toBe(true)
+      expect(ConfigMigrateV1.isV1({ skills: ["/skills"] })).toBe(false)
+      expect(ConfigMigrateV1.migrate({ model: "sub2api/glm-5.3-flash", skills: { paths: ["/skills"] } })).toMatchObject(
+        { model: "sub2api/glm-5.3-flash", skills: ["/skills"] },
+      )
       expect(ConfigMigrateV1.isV1({ shell: "/bin/zsh", model: "anthropic/claude" })).toBe(false)
       expect(ConfigMigrateV1.isV1({ references: {} })).toBe(false)
     }),

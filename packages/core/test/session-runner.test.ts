@@ -1,3 +1,4 @@
+import { SkillLibrary } from "@opencode-ai/core/skill/library"
 import { describe, expect } from "bun:test"
 import {
   LLMClient,
@@ -254,6 +255,7 @@ const execution = Layer.effect(
 const it = testEffect(
   AppNodeBuilder.build(
     LayerNode.group([
+      SkillLibrary.node,
       Database.node,
       EventV2.node,
       QuestionV2.node,
@@ -3464,3 +3466,82 @@ describe("SessionRunnerLLM", () => {
     }),
   )
 })
+
+it.effect("HUBU exact skills reach runner requests after queue, retry and replay", () =>
+  Effect.gen(function* () {
+    yield* setup
+    const previous = process.env.BRAND
+    process.env.BRAND = "hubu"
+    try {
+      const library = yield* SkillLibrary.Service
+      const agents = yield* AgentV2.Service
+      yield* agents.transform((editor) =>
+        editor.update(AgentV2.ID.make("build"), (agent) => {
+          agent.mode = "primary"
+          agent.permissions = [{ action: "*", resource: "*", effect: "allow" }]
+        }),
+      )
+      const install = (repository: string, instruction: string) => {
+        const source = { sourceType: "local" as const, repository, path: "", name: "test-skill", description: "Test" }
+        return library.importEntries({ ...source, id: SkillLibrary.identity(source) }, [
+          {
+            path: "SKILL.md",
+            bytes: new TextEncoder().encode(`---\nname: test-skill\ndescription: Test\n---\n${instruction}`),
+            executable: false,
+          },
+          {
+            path: "resources/private.txt",
+            bytes: new TextEncoder().encode("RESOURCE_MUST_NOT_BE_IN_PROMPT"),
+            executable: false,
+          },
+        ])
+      }
+      const first = yield* install("first", "SELECTED_REVISION_ONE")
+      const second = yield* install("second", "SELECTED_REVISION_TWO")
+      yield* install("third", "UNSELECTED_REVISION")
+      const refs = [first, second].map((item) => ({
+        skillId: item.id,
+        revision: item.revision,
+        contentHash: item.contentHash,
+      }))
+      const session = yield* SessionV2.Service
+      const id = SessionMessage.ID.create()
+      const selected = {
+        id,
+        sessionID,
+        prompt: Prompt.make({ text: "Use selected skills", selectedSkills: refs }),
+        delivery: "queue" as const,
+        resume: false,
+      }
+      yield* session.prompt(selected)
+      yield* install("first", "NEW_REVISION_MUST_NOT_REPLACE_OLD")
+      yield* library.remove(first.id)
+      yield* session.prompt(selected)
+      yield* replaySessionProjection(sessionID)
+      requests.length = 0
+      yield* session.resume(sessionID)
+      expect(requests.length).toBeGreaterThan(0)
+      const text = requests.flatMap((request) => request.system.map((part) => part.text)).join("\n")
+      expect(text).toContain("HUBUCode")
+      expect(text).toContain(requests[0].model.id)
+      expect(text).toContain("SELECTED_REVISION_ONE")
+      expect(text).toContain("SELECTED_REVISION_TWO")
+      expect(text).not.toContain("NEW_REVISION_MUST_NOT_REPLACE_OLD")
+      expect(text).not.toContain("UNSELECTED_REVISION")
+      expect(text).not.toContain("RESOURCE_MUST_NOT_BE_IN_PROMPT")
+      requests.length = 0
+      yield* session.prompt({
+        sessionID,
+        prompt: Prompt.make({ text: "No skills", selectedSkills: [] }),
+        resume: false,
+      })
+      yield* session.resume(sessionID)
+      expect(requests.flatMap((request) => request.system.map((part) => part.text)).join("\n")).not.toContain(
+        "SELECTED_REVISION_ONE",
+      )
+    } finally {
+      if (previous === undefined) delete process.env.BRAND
+      else process.env.BRAND = previous
+    }
+  }),
+)

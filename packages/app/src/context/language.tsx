@@ -1,3 +1,4 @@
+import { publicBrandMessages, publicBrandText } from "@opencode-ai/brand"
 import * as i18n from "@solid-primitives/i18n"
 import { createEffect, createMemo, createResource } from "solid-js"
 import { createStore } from "solid-js/store"
@@ -43,11 +44,13 @@ const LOCALES: readonly Locale[] = DESKTOP_NATIVE_LOCALES
 
 const INTL = DESKTOP_NATIVE_LOCALE_TAGS
 
-const base = i18n.flatten({ ...en, ...uiEn })
+const base = publicBrandMessages(i18n.flatten({ ...en, ...uiEn }))
 const dicts = new Map<Locale, Dictionary>([["en", base]])
 
 const merge = (app: Promise<Source>, ui: Promise<Source>) =>
-  Promise.all([app, ui]).then(([a, b]) => ({ ...base, ...i18n.flatten({ ...a.dict, ...b.dict }) }) as Dictionary)
+  Promise.all([app, ui]).then(
+    ([a, b]) => publicBrandMessages({ ...base, ...i18n.flatten({ ...a.dict, ...b.dict }) }) as Dictionary,
+  )
 
 const loaders: Record<Exclude<Locale, "en">, () => Promise<Dictionary>> = {
   zh: () => merge(import("@/i18n/zh"), import("@opencode-ai/ui/i18n/zh")),
@@ -217,7 +220,7 @@ export const { use: useLanguage, provider: LanguageProvider } = createSimpleCont
       const current = dict()
       if (!current) return
       props.onNativeTranslations(
-        createDesktopNativeBundle(locale(), (key) => current[key] ?? DESKTOP_NATIVE_ENGLISH[key]),
+        createDesktopNativeBundle(locale(), (key) => current[key] ?? publicBrandText(DESKTOP_NATIVE_ENGLISH[key])),
       )
     })
 

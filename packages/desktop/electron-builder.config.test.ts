@@ -13,6 +13,7 @@ for (const signed of [false, true]) {
       HUBU_MANIFEST_URL: "https://example.com/latest-hubu-ai.json",
       HUBU_DOWNLOAD_BASE_URL: "https://example.com/downloads",
       HUBU_WEBSITE_URL: "https://example.com",
+      HUBU_SKILL_REGISTRY_URL: "https://example.com/hubu-skills",
       WIN_CSC_LINK: signed ? "fixture-signing.pfx" : undefined,
       CSC_LINK: undefined,
       WIN_CSC_KEY_PASSWORD: undefined,

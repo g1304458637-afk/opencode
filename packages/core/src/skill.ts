@@ -1,5 +1,6 @@
 export * as SkillV2 from "./skill"
 
+import { resolveBrand } from "@opencode-ai/brand"
 import { makeLocationNode } from "./effect/app-node"
 import path from "path"
 import { Context, Effect, Layer, Schema, Types } from "effect"
@@ -11,6 +12,9 @@ import { PermissionV2 } from "./permission"
 import { AbsolutePath } from "./schema"
 import { SkillDiscovery } from "./skill/discovery"
 import { State } from "./state"
+import { SkillLibrary } from "./skill/library"
+import { Reference, Failure } from "@opencode-ai/schema/skill-library"
+import { readFile } from "node:fs/promises"
 
 export const DirectorySource = Skill.DirectorySource
 export type DirectorySource = Skill.DirectorySource
@@ -26,6 +30,38 @@ export type Source = typeof Source.Type
 
 export const Info = Skill.Info
 export type Info = Skill.Info
+
+export function parseFile(filepath: string, content: string): Info | undefined {
+  const markdown = ConfigMarkdown.parseOption(content)
+  if (!markdown) return
+  const frontmatter = decodeFrontmatter(markdown.data).valueOrUndefined
+  if (!frontmatter) return
+  if (!frontmatter.name && path.basename(filepath) === "SKILL.md") return
+  const name = frontmatter.name ?? path.basename(filepath, ".md")
+  return {
+    name,
+    description: frontmatter.description,
+    slash: frontmatter.slash,
+    location: AbsolutePath.make(filepath),
+    content: markdown.content,
+  }
+}
+
+// The same markdown parser used by discovery loads only SKILL.md into model context.
+// Other revision resources remain files and are read by ordinary tools only when needed.
+export const loadRevision = (library: SkillLibrary.Interface, ref: Reference) =>
+  Effect.gen(function* () {
+    const revision = yield* library.load(ref)
+    const filename = path.join(revision.path, "SKILL.md")
+    const raw = yield* Effect.tryPromise({
+      try: () => readFile(filename, "utf8"),
+      catch: (cause) => new Failure({ code: "READ_FAILED", stage: "validating", message: String(cause) }),
+    })
+    const info = parseFile(filename, raw)
+    if (!info)
+      return yield* new Failure({ code: "INVALID_SKILL", stage: "validating", message: "Cannot load locked SKILL.md" })
+    return info
+  })
 
 export const available = (skills: ReadonlyArray<Info>, agent: AgentV2.Info) =>
   skills.filter((skill) => PermissionV2.evaluate("skill", skill.name, agent.permissions).effect !== "deny")
@@ -81,24 +117,8 @@ const layer = Layer.effect(
         for (const filepath of files.toSorted()) {
           const content = yield* fs.readFileStringSafe(filepath).pipe(Effect.catch(() => Effect.succeed(undefined)))
           if (!content) continue
-          const markdown = ConfigMarkdown.parseOption(content)
-          if (!markdown) continue
-          const frontmatter = decodeFrontmatter(markdown.data).valueOrUndefined
-          if (!frontmatter) continue
-          const name =
-            frontmatter.name !== undefined
-              ? frontmatter.name
-              : path.dirname(filepath) === directory
-                ? path.basename(filepath, ".md")
-                : undefined
-          if (!name) continue
-          skills.push({
-            name,
-            description: frontmatter.description,
-            slash: frontmatter.slash,
-            location: AbsolutePath.make(filepath),
-            content: markdown.content,
-          })
+          const info = parseFile(filepath, content)
+          if (info) skills.push(info)
         }
       }
       return skills
@@ -113,14 +133,19 @@ const layer = Layer.effect(
         const key = Source.key(source)
         const loaded = cache.get(key) ?? (yield* load(source))
         cache.set(key, loaded)
-        for (const skill of loaded) skills.set(skill.name, skill)
+        for (const skill of loaded)
+          skills.set(["hubu", "kai"].includes(resolveBrand().id) ? skill.location : skill.name, skill)
       }
       return Array.from(skills.values())
     })
 
     return Service.of({
       transform: state.transform,
-      reload: state.reload,
+      reload: () =>
+        Effect.suspend(() => {
+          cache.clear()
+          return state.reload()
+        }),
       sources: Effect.fn("SkillV2.sources")(function* () {
         return state.get().sources
       }),

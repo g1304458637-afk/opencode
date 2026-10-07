@@ -1,3 +1,4 @@
+import { Reference } from "@opencode-ai/schema/skill-library"
 import type {
   SessionMessageAssistant,
   SessionMessageAssistantTool,
@@ -195,6 +196,12 @@ function userMessage(
   return {
     id: message.id,
     sessionID,
+    selectedSkills:
+      "selectedSkills" in message
+        ? Schema.decodeUnknownOption(Schema.Array(Reference))(message.selectedSkills).valueOrUndefined?.map((ref) => ({
+            ...ref,
+          }))
+        : undefined,
     role: "user",
     time: message.time,
     agent,
@@ -313,7 +320,12 @@ function toolPart(sessionID: string, messageID: string, tool: SessionMessageAssi
         status: "running" as const,
         input: normalizeToolInput(tool.name, tool.state.input),
         // metadata: normalizeToolMetadata(tool.name, tool.state.structured),
-        metadata: normalizeToolMetadata(tool.name, tool.state.metadata ?? {}),
+        metadata: normalizeToolMetadata(tool.name, {
+          ...(tool.state.metadata ?? {}),
+          ...(tool.name === "install_skill" && "structured" in tool.state && record(tool.state.structured)
+            ? tool.state.structured
+            : {}),
+        }),
         time: { start },
       }
     }
@@ -323,7 +335,12 @@ function toolPart(sessionID: string, messageID: string, tool: SessionMessageAssi
         input: normalizeToolInput(tool.name, tool.state.input),
         error: tool.state.error.message,
         // metadata: normalizeToolMetadata(tool.name, tool.state.structured),
-        metadata: normalizeToolMetadata(tool.name, tool.state.metadata ?? {}),
+        metadata: normalizeToolMetadata(tool.name, {
+          ...(tool.state.metadata ?? {}),
+          ...(tool.name === "install_skill" && "structured" in tool.state && record(tool.state.structured)
+            ? tool.state.structured
+            : {}),
+        }),
         time: { start, end: tool.time.completed ?? start },
       }
     }
@@ -348,7 +365,12 @@ function toolPart(sessionID: string, messageID: string, tool: SessionMessageAssi
       output: tool.state.content.flatMap((item) => (item.type === "text" ? [item.text] : [])).join("\n"),
       title: tool.name,
       // metadata: normalizeToolMetadata(tool.name, tool.state.structured),
-      metadata: normalizeToolMetadata(tool.name, tool.state.metadata ?? {}),
+      metadata: normalizeToolMetadata(tool.name, {
+        ...(tool.state.metadata ?? {}),
+        ...(tool.name === "install_skill" && "structured" in tool.state && record(tool.state.structured)
+          ? tool.state.structured
+          : {}),
+      }),
       time: { start, end: tool.time.completed ?? start },
       attachments: attachments.length ? attachments : undefined,
     }

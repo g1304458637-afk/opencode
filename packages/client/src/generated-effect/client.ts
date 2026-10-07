@@ -506,7 +506,115 @@ type Endpoint12_0Input = { readonly location?: Endpoint12_0Request["query"]["loc
 const Endpoint12_0 = (raw: RawClient["server.skill"]) => (input?: Endpoint12_0Input) =>
   raw["skill.list"]({ query: { location: input?.["location"] } }).pipe(Effect.mapError(mapClientError))
 
-const adaptGroup12 = (raw: RawClient["server.skill"]) => ({ list: Endpoint12_0(raw) })
+type Endpoint12_1Request = Parameters<RawClient["server.skill"]["skill.installed"]>[0]
+type Endpoint12_1Input = { readonly location?: Endpoint12_1Request["query"]["location"] }
+const Endpoint12_1 = (raw: RawClient["server.skill"]) => (input?: Endpoint12_1Input) =>
+  raw["skill.installed"]({ query: { location: input?.["location"] } }).pipe(Effect.mapError(mapClientError))
+
+type Endpoint12_2Request = Parameters<RawClient["server.skill"]["skill.available"]>[0]
+type Endpoint12_2Input = { readonly location?: Endpoint12_2Request["query"]["location"] }
+const Endpoint12_2 = (raw: RawClient["server.skill"]) => (input?: Endpoint12_2Input) =>
+  raw["skill.available"]({ query: { location: input?.["location"] } }).pipe(Effect.mapError(mapClientError))
+
+type Endpoint12_3Request = Parameters<RawClient["server.skill"]["skill.search"]>[0]
+type Endpoint12_3Input = {
+  readonly location?: Endpoint12_3Request["query"]["location"]
+  readonly q: Endpoint12_3Request["query"]["q"]
+}
+const Endpoint12_3 = (raw: RawClient["server.skill"]) => (input: Endpoint12_3Input) =>
+  raw["skill.search"]({ query: { location: input["location"], q: input["q"] } }).pipe(Effect.mapError(mapClientError))
+
+type Endpoint12_4Request = Parameters<RawClient["server.skill"]["skill.read"]>[0]
+type Endpoint12_4Input = {
+  readonly location?: Endpoint12_4Request["query"]["location"]
+  readonly source: Endpoint12_4Request["payload"]["source"]
+}
+const Endpoint12_4 = (raw: RawClient["server.skill"]) => (input: Endpoint12_4Input) =>
+  raw["skill.read"]({ query: { location: input["location"] }, payload: { source: input["source"] } }).pipe(
+    Effect.mapError(mapClientError),
+  )
+
+type Endpoint12_5Request = Parameters<RawClient["server.skill"]["skill.content"]>[0]
+type Endpoint12_5Input = {
+  readonly location?: Endpoint12_5Request["query"]["location"]
+  readonly source: Endpoint12_5Request["payload"]["source"]
+}
+const Endpoint12_5 = (raw: RawClient["server.skill"]) => (input: Endpoint12_5Input) =>
+  raw["skill.content"]({ query: { location: input["location"] }, payload: { source: input["source"] } }).pipe(
+    Effect.mapError(mapClientError),
+  )
+
+type Endpoint12_6Request = Parameters<RawClient["server.skill"]["skill.translate"]>[0]
+type Endpoint12_6Input = {
+  readonly location?: Endpoint12_6Request["query"]["location"]
+  readonly source: Endpoint12_6Request["payload"]["source"]
+  readonly includeMarkdown: Endpoint12_6Request["payload"]["includeMarkdown"]
+  readonly model?: Endpoint12_6Request["payload"]["model"]
+}
+const Endpoint12_6 = (raw: RawClient["server.skill"]) => (input: Endpoint12_6Input) =>
+  raw["skill.translate"]({
+    query: { location: input["location"] },
+    payload: { source: input["source"], includeMarkdown: input["includeMarkdown"], model: input["model"] },
+  }).pipe(Effect.mapError(mapClientError))
+
+type Endpoint12_7Request = Parameters<RawClient["server.skill"]["skill.install"]>[0]
+type Endpoint12_7Input = {
+  readonly location?: Endpoint12_7Request["query"]["location"]
+  readonly id?: Endpoint12_7Request["payload"]["id"]
+  readonly source: Endpoint12_7Request["payload"]["source"]
+}
+const Endpoint12_7 = (raw: RawClient["server.skill"]) => (input: Endpoint12_7Input) =>
+  raw["skill.install"]({
+    query: { location: input["location"] },
+    payload: { id: input["id"], source: input["source"] },
+  }).pipe(Effect.mapError(mapClientError))
+
+type Endpoint12_8Request = Parameters<RawClient["server.skill"]["skill.operation"]>[0]
+type Endpoint12_8Input = {
+  readonly id: Endpoint12_8Request["params"]["id"]
+  readonly location?: Endpoint12_8Request["query"]["location"]
+}
+const Endpoint12_8 = (raw: RawClient["server.skill"]) => (input: Endpoint12_8Input) =>
+  raw["skill.operation"]({ params: { id: input["id"] }, query: { location: input["location"] } }).pipe(
+    Effect.mapError(mapClientError),
+  )
+
+type Endpoint12_9Request = Parameters<RawClient["server.skill"]["skill.remove"]>[0]
+type Endpoint12_9Input = {
+  readonly id: Endpoint12_9Request["params"]["id"]
+  readonly location?: Endpoint12_9Request["query"]["location"]
+}
+const Endpoint12_9 = (raw: RawClient["server.skill"]) => (input: Endpoint12_9Input) =>
+  raw["skill.remove"]({ params: { id: input["id"] }, query: { location: input["location"] } }).pipe(
+    Effect.mapError(mapClientError),
+  )
+
+type Endpoint12_10Request = Parameters<RawClient["server.skill"]["skill.prepare"]>[0]
+type Endpoint12_10Input = {
+  readonly location?: Endpoint12_10Request["query"]["location"]
+  readonly owner: Endpoint12_10Request["payload"]["owner"]
+  readonly restoreFrom?: Endpoint12_10Request["payload"]["restoreFrom"]
+  readonly skills: Endpoint12_10Request["payload"]["skills"]
+}
+const Endpoint12_10 = (raw: RawClient["server.skill"]) => (input: Endpoint12_10Input) =>
+  raw["skill.prepare"]({
+    query: { location: input["location"] },
+    payload: { owner: input["owner"], restoreFrom: input["restoreFrom"], skills: input["skills"] },
+  }).pipe(Effect.mapError(mapClientError))
+
+const adaptGroup12 = (raw: RawClient["server.skill"]) => ({
+  list: Endpoint12_0(raw),
+  installed: Endpoint12_1(raw),
+  available: Endpoint12_2(raw),
+  search: Endpoint12_3(raw),
+  read: Endpoint12_4(raw),
+  content: Endpoint12_5(raw),
+  translate: Endpoint12_6(raw),
+  install: Endpoint12_7(raw),
+  operation: Endpoint12_8(raw),
+  remove: Endpoint12_9(raw),
+  prepare: Endpoint12_10(raw),
+})
 
 const Endpoint13_0 = (raw: RawClient["server.event"]) => () =>
   Stream.unwrap(

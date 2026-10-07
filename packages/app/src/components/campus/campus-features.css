@@ -1,0 +1,194 @@
+/* Feature-only layout. Existing HUBU theme, material and animation rules stay authoritative. */
+.campus-feature-page {
+  flex: 1;
+  align-self: stretch;
+  min-height: 0;
+  overflow: auto;
+  color: var(--workspace-text);
+}
+.campus-feature-content {
+  max-width: 1080px;
+  margin-inline: auto;
+  padding: 32px 24px;
+}
+.campus-feature-content h1 {
+  font-size: 18px;
+  font-weight: 550;
+  margin-bottom: 24px;
+}
+.campus-project-tabs {
+  display: flex;
+  gap: 8px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--workspace-border);
+}
+.campus-project-tabs button {
+  padding: 8px 12px;
+  border-radius: var(--workspace-radius-sm);
+  color: var(--workspace-secondary);
+  font-size: 14px;
+}
+.campus-project-tabs button[aria-selected="true"] {
+  color: var(--workspace-text);
+  background: var(--workspace-glass-active);
+}
+.campus-project-scroll {
+  min-height: 0;
+}
+.campus-project-group,
+.campus-independent {
+  margin-top: 16px;
+}
+.campus-project-heading,
+.campus-session-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: var(--workspace-radius-sm);
+}
+.campus-project-toggle,
+.campus-session-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  text-align: left;
+  font-size: 14px;
+}
+.campus-project-toggle > span,
+.campus-session-link > span {
+  flex: 1;
+  min-width: 0;
+}
+.campus-project-toggle > span,
+.campus-session-title {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.campus-session-link small {
+  color: var(--workspace-muted);
+  font-size: 12px;
+}
+.campus-session-link > span small {
+  display: block;
+}
+.campus-session-more,
+.campus-project-create {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-radius: var(--workspace-radius-sm);
+  color: var(--workspace-secondary);
+}
+.campus-project-heading:hover,
+.campus-session-row:hover,
+.campus-session-row[data-active="true"] {
+  background: var(--workspace-glass-active);
+}
+.campus-project-children {
+  margin-left: 16px;
+  border-left: 1px solid var(--workspace-border);
+}
+.campus-project-empty,
+.campus-project-more,
+.campus-project-menu-note {
+  padding: 10px 12px;
+  color: var(--workspace-secondary);
+  font-size: 12px;
+}
+.campus-project-more {
+  text-align: left;
+}
+.campus-independent h2 {
+  font-size: 14px;
+  padding: 12px;
+  color: var(--workspace-secondary);
+}
+.campus-delete-body {
+  padding: 0 24px 24px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.campus-delete-list {
+  margin-block: 16px;
+  max-height: 240px;
+  overflow: auto;
+}
+.campus-delete-list li {
+  padding-block: 8px;
+}
+.campus-delete-list small {
+  display: block;
+  color: var(--workspace-secondary);
+  overflow-wrap: anywhere;
+}
+.campus-delete-danger,
+.campus-delete-errors,
+.campus-delete-body [role="alert"] {
+  color: var(--workspace-error);
+}
+.campus-delete-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 20px;
+}
+.campus-task-starters {
+  width: min(100%, 800px);
+  margin-inline: auto;
+  padding-block: 16px;
+  color: var(--workspace-secondary);
+}
+.campus-task-starters h2 {
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+.campus-task-starters__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.campus-task-starters .campus-task-starters__grid [data-component="button-v2"] {
+  height: auto;
+  white-space: normal;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--workspace-border);
+  border-radius: var(--workspace-radius-sm);
+  background: var(--workspace-glass-elevated);
+  text-align: left;
+}
+.campus-task-starters__grid button:hover {
+  background: var(--workspace-glass-active);
+}
+.campus-task-starters__grid button > span {
+  min-width: 0;
+}
+.campus-task-starters__grid strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--workspace-text);
+}
+.campus-task-starters__grid span span,
+.campus-task-starters > p {
+  display: block;
+  font-size: 12px;
+  line-height: 1.5;
+  margin-top: 6px;
+}
+@media (max-width: 700px) {
+  .campus-task-starters__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .campus-feature-content {
+    padding: 24px 16px;
+  }
+}

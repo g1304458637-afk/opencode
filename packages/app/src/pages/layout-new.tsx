@@ -1,3 +1,5 @@
+import { CampusProjectsProvider } from "@/context/campus-projects"
+import "@/components/campus/campus-features.css"
 import { createEffect, onCleanup, onMount, Show, Suspense, type ParentProps } from "solid-js"
 import { resolveBrand } from "@opencode-ai/brand"
 import { useLayout } from "@/context/layout"
@@ -38,37 +40,39 @@ export default function NewLayout(props: ParentProps) {
   }
 
   return (
-    <div
-      data-component={brand.campus ? "campus-workspace" : undefined}
-      data-view={layout.route().type}
-      class="relative bg-v2-background-bg-deep flex-1 min-h-0 min-w-0 flex flex-col select-none [&_input]:select-text [&_textarea]:select-text [&_[contenteditable]]:select-text"
-      style={{
-        "padding-top": "env(safe-area-inset-top, 0px)",
-        "padding-bottom": "env(safe-area-inset-bottom, 0px)",
-      }}
-    >
-      <Show when={brand.campus}>
-        <NewSessionBackground workspace />
-      </Show>
-      <Titlebar
-        update={update}
-        debugTools={
-          import.meta.env.DEV
-            ? { visible: state.debugTools, toggle: () => setState("debugTools", (value) => !value) }
-            : undefined
-        }
-      />
-      <div class="campus-workspace__body flex flex-1 min-h-0 min-w-0">
+    <CampusProjectsProvider>
+      <div
+        data-component={brand.campus ? "campus-workspace" : undefined}
+        data-view={layout.route().type}
+        class="relative bg-v2-background-bg-deep flex-1 min-h-0 min-w-0 flex flex-col select-none [&_input]:select-text [&_textarea]:select-text [&_[contenteditable]]:select-text"
+        style={{
+          "padding-top": "env(safe-area-inset-top, 0px)",
+          "padding-bottom": "env(safe-area-inset-bottom, 0px)",
+        }}
+      >
         <Show when={brand.campus}>
-          <WorkspaceSidebar />
+          <NewSessionBackground workspace />
         </Show>
-        <main class="flex-1 min-h-0 min-w-0 overflow-x-hidden flex flex-col items-start contain-strict">
-          <Suspense>{props.children}</Suspense>
-        </main>
+        <Titlebar
+          update={update}
+          debugTools={
+            import.meta.env.DEV
+              ? { visible: state.debugTools, toggle: () => setState("debugTools", (value) => !value) }
+              : undefined
+          }
+        />
+        <div class="campus-workspace__body flex flex-1 min-h-0 min-w-0">
+          <Show when={brand.campus}>
+            <WorkspaceSidebar />
+          </Show>
+          <main class="flex-1 min-h-0 min-w-0 overflow-x-hidden flex flex-col items-start contain-strict">
+            <Suspense>{props.children}</Suspense>
+          </main>
+        </div>
+        {import.meta.env.DEV && state.debugTools && <DebugBar inline />}
+        <TabsInfoPopup />
+        <ToastRegion v2 />
       </div>
-      {import.meta.env.DEV && state.debugTools && <DebugBar inline />}
-      <TabsInfoPopup />
-      <ToastRegion v2 />
-    </div>
+    </CampusProjectsProvider>
   )
 }

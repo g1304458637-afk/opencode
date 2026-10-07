@@ -7,6 +7,24 @@
 //   不 fork 任何 Core。
 // - muc 分支的历史行为逐字节保留：muc 的取值与旧硬编码完全一致。
 
+// Use only on application-owned presentation templates, before inserting user data.
+// Routing IDs, configuration, code, storage keys and conversation history are not rewritten.
+export function publicBrandText(value: string, brand = resolveBrand()): string {
+  if (brand.id !== "hubu") return value
+  return value
+    .replace(
+      /https:\/\/(?:opencode\.ai(?:\/[^\s)]+)?|discord\.com\/invite\/opencode|github\.com\/anomalyco\/opencode[^\s)]*)/g,
+      `${brand.gatewayURL}${brand.sitePath}`,
+    )
+    .replace(/(?<![\w@./-])open[ -]?code(?![._/-])/gi, brand.appName)
+    .replace(/(?<![\w@./-])(?:sub2api|kcode|k ai|muc|mucode)(?![\w./-])/gi, brand.appName)
+}
+
+export function publicBrandMessages<T extends Record<string, string>>(messages: T, brand = resolveBrand()): T {
+  if (brand.id !== "hubu") return messages
+  return Object.fromEntries(Object.entries(messages).map(([key, value]) => [key, publicBrandText(value, brand)])) as T
+}
+
 export interface BrandColors {
   /** 主色（深绿 / 民大红） */
   primary: string

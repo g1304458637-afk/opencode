@@ -1,3 +1,5 @@
+import type { Reference, Selectable } from "@opencode-ai/schema/skill-library"
+import { resolveBrand } from "@opencode-ai/brand"
 import type { Message, Session } from "@opencode-ai/sdk/v2/client"
 import { showToast } from "@/utils/toast"
 import { base64Encode } from "@opencode-ai/core/util/encode"
@@ -32,6 +34,9 @@ type PendingPrompt = {
 const pending = new Map<string, PendingPrompt>()
 
 export type FollowupDraft = {
+  messageID?: string
+  selectedSkills?: Reference[]
+  skills?: Selectable[]
   sessionID: string
   sessionDirectory: string
   prompt: Prompt
@@ -84,8 +89,9 @@ export async function sendFollowupDraft(input: FollowupSendInput) {
         return false
       }
 
-      const messageID = Identifier.ascending("message")
+      const messageID = input.messageID ?? input.draft.messageID ?? Identifier.ascending("message")
       await input.api.command({
+        selectedSkills: input.draft.selectedSkills,
         sessionID: input.draft.sessionID,
         id: messageID,
         command: cmd,
@@ -110,7 +116,7 @@ export async function sendFollowupDraft(input: FollowupSendInput) {
     }
   }
 
-  const messageID = input.messageID ?? Identifier.ascending("message")
+  const messageID = input.messageID ?? input.draft.messageID ?? Identifier.ascending("message")
   const encodedImages = await Promise.all(
     images.map(async (attachment) => ({
       ...attachment,
@@ -172,6 +178,7 @@ export async function sendFollowupDraft(input: FollowupSendInput) {
       model: input.draft.model,
       variant: input.draft.variant,
       legacyParts: requestParts,
+      selectedSkills: input.draft.selectedSkills,
       text: requestParts.flatMap((part) => (part.type === "text" ? [part.text] : [])).join("\n"),
       files: requestParts.flatMap((part) => {
         if (part.type !== "file") return []
@@ -446,7 +453,34 @@ export function createPromptSubmit(input: PromptSubmitInput) {
       providerID: currentModel.provider.id,
     }
     const agent = currentAgent.name
+    const messageID = Identifier.ascending("message")
+    const skills = submission
+      .target()
+      .skills.current()
+      .map((skill) => ({ ...skill }))
+    let selectedSkills: Reference[] | undefined
+    if (resolveBrand().id === "hubu" && mode === "normal") {
+      try {
+        const prepared = await client.v2.skill.prepare(
+          {
+            owner: messageID,
+            restoreFrom: submission.target().skills.origin(),
+            skills: skills.map(({ id, revision }) => ({ id, revision })),
+            location: { directory: sessionDirectory },
+          },
+          { throwOnError: true },
+        )
+        selectedSkills = [...(prepared.data.data ?? [])]
+        submission.pin(selectedSkills, messageID)
+      } catch (error) {
+        showToast({ title: language.t("prompt.toast.promptSendFailed.title"), description: errorMessage(error) })
+        return
+      }
+    }
     const draft: FollowupDraft = {
+      messageID,
+      skills,
+      selectedSkills,
       sessionID: session.id,
       sessionDirectory,
       prompt: currentPrompt,
@@ -466,6 +500,7 @@ export function createPromptSubmit(input: PromptSubmitInput) {
       const restored = submission.restore()
       if (!restored) return false
       restored.target.set(restored.prompt, input.promptLength(restored.prompt))
+      restored.target.skills.restore(restored.skills, restored.origin)
       if (!submission.current(prompt.capture())) return true
       input.setMode(mode)
       input.setPopover(null)
@@ -515,10 +550,10 @@ export function createPromptSubmit(input: PromptSubmitInput) {
       const customCommand = sync().data.command.find((c) => c.name === commandName)
       if (customCommand) {
         clearInput()
-        const messageID = Identifier.ascending("message")
         serverSync().session.set("session_status", session.id, { type: "busy" })
         sdk()
           .api.session.command({
+            selectedSkills,
             sessionID: session.id,
             id: messageID,
             command: commandName,
@@ -545,8 +580,6 @@ export function createPromptSubmit(input: PromptSubmitInput) {
     }
 
     const commentItems = context.filter((item) => item.type === "file" && !!item.comment?.trim())
-    const messageID = Identifier.ascending("message")
-
     const removeOptimisticMessage = () => {
       sync().session.optimistic.remove({
         directory: sessionDirectory,

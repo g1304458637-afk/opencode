@@ -10,6 +10,8 @@
 // - Gateway Base URL 默认值来自品牌档案，可用 <BRAND>_GATEWAY_URL 覆盖
 //   （开发期兼容 HTTP，正式发布走 HTTPS）。
 
+import { CampusModel } from "@opencode-ai/core/provider/campus-model"
+import { Schema } from "effect"
 import { resolveBrand } from "@opencode-ai/brand"
 
 const brand = resolveBrand()
@@ -67,6 +69,10 @@ export function sub2apiDefaultProvider(existing?: Record<string, unknown>, apiKe
 
 // 拉取网关 /v1/models，失败时返回空数组（回退到静态配置模型）。
 export async function fetchSub2APIModels(baseURL: string, apiKey?: string): Promise<string[]> {
+  return (await fetchSub2APIModelCatalog(baseURL, apiKey)).map((model) => model.id)
+}
+
+export async function fetchSub2APIModelCatalog(baseURL: string, apiKey?: string): Promise<CampusModel.Info[]> {
   try {
     const url = baseURL.replace(/\/+$/, "") + "/models"
     const res = await fetch(url, {
@@ -74,9 +80,11 @@ export async function fetchSub2APIModels(baseURL: string, apiKey?: string): Prom
       signal: AbortSignal.timeout(8_000),
     })
     if (!res.ok) return []
-    const data = (await res.json()) as any
-    const items = Array.isArray(data?.data) ? data.data : []
-    return items.map((m: any) => String(m?.id)).filter(Boolean)
+    const data = Schema.decodeUnknownSync(Schema.Struct({ data: Schema.Array(Schema.Unknown) }))(await res.json())
+    return data.data.flatMap((item) => {
+      const model = Schema.decodeUnknownOption(CampusModel.Info)(item).valueOrUndefined
+      return model ? [model] : []
+    })
   } catch {
     return []
   }

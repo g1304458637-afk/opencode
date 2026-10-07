@@ -1,3 +1,4 @@
+import { CampusTaskStarters } from "./campus-task-starters"
 import { useDialog } from "@opencode-ai/ui/context/dialog"
 import { Tooltip } from "@opencode-ai/ui/tooltip"
 import { Icon as IconV2 } from "@opencode-ai/ui/v2/icon"
@@ -92,6 +93,9 @@ export function NewSessionView(props: {
               </div>
             </div>
           </div>
+          <Show when={campusBrand.id === "hubu"}>
+            <CampusTaskStarters input={props.input} />
+          </Show>
         </div>
         <ProviderTip />
       </div>

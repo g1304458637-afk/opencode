@@ -85,6 +85,26 @@ import type {
   CommandsListOutput,
   SkillsListInput,
   SkillsListOutput,
+  SkillsInstalledInput,
+  SkillsInstalledOutput,
+  SkillsAvailableInput,
+  SkillsAvailableOutput,
+  SkillsSearchInput,
+  SkillsSearchOutput,
+  SkillsReadInput,
+  SkillsReadOutput,
+  SkillsContentInput,
+  SkillsContentOutput,
+  SkillsTranslateInput,
+  SkillsTranslateOutput,
+  SkillsInstallInput,
+  SkillsInstallOutput,
+  SkillsOperationInput,
+  SkillsOperationOutput,
+  SkillsRemoveInput,
+  SkillsRemoveOutput,
+  SkillsPrepareInput,
+  SkillsPrepareOutput,
   EventsSubscribeOutput,
   PtysListInput,
   PtysListOutput,
@@ -803,6 +823,131 @@ export function make(options: ClientOptions) {
             query: { location: input?.["location"] },
             successStatus: 200,
             declaredStatuses: [401, 400],
+            empty: false,
+          },
+          requestOptions,
+        ),
+      installed: (input?: SkillsInstalledInput, requestOptions?: RequestOptions) =>
+        request<SkillsInstalledOutput>(
+          {
+            method: "GET",
+            path: `/api/skill/library`,
+            query: { location: input?.["location"] },
+            successStatus: 200,
+            declaredStatuses: [401, 400],
+            empty: false,
+          },
+          requestOptions,
+        ),
+      available: (input?: SkillsAvailableInput, requestOptions?: RequestOptions) =>
+        request<SkillsAvailableOutput>(
+          {
+            method: "GET",
+            path: `/api/skill/available`,
+            query: { location: input?.["location"] },
+            successStatus: 200,
+            declaredStatuses: [401, 400],
+            empty: false,
+          },
+          requestOptions,
+        ),
+      search: (input: SkillsSearchInput, requestOptions?: RequestOptions) =>
+        request<SkillsSearchOutput>(
+          {
+            method: "GET",
+            path: `/api/skill/search`,
+            query: { location: input["location"], q: input["q"] },
+            successStatus: 200,
+            declaredStatuses: [500, 401, 400],
+            empty: false,
+          },
+          requestOptions,
+        ),
+      read: (input: SkillsReadInput, requestOptions?: RequestOptions) =>
+        request<SkillsReadOutput>(
+          {
+            method: "POST",
+            path: `/api/skill/read`,
+            query: { location: input["location"] },
+            body: { source: input["source"] },
+            successStatus: 200,
+            declaredStatuses: [500, 401, 400],
+            empty: false,
+          },
+          requestOptions,
+        ),
+      content: (input: SkillsContentInput, requestOptions?: RequestOptions) =>
+        request<SkillsContentOutput>(
+          {
+            method: "POST",
+            path: `/api/skill/content`,
+            query: { location: input["location"] },
+            body: { source: input["source"] },
+            successStatus: 200,
+            declaredStatuses: [500, 401, 400],
+            empty: false,
+          },
+          requestOptions,
+        ),
+      translate: (input: SkillsTranslateInput, requestOptions?: RequestOptions) =>
+        request<SkillsTranslateOutput>(
+          {
+            method: "POST",
+            path: `/api/skill/translate`,
+            query: { location: input["location"] },
+            body: { source: input["source"], includeMarkdown: input["includeMarkdown"], model: input["model"] },
+            successStatus: 200,
+            declaredStatuses: [500, 401, 400],
+            empty: false,
+          },
+          requestOptions,
+        ),
+      install: (input: SkillsInstallInput, requestOptions?: RequestOptions) =>
+        request<SkillsInstallOutput>(
+          {
+            method: "POST",
+            path: `/api/skill/install`,
+            query: { location: input["location"] },
+            body: { id: input["id"], source: input["source"] },
+            successStatus: 200,
+            declaredStatuses: [401, 400],
+            empty: false,
+          },
+          requestOptions,
+        ),
+      operation: (input: SkillsOperationInput, requestOptions?: RequestOptions) =>
+        request<SkillsOperationOutput>(
+          {
+            method: "GET",
+            path: `/api/skill/operation/${encodeURIComponent(input.id)}`,
+            query: { location: input["location"] },
+            successStatus: 200,
+            declaredStatuses: [401, 400],
+            empty: false,
+          },
+          requestOptions,
+        ),
+      remove: (input: SkillsRemoveInput, requestOptions?: RequestOptions) =>
+        request<SkillsRemoveOutput>(
+          {
+            method: "DELETE",
+            path: `/api/skill/library/${encodeURIComponent(input.id)}`,
+            query: { location: input["location"] },
+            successStatus: 200,
+            declaredStatuses: [500, 401, 400],
+            empty: false,
+          },
+          requestOptions,
+        ),
+      prepare: (input: SkillsPrepareInput, requestOptions?: RequestOptions) =>
+        request<SkillsPrepareOutput>(
+          {
+            method: "POST",
+            path: `/api/skill/selection`,
+            query: { location: input["location"] },
+            body: { owner: input["owner"], restoreFrom: input["restoreFrom"], skills: input["skills"] },
+            successStatus: 200,
+            declaredStatuses: [500, 401, 400],
             empty: false,
           },
           requestOptions,

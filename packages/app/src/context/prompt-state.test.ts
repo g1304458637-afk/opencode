@@ -27,3 +27,33 @@ describe("prompt state initialization", () => {
     })
   })
 })
+
+test("task skill selection survives composer reset, remains isolated, and respects explicit removal", () => {
+  const first = createPromptState()
+  const second = createPromptState()
+  const skill = {
+    id: `sk_${"a".repeat(64)}`,
+    name: "Design",
+    description: "",
+    sourceType: "local" as const,
+    repository: "fixture",
+    path: "",
+    revision: "b".repeat(64),
+    contentHash: "b".repeat(64),
+    managed: true,
+  }
+  first.skills.add(skill)
+  expect(first.skills.current()).toEqual([skill])
+  expect(second.skills.current()).toEqual([])
+  first.skills.restore([skill], "original-task")
+  expect(first.skills.origin()).toBe("original-task")
+  first.skills.remove(skill.id)
+  expect(first.skills.origin()).toBeUndefined()
+  first.skills.add(skill)
+  first.reset()
+  expect(first.skills.current()).toEqual([skill])
+  first.skills.remove(skill.id)
+  first.reset()
+  expect(first.skills.current()).toEqual([])
+  expect(second.skills.current()).toEqual([])
+})

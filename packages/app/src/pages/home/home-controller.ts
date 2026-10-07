@@ -1,3 +1,4 @@
+import { notifyCampusProjectOpened } from "@/components/campus/campus-project-events"
 import { useGlobal } from "@/context/global"
 import { type HomeProjectSelection, useLayout } from "@/context/layout"
 import { ServerConnection, useServer } from "@/context/server"
@@ -91,6 +92,7 @@ export function createHomeController() {
         if (!directory) return
         const ctx = global.ensureServerCtx(conn)
         directories.forEach((item) => {
+          notifyCampusProjectOpened(ServerConnection.key(conn), item)
           if (ctx.projects.list().some((project) => project.worktree === item)) return
           const location = { directory: item }
           void ctx.sdk.api.file

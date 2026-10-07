@@ -175,6 +175,15 @@ const createPlatform = (windowState: DesktopWindowState): Platform => {
     version: APP_VERSION,
     windowID: windowState.id,
 
+    async openSkillZipPickerDialog(opts) {
+      const result = await window.api.openFilePicker({ title: opts?.title, multiple: false, extensions: ["zip"] })
+      if (!result) return
+      try {
+        return result.files[0]?.path
+      } finally {
+        await window.api.releasePickedFiles(result.token)
+      }
+    },
     async openDirectoryPickerDialog(opts) {
       return window.api.openDirectoryPicker({
         multiple: opts?.multiple ?? false,

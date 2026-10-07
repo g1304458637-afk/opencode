@@ -42,6 +42,8 @@ export type PromptInputV2Props = {
   borderUnderlay?: boolean
   class?: string
   modelControl?: JSX.Element
+  onSkills?: () => void
+  skillsLabel?: string
   variantControlVisible?: boolean
   attachKeybind?: string[]
   attachShortcut?: string
@@ -218,6 +220,8 @@ export function PromptInputV2(props: PromptInputV2Props) {
               onCommands={props.controller.openCommands}
               onContext={props.controller.openContext}
               onShell={props.controller.openShell}
+              onSkills={props.onSkills}
+              skillsLabel={props.skillsLabel}
             />
             <Show when={view.agent} keyed>
               {(control) => (
@@ -471,6 +475,8 @@ export function PromptInputV2Attachments(props: {
 }
 
 export function PromptInputV2AddMenu(props: {
+  onSkills?: () => void
+  skillsLabel?: string
   disabled?: boolean
   title: string
   keybind?: string[]
@@ -507,6 +513,11 @@ export function PromptInputV2AddMenu(props: {
         />
         <MenuV2.Portal>
           <MenuV2.Content style={{ "min-width": "180px" }}>
+            <Show when={props.onSkills}>
+              <MenuV2.Item onSelect={props.onSkills} data-action="prompt-skills">
+                {props.skillsLabel}
+              </MenuV2.Item>
+            </Show>
             <MenuV2.Item onSelect={props.onAttach} shortcut={props.attachShortcut}>
               {props.attachLabel}
             </MenuV2.Item>

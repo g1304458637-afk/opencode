@@ -1,3 +1,5 @@
+import { SkillSelectionSummary, SkillSelector } from "@/components/skill-library"
+import { resolveBrand } from "@opencode-ai/brand"
 import { ImagePreview } from "@opencode-ai/ui/image-preview"
 import { useDialog } from "@opencode-ai/ui/context/dialog"
 import { ProviderIcon } from "@opencode-ai/ui/provider-icon"
@@ -41,6 +43,7 @@ export type PromptInputV2ComposerProps = {
 
 export type PromptInputV2ControllerProps = Omit<PromptInputProps, "class" | "submission">
 export type PromptInputV2ComposerController = PromptInputV2Interaction & {
+  readonly skills: ReturnType<typeof usePrompt>["skills"]
   readonly model: PromptInputProps["controls"]["model"]
 }
 
@@ -51,8 +54,17 @@ export function PromptInputV2Composer(props: PromptInputV2ComposerProps) {
 
   return (
     <div class="flex flex-col gap-3">
+      <Show when={resolveBrand().id === "hubu"}>
+        <SkillSelectionSummary selection={props.controller.skills} />
+      </Show>
       <PromptInputV2
         controller={props.controller}
+        onSkills={
+          resolveBrand().id === "hubu"
+            ? () => dialog.show(() => <SkillSelector selection={props.controller.skills} />)
+            : undefined
+        }
+        skillsLabel={language.t("skills.add")}
         borderUnderlay={props.borderUnderlay}
         class={props.class}
         variantControlVisible={!props.controller.model.loading}
@@ -408,6 +420,7 @@ export function usePromptInputV2Controller(props: PromptInputV2ControllerProps):
       },
     },
   })
+  Object.defineProperty(controller, "skills", { get: () => prompt.skills })
   Object.defineProperty(controller, "model", { get: () => props.controls.model })
 
   command.register("prompt-input", () => [
@@ -458,6 +471,7 @@ export function usePromptInputV2Controller(props: PromptInputV2ControllerProps):
         controller.dispatch({ type: "mode.normal" })
         controller.resetHistory()
         prompt.set(edit.prompt, promptLength(edit.prompt))
+        prompt.skills.restore(edit.skills ?? [], edit.id)
         controller.restoreFocus()
         props.onEditLoaded?.()
       },
@@ -528,6 +542,7 @@ function PromptInputV2ModelControl(props: {
         >
           <ModelSelectorPopoverV2
             model={props.model}
+            variant={resolveBrand().id === "hubu" ? props.model.variant : undefined}
             trigger={(triggerProps) => (
               <ButtonV2
                 {...triggerProps}

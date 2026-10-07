@@ -1,3 +1,4 @@
+import { SkillSelection } from "./selection"
 export * as SkillGuidance from "./guidance"
 
 import { makeLocationNode } from "../effect/app-node"
@@ -44,6 +45,7 @@ const layer = Layer.effect(
 
     return Service.of({
       load: Effect.fn("SkillGuidance.load")(function* (selection) {
+        if (SkillSelection.required()) return SystemContext.empty
         const agent = selection.info
         if (!agent) return SystemContext.empty
         const permitted = SkillV2.available(yield* skills.list(), agent)

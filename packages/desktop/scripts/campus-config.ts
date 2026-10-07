@@ -9,10 +9,12 @@ export function campusConfig(env: NodeJS.ProcessEnv = process.env) {
   if (!brand.campus) return { brand, version: null }
   const prefix = brand.id.toUpperCase()
   const local = env.CAMPUS_LOCAL_BUILD === "1"
+  const skillRegistryURL = brand.id === "hubu" ? env.HUBU_SKILL_REGISTRY_URL : undefined
   if (brand.id === "hubu" && !local) {
     for (const suffix of ["GATEWAY_URL", "UPDATE_FEED_URL", "MANIFEST_URL", "DOWNLOAD_BASE_URL", "WEBSITE_URL"]) {
       if (!env[`${prefix}_${suffix}`]) throw new Error(`HUBU production build requires ${prefix}_${suffix}`)
     }
+    if (!skillRegistryURL) throw new Error("HUBU production build requires HUBU_SKILL_REGISTRY_URL")
   }
   const configured = {
     ...brand,
@@ -24,7 +26,11 @@ export function campusConfig(env: NodeJS.ProcessEnv = process.env) {
       downloadBase: env[`${prefix}_DOWNLOAD_BASE_URL`] || brand.updates.downloadBase,
     },
   }
-  for (const value of [configured.gatewayURL, ...Object.values(configured.updates)]) {
+  for (const value of [
+    configured.gatewayURL,
+    ...Object.values(configured.updates),
+    ...(skillRegistryURL ? [skillRegistryURL] : []),
+  ]) {
     const url = new URL(value)
     const loopback = ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname)
     if (url.username || url.password || url.hash || !["http:", "https:"].includes(url.protocol)) {
@@ -34,6 +40,7 @@ export function campusConfig(env: NodeJS.ProcessEnv = process.env) {
       throw new Error("Campus endpoints require HTTPS (local builds may use loopback HTTP)")
     }
   }
+  if (skillRegistryURL && new URL(skillRegistryURL).search) throw new Error("Invalid skill registry endpoint")
   const release = JSON.parse(readFileSync(new URL(`../resources/${brand.id}/release.json`, import.meta.url), "utf8"))
   if (
     typeof release.version !== "string" ||
@@ -41,5 +48,5 @@ export function campusConfig(env: NodeJS.ProcessEnv = process.env) {
   ) {
     throw new Error("Invalid campus release version")
   }
-  return { brand: configured, version: release.version as string }
+  return { brand: configured, version: release.version as string, skillRegistryURL }
 }

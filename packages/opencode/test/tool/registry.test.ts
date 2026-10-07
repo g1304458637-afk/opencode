@@ -364,9 +364,6 @@ describe("tool.registry", () => {
           fs.cp(path.dirname(fileURLToPath(import.meta.resolve("zod"))), path.join(opencode, "node_modules", "zod"), {
             dereference: true,
             recursive: true,
-            // Keep a distinct runtime copy for cross-package metadata, without
-            // copying sources and declarations that dominate Windows fixture I/O.
-            filter: (source) => path.basename(source) !== "src" && !/\.(?:ts|cts|mts)$/.test(source),
           }),
         )
         yield* Effect.promise(() =>

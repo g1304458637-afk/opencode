@@ -1,3 +1,6 @@
+import { SkillLibrary } from "@opencode-ai/core/skill/library"
+import { SkillSelection } from "@opencode-ai/core/skill/selection"
+import { Reference } from "@opencode-ai/schema/skill-library"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import path from "path"
@@ -122,6 +125,7 @@ const layer = Layer.effect(
     const plugin = yield* Plugin.Service
     const commands = yield* Command.Service
     const config = yield* Config.Service
+    const library = yield* SkillLibrary.Service
     const permission = yield* Permission.Service
     const fsys = yield* FSUtil.Service
     const mcp = yield* MCP.Service
@@ -666,9 +670,11 @@ const layer = Layer.effect(
           variant,
         },
         system: input.system,
+        selectedSkills: input.selectedSkills ? [...input.selectedSkills] : undefined,
         format: input.format,
       }
 
+      if (SkillSelection.required()) yield* library.pin(info.id, info.selectedSkills ?? []).pipe(Effect.orDie)
       const current = yield* sessions.get(input.sessionID).pipe(Effect.orDie)
       if (
         current.agent !== info.agent ||
@@ -1255,7 +1261,18 @@ const layer = Layer.effect(
             yield* plugin.trigger("experimental.chat.messages.transform", {}, { messages: msgs })
 
             const [skills, env, instructions, mcpInstructions, modelMsgs] = yield* Effect.all([
-              sys.skills(agent),
+              SkillSelection.required()
+                ? SkillSelection.context(
+                    library,
+                    lastUser.selectedSkills ?? [],
+                    (name) =>
+                      Permission.evaluate("skill", name, Permission.merge(agent.permission, session.permission ?? []))
+                        .action !== "deny",
+                  ).pipe(
+                    Effect.map((parts) => parts.join("\n\n")),
+                    Effect.orDie,
+                  )
+                : sys.skills(agent),
               sys.environment(model),
               instruction.system().pipe(Effect.orDie),
               sys.mcp(agent, session.permission),
@@ -1464,6 +1481,7 @@ const layer = Layer.effect(
       )
 
       const result = yield* prompt({
+        selectedSkills: input.selectedSkills,
         sessionID: input.sessionID,
         messageID: input.messageID,
         model: userModel,
@@ -1507,6 +1525,7 @@ export const PromptInput = Schema.Struct({
       "@deprecated tools and permissions have been merged, you can set permissions on the session itself now",
   }),
   format: Schema.optional(SessionV1.Format),
+  selectedSkills: Schema.optional(Schema.Array(Reference)),
   system: Schema.optional(Schema.String),
   variant: Schema.optional(Schema.String),
   parts: Schema.Array(
@@ -1534,6 +1553,7 @@ export const ShellInput = Schema.Struct({
 export type ShellInput = Schema.Schema.Type<typeof ShellInput>
 
 export const CommandInput = Schema.Struct({
+  selectedSkills: Schema.optional(Schema.Array(Reference)),
   messageID: Schema.optional(MessageID),
   sessionID: SessionID,
   agent: Schema.optional(Schema.String),
@@ -1625,6 +1645,7 @@ export const node = LayerNode.make({
     EventV2Bridge.node,
     RuntimeFlags.node,
     Database.node,
+    SkillLibrary.node,
   ],
 })
 

@@ -1,3 +1,4 @@
+import { SkillLibrary } from "@opencode-ai/core/skill/library"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import { Slug } from "@opencode-ai/core/util/slug"
@@ -486,10 +487,11 @@ export type Patch = Omit<Partial<Info>, "time" | "share" | "summary" | "revert" 
 const layer: Layer.Layer<
   Service,
   never,
-  BackgroundJob.Service | RuntimeFlags.Service | Database.Service | EventV2Bridge.Service
+  BackgroundJob.Service | RuntimeFlags.Service | Database.Service | EventV2Bridge.Service | SkillLibrary.Service
 > = Layer.effect(
   Service,
   Effect.gen(function* () {
+    const library = yield* SkillLibrary.Service
     const { db } = yield* Database.Service
     const database = yield* Database.Service
     const background = yield* BackgroundJob.Service
@@ -708,6 +710,8 @@ const layer: Layer.Layer<
         idMap.set(msg.info.id, newID)
 
         const parentID = msg.info.role === "assistant" && msg.info.parentID ? idMap.get(msg.info.parentID) : undefined
+        if (msg.info.role === "user" && msg.info.selectedSkills)
+          yield* library.pin(newID, msg.info.selectedSkills, msg.info.id).pipe(Effect.orDie)
         const cloned = yield* updateMessage({
           ...msg.info,
           sessionID: session.id,
@@ -1010,7 +1014,7 @@ function listByProject(
 export const node = LayerNode.make({
   service: Service,
   layer: layer,
-  deps: [BackgroundJob.node, RuntimeFlags.node, Database.node, EventV2Bridge.node],
+  deps: [SkillLibrary.node, BackgroundJob.node, RuntimeFlags.node, Database.node, EventV2Bridge.node],
 })
 
 export * as Session from "./session"

@@ -1,3 +1,4 @@
+import { SkillLibrary } from "./skill-library"
 import { Schema } from "effect"
 import { optional } from "./schema"
 import { statics } from "./schema"
@@ -42,16 +43,18 @@ export const Prompt = Schema.Struct({
   text: Schema.String,
   files: Schema.Array(FileAttachment).pipe(optional),
   agents: Schema.Array(AgentAttachment).pipe(optional),
+  selectedSkills: Schema.Array(SkillLibrary.Reference).pipe(optional),
 })
   .annotate({ identifier: "Prompt" })
   .pipe(
     statics((schema) => ({
       equivalence: Schema.toEquivalence(schema),
-      fromUserMessage: (input: Pick<Prompt, "text" | "files" | "agents">) =>
+      fromUserMessage: (input: Pick<Prompt, "text" | "files" | "agents" | "selectedSkills">) =>
         schema.make({
           text: input.text,
           ...(input.files === undefined ? {} : { files: input.files }),
           ...(input.agents === undefined ? {} : { agents: input.agents }),
+          ...(input.selectedSkills === undefined ? {} : { selectedSkills: input.selectedSkills }),
         }),
     })),
   )

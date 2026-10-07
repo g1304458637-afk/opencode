@@ -1,3 +1,4 @@
+import { SkillLibrary } from "./skill-library"
 export * as PromptInput from "./prompt-input"
 
 import { Schema } from "effect"
@@ -23,4 +24,5 @@ export const Prompt = Schema.Struct({
   text: Schema.String,
   files: Schema.Array(FileAttachment).pipe(optional),
   agents: Schema.Array(AgentAttachment).pipe(optional),
+  selectedSkills: Schema.Array(SkillLibrary.Reference).pipe(optional),
 }).annotate({ identifier: "PromptInput" })

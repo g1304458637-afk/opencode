@@ -1,3 +1,6 @@
+import { toModelOutput } from "../skill/format"
+import { SkillLibrary } from "../skill/library"
+import { SkillSelection } from "../skill/selection"
 export * as SkillTool from "./skill"
 
 import path from "path"
@@ -32,24 +35,7 @@ export const description = [
   "The skill name must match one of the available skills in the system context.",
 ].join("\n")
 
-export const toModelOutput = (skill: SkillV2.Info, files: ReadonlyArray<string>) => {
-  const directory = path.dirname(skill.location)
-  return [
-    `<skill_content name="${skill.name}">`,
-    `# Skill: ${skill.name}`,
-    "",
-    skill.content.trim(),
-    "",
-    `Base directory for this skill: ${directory}`,
-    "Relative paths in this skill (e.g., scripts/, reference/) are relative to this base directory.",
-    "Note: file list is sampled.",
-    "",
-    "<skill_files>",
-    ...files.map((file) => `<file>${file}</file>`),
-    "</skill_files>",
-    "</skill_content>",
-  ].join("\n")
-}
+export { toModelOutput } from "../skill/format"
 
 const unableToLoad = (name: string, error?: unknown) =>
   new ToolFailure({ message: `Unable to load skill ${name}`, error })
@@ -58,6 +44,7 @@ const layer = Layer.effectDiscard(
   Effect.gen(function* () {
     const tools = yield* Tools.Service
     const fs = yield* FSUtil.Service
+    const library = yield* SkillLibrary.Service
     const skills = yield* SkillV2.Service
     const permission = yield* PermissionV2.Service
     yield* tools
@@ -69,6 +56,29 @@ const layer = Layer.effectDiscard(
           toModelOutput: ({ output }) => [{ type: "text", text: output.output }],
           execute: (input, context) =>
             Effect.gen(function* () {
+              if (SkillSelection.required()) {
+                yield* permission
+                  .assert({
+                    action: name,
+                    resources: [input.name],
+                    save: [input.name],
+                    sessionID: context.sessionID,
+                    agent: context.agent,
+                    source: { type: "tool", messageID: context.assistantMessageID, callID: context.toolCallID },
+                  })
+                  .pipe(Effect.mapError((error) => unableToLoad(input.name, error)))
+                const selected = yield* Effect.forEach(context.selectedSkills ?? [], (ref) =>
+                  SkillV2.loadRevision(library, ref),
+                ).pipe(Effect.mapError((error) => unableToLoad(input.name, error)))
+                const matches = selected.filter((skill) => skill.name === input.name)
+                if (matches.length !== 1)
+                  return yield* unableToLoad(input.name, "Skill must be explicitly selected and unambiguous")
+                return {
+                  name: input.name,
+                  directory: path.dirname(matches[0].location),
+                  output: `Selected skill ${input.name} is already loaded for this task. Resources: ${path.dirname(matches[0].location)}`,
+                }
+              }
               const current = yield* skills.list()
               const skill = current.find((skill) => skill.name === input.name)
               if (!skill) return yield* unableToLoad(input.name)
@@ -105,5 +115,5 @@ const layer = Layer.effectDiscard(
 export const node = makeLocationNode({
   name: "tool/skill",
   layer,
-  deps: [ToolRegistry.node, FSUtil.node, SkillV2.node, PermissionV2.node],
+  deps: [ToolRegistry.node, FSUtil.node, SkillV2.node, SkillLibrary.node, PermissionV2.node],
 })

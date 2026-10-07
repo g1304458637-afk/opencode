@@ -129,6 +129,7 @@ export type Platform = PlatformBase &
     | {
         platform: "desktop"
         os?: DesktopOS
+        openSkillZipPickerDialog?(opts?: { title?: string }): Promise<string | undefined>
         openDirectoryPickerDialog(opts?: OpenDirectoryPickerOptions): Promise<PickerPaths>
       }
   )

@@ -1,3 +1,4 @@
+import { SkillManagementTools } from "./skill-management"
 export * as BuiltInTools from "./builtins"
 
 import { makeLocationNode } from "../effect/app-node"
@@ -40,6 +41,7 @@ export const node = makeLocationNode({
     QuestionTool.node,
     ReadTool.node,
     SkillTool.node,
+    SkillManagementTools.node,
     TodoWriteTool.node,
     WebFetchTool.node,
     WebSearchTool.node,

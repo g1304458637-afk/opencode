@@ -91,6 +91,7 @@ describe("SkillTool", () => {
               value: SkillTool.toModelOutput(info, [reference]),
             })
             expect(SkillTool.toModelOutput(info, [reference])).toContain(`Base directory for this skill: ${directory}`)
+            expect(SkillTool.toModelOutput(info, [reference])).toContain(info.content)
             expect(
               yield* settleTool(registry, {
                 sessionID,

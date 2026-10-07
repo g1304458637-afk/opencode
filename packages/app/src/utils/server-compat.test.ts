@@ -25,7 +25,7 @@ function setup(
       if (request.method === "POST" && request.url.endsWith("/prompt_async"))
         return new Response(undefined, { status: 204 })
       if (request.method === "POST" && request.url.endsWith("/prompt")) {
-        return Response.json({
+        const result = {
           admittedSeq: 1,
           id: "msg_1",
           sessionID: "ses_1",
@@ -33,7 +33,9 @@ function setup(
           type: "user",
           data: { text: "hello" },
           delivery: "steer",
-        })
+        }
+        const body = await request.clone().json()
+        return Response.json(body.prompt ? { data: result } : result)
       }
       if (request.method === "GET" && new URL(request.url).pathname === "/vcs")
         return Response.json(responses?.vcs ?? {})
@@ -232,5 +234,75 @@ describe("createCompatibleApi", () => {
     ])
     expect(requests[1]!.headers.get("x-opencode-directory")).toBe("%2Frepo")
     expect(requests[2]!.headers.get("x-opencode-directory")).toBeNull()
+  })
+})
+
+describe("skill reference API transport", () => {
+  const selectedSkills = [{ skillId: "sk_" + "1".repeat(64), revision: "2".repeat(64), contentHash: "3".repeat(64) }]
+
+  test("V1 prompt preserves immutable references alongside image attachments", async () => {
+    const { api, requests } = setup("v1")
+    await api.session.prompt({
+      sessionID: "ses_1",
+      id: "msg_skills",
+      text: "Read this image",
+      selectedSkills,
+      files: [{ uri: "data:image/png;base64,AAAA", name: "image.png" }],
+    })
+    expect(new URL(requests[0]!.url).pathname).toBe("/session/ses_1/prompt_async")
+    expect(await requests[0]!.json()).toMatchObject({
+      messageID: "msg_skills",
+      selectedSkills,
+      parts: [
+        { type: "text", text: "Read this image" },
+        { type: "file", mime: "image/png" },
+      ],
+    })
+  })
+
+  test("V1 slash command preserves immutable references, the message ID and the model variant", async () => {
+    const { api, requests } = setup("v1")
+    await api.session.command({
+      sessionID: "ses_1",
+      id: "msg_command",
+      command: "review",
+      arguments: "changes",
+      selectedSkills,
+      agent: "build",
+      model: { id: "model", providerID: "provider", variant: "high" },
+    })
+    expect(new URL(requests[0]!.url).pathname).toBe("/session/ses_1/command")
+    expect(await requests[0]!.json()).toMatchObject({
+      messageID: "msg_command",
+      command: "review",
+      arguments: "changes",
+      selectedSkills,
+      agent: "build",
+      model: "provider/model",
+      variant: "high",
+    })
+  })
+
+  test("V2 prompt carries selected references through the generated SDK and keeps delivery semantics", async () => {
+    const { api, requests } = setup("v2")
+    const result = await api.session.prompt({
+      sessionID: "ses_1",
+      id: "msg_1",
+      text: "hello",
+      selectedSkills,
+      delivery: "queue",
+      files: [{ uri: "data:image/png;base64,AAAA", name: "image.png" }],
+    })
+    expect(new URL(requests[0]!.url).pathname).toBe("/api/session/ses_1/prompt")
+    expect(await requests[0]!.json()).toMatchObject({
+      id: "msg_1",
+      delivery: "queue",
+      prompt: {
+        text: "hello",
+        selectedSkills,
+        files: [{ uri: "data:image/png;base64,AAAA", name: "image.png" }],
+      },
+    })
+    expect(result).toMatchObject({ id: "msg_1", sessionID: "ses_1", type: "user", data: { text: "hello" } })
   })
 })

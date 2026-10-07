@@ -81,6 +81,8 @@ async function stop() {
 }
 
 function prepareSidecarEnv(password: string, userDataPath: string) {
+  if (import.meta.env.HUBU_SKILL_REGISTRY_URL)
+    process.env.HUBU_SKILL_REGISTRY_URL ??= import.meta.env.HUBU_SKILL_REGISTRY_URL
   Object.assign(process.env, {
     OPENCODE_SERVER_USERNAME: "opencode",
     OPENCODE_SERVER_PASSWORD: password,
