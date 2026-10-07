@@ -54,10 +54,10 @@ jobs:
         env:
           BRAND: hubu
         run: bun test test/session/compaction.test.ts -t 'compaction continuation preserves' --timeout 30000
-      - name: HUBU feature copy covers every locale
+      - name: HUBU UI state and locale regressions
         if: github.base_ref == 'hubu-main' || github.ref_name == 'hubu-main'
         working-directory: packages/app
-        run: bun test src/i18n/parity.test.ts
+        run: bun run test
       - name: Require canonical branch
         run: |
           candidate="${GITHUB_REF_NAME}"
