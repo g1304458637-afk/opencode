@@ -35,6 +35,29 @@ jobs:
         env:
           OPENCODE_CHANNEL: muc
         run: bun test src/main/muc
+      - name: HUBU skills and upgrade compatibility
+        if: github.base_ref == 'hubu-main' || github.ref_name == 'hubu-main'
+        working-directory: packages/core
+        run: >-
+          bun test test/skill-library.test.ts test/skill-registry-server.test.ts
+          test/skill-source.test.ts test/skill-translation.test.ts
+          test/skill-translation-service.test.ts test/campus-catalog.test.ts
+          test/hubu-skill-registry.integration.test.ts test/tool-skill.test.ts
+          test/config/config.test.ts test/session-runner.test.ts --timeout 30000
+      - name: HUBU legacy model and retry contracts
+        if: github.base_ref == 'hubu-main' || github.ref_name == 'hubu-main'
+        working-directory: packages/opencode
+        run: bun test test/provider/muc-vision.test.ts test/session/system.test.ts test/session/retry.test.ts test/tool/skill.test.ts --timeout 30000
+      - name: HUBU compaction keeps task skills
+        if: github.base_ref == 'hubu-main' || github.ref_name == 'hubu-main'
+        working-directory: packages/opencode
+        env:
+          BRAND: hubu
+        run: bun test test/session/compaction.test.ts -t 'compaction continuation preserves' --timeout 30000
+      - name: HUBU UI state and locale regressions
+        if: github.base_ref == 'hubu-main' || github.ref_name == 'hubu-main'
+        working-directory: packages/app
+        run: bun run test
       - name: Require canonical branch
         run: |
           candidate="${GITHUB_REF_NAME}"
@@ -79,6 +102,8 @@ jobs:
       HUBU_MANIFEST_URL: https://hubu.wuxuexi.top/downloads/latest-hubu-ai.json
       HUBU_DOWNLOAD_BASE_URL: https://hubu.wuxuexi.top/downloads
       HUBU_WEBSITE_URL: https://hubu.wuxuexi.top/hubu
+      # RC build configuration only; deployment and endpoint acceptance are separate steps.
+      HUBU_SKILL_REGISTRY_URL: ${{ vars.HUBU_SKILL_REGISTRY_URL || 'https://hubu.wuxuexi.top/hubu-skills/' }}
     defaults:
       run:
         shell: bash

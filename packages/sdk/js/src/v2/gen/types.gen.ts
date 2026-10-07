@@ -255,6 +255,7 @@ export type UserMessage = {
     modelID: string
     variant?: string
   }
+  selectedSkills?: Array<SkillLibraryReference>
   system?: string
   tools?: {
     [key: string]: boolean
@@ -642,6 +643,7 @@ export type Prompt = {
   text: string
   files?: Array<PromptFileAttachment>
   agents?: Array<PromptAgentAttachment>
+  selectedSkills?: Array<SkillLibraryReference>
 }
 
 export type Pty = {
@@ -2712,6 +2714,7 @@ export type PromptInput = {
   text: string
   files?: Array<PromptInputFileAttachment>
   agents?: Array<PromptAgentAttachment>
+  selectedSkills?: Array<SkillLibraryReference>
 }
 
 export type ConflictError = {
@@ -2788,6 +2791,13 @@ export type ProviderNotFoundError = {
   _tag: "ProviderNotFoundError"
   providerID: string
   message: string
+}
+
+export type SkillLibraryFailure = {
+  _tag: "SkillLibraryFailure"
+  code: string
+  message: string
+  stage: "resolving" | "downloading" | "validating" | "installing" | "refreshing" | "completed" | "failed"
 }
 
 export type OutputFormat1 =
@@ -3036,6 +3046,12 @@ export type SkillV2Source = SkillV2DirectorySource | SkillV2UrlSource | SkillV2E
 
 export type MoveSessionDestination = {
   directory: string
+}
+
+export type SkillLibraryReference = {
+  skillId: string
+  revision: string
+  contentHash: string
 }
 
 export type ModelRef = {
@@ -3984,6 +4000,7 @@ export type SessionMessageUser = {
   text: string
   files?: Array<PromptFileAttachment>
   agents?: Array<PromptAgentAttachment>
+  selectedSkills?: Array<SkillLibraryReference>
   type: "user"
 }
 
@@ -5022,6 +5039,123 @@ export type SkillV2Info = {
   slash?: boolean
   location: string
   content: string
+}
+
+export type SkillLibraryInstalled = {
+  id: string
+  name: string
+  description: string
+  sourceType: "github" | "local" | "project" | "builtin"
+  repository: string
+  path: string
+  revision: string
+  contentHash: string
+  installedAt: number
+  managed: boolean
+}
+
+export type SkillLibrarySelectable = {
+  id: string
+  name: string
+  description: string
+  sourceType: "github" | "local" | "project" | "builtin"
+  repository: string
+  path: string
+  revision?: string
+  contentHash?: string
+  managed: boolean
+}
+
+export type SkillLibraryCandidate = {
+  id: string
+  name: string
+  description: string
+  sourceType: "github" | "local" | "project" | "builtin"
+  repository: string
+  path: string
+  revision: string
+  contentHash: string
+  artifactUrl: string
+  artifactHash: string
+  upstreamRevision?: string
+  installed?: boolean
+}
+
+export type SkillLibrarySourceCandidate = {
+  repository: string
+  path: string
+  upstreamRevision: string
+  url: string
+}
+
+export type SkillLibraryPreview = {
+  id: string
+  name: string
+  description: string
+  sourceType: "github" | "local" | "project" | "builtin"
+  repository: string
+  path: string
+  previewId: string
+  revision: string
+  contentHash: string
+  upstreamRevision?: string
+  skillMarkdown: string
+}
+
+export type SkillLibraryReadResult =
+  | {
+      type: "preview"
+      preview: SkillLibraryPreview
+    }
+  | {
+      type: "candidates"
+      candidates: Array<SkillLibrarySourceCandidate>
+    }
+
+export type SkillLibraryTranslationSource =
+  | {
+      type: "preview"
+      previewId: string
+    }
+  | {
+      type: "revision"
+      reference: SkillLibraryReference
+    }
+  | {
+      type: "discovered"
+      id: string
+      contentHash: string
+    }
+
+export type SkillLibraryContent = {
+  name: string
+  description: string
+  skillMarkdown: string
+  contentHash: string
+}
+
+export type SkillLibraryTranslation = {
+  name: string
+  description: string
+  skillMarkdown?: string
+}
+
+export type SkillLibraryInstallSource = {
+  type: "preview"
+  previewId: string
+}
+
+export type SkillLibraryOperation = {
+  id: string
+  stage: "resolving" | "downloading" | "validating" | "installing" | "refreshing" | "completed" | "failed"
+  updatedAt: number
+  result?: SkillLibraryInstalled
+  alreadyInstalled?: boolean
+  error?: {
+    code: string
+    message: string
+    stage: "resolving" | "downloading" | "validating" | "installing" | "refreshing" | "completed" | "failed"
+  }
 }
 
 export type ModelsDevRefreshed = {
@@ -9807,6 +9941,7 @@ export type SessionPromptData = {
       [key: string]: boolean
     }
     format?: OutputFormat
+    selectedSkills?: Array<SkillLibraryReference>
     system?: string
     variant?: string
     parts: Array<TextPartInput | FilePartInput | AgentPartInput | SubtaskPartInput>
@@ -10154,6 +10289,7 @@ export type SessionPromptAsyncData = {
       [key: string]: boolean
     }
     format?: OutputFormat
+    selectedSkills?: Array<SkillLibraryReference>
     system?: string
     variant?: string
     parts: Array<TextPartInput | FilePartInput | AgentPartInput | SubtaskPartInput>
@@ -10192,6 +10328,7 @@ export type SessionPromptAsyncResponse = SessionPromptAsyncResponses[keyof Sessi
 
 export type SessionCommandData = {
   body?: {
+    selectedSkills?: Array<SkillLibraryReference>
     messageID?: string
     agent?: string
     model?: string
@@ -12967,6 +13104,443 @@ export type V2SkillListResponses = {
 }
 
 export type V2SkillListResponse = V2SkillListResponses[keyof V2SkillListResponses]
+
+export type V2SkillInstalledData = {
+  body?: never
+  path?: never
+  query?: {
+    location?: {
+      directory?: string
+      workspace?: string
+    }
+  }
+  url: "/api/skill/library"
+}
+
+export type V2SkillInstalledErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * UnauthorizedError
+   */
+  401: UnauthorizedError
+}
+
+export type V2SkillInstalledError = V2SkillInstalledErrors[keyof V2SkillInstalledErrors]
+
+export type V2SkillInstalledResponses = {
+  /**
+   * Success
+   */
+  200: {
+    location: LocationInfo
+    data: Array<SkillLibraryInstalled>
+  }
+}
+
+export type V2SkillInstalledResponse = V2SkillInstalledResponses[keyof V2SkillInstalledResponses]
+
+export type V2SkillAvailableData = {
+  body?: never
+  path?: never
+  query?: {
+    location?: {
+      directory?: string
+      workspace?: string
+    }
+  }
+  url: "/api/skill/available"
+}
+
+export type V2SkillAvailableErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * UnauthorizedError
+   */
+  401: UnauthorizedError
+}
+
+export type V2SkillAvailableError = V2SkillAvailableErrors[keyof V2SkillAvailableErrors]
+
+export type V2SkillAvailableResponses = {
+  /**
+   * Success
+   */
+  200: {
+    location: LocationInfo
+    data: Array<SkillLibrarySelectable>
+  }
+}
+
+export type V2SkillAvailableResponse = V2SkillAvailableResponses[keyof V2SkillAvailableResponses]
+
+export type V2SkillSearchData = {
+  body?: never
+  path?: never
+  query: {
+    location?: {
+      directory?: string
+      workspace?: string
+    }
+    q: string
+  }
+  url: "/api/skill/search"
+}
+
+export type V2SkillSearchErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * UnauthorizedError
+   */
+  401: UnauthorizedError
+  /**
+   * SkillLibraryFailure
+   */
+  500: SkillLibraryFailure
+}
+
+export type V2SkillSearchError = V2SkillSearchErrors[keyof V2SkillSearchErrors]
+
+export type V2SkillSearchResponses = {
+  /**
+   * Success
+   */
+  200: {
+    location: LocationInfo
+    data: Array<SkillLibraryCandidate>
+  }
+}
+
+export type V2SkillSearchResponse = V2SkillSearchResponses[keyof V2SkillSearchResponses]
+
+export type V2SkillReadData = {
+  body: {
+    source:
+      | {
+          type: "candidate"
+          candidate: SkillLibrarySourceCandidate
+        }
+      | {
+          type: "url"
+          url: string
+        }
+      | {
+          type: "local"
+          path: string
+        }
+      | {
+          type: "registry"
+          id: string
+          revision: string
+        }
+  }
+  path?: never
+  query?: {
+    location?: {
+      directory?: string
+      workspace?: string
+    }
+  }
+  url: "/api/skill/read"
+}
+
+export type V2SkillReadErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * UnauthorizedError
+   */
+  401: UnauthorizedError
+  /**
+   * SkillLibraryFailure
+   */
+  500: SkillLibraryFailure
+}
+
+export type V2SkillReadError = V2SkillReadErrors[keyof V2SkillReadErrors]
+
+export type V2SkillReadResponses = {
+  /**
+   * Success
+   */
+  200: {
+    location: LocationInfo
+    data: SkillLibraryReadResult
+  }
+}
+
+export type V2SkillReadResponse = V2SkillReadResponses[keyof V2SkillReadResponses]
+
+export type V2SkillContentData = {
+  body: {
+    source: SkillLibraryTranslationSource
+  }
+  path?: never
+  query?: {
+    location?: {
+      directory?: string
+      workspace?: string
+    }
+  }
+  url: "/api/skill/content"
+}
+
+export type V2SkillContentErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * UnauthorizedError
+   */
+  401: UnauthorizedError
+  /**
+   * SkillLibraryFailure
+   */
+  500: SkillLibraryFailure
+}
+
+export type V2SkillContentError = V2SkillContentErrors[keyof V2SkillContentErrors]
+
+export type V2SkillContentResponses = {
+  /**
+   * Success
+   */
+  200: {
+    location: LocationInfo
+    data: SkillLibraryContent
+  }
+}
+
+export type V2SkillContentResponse = V2SkillContentResponses[keyof V2SkillContentResponses]
+
+export type V2SkillTranslateData = {
+  body: {
+    source: SkillLibraryTranslationSource
+    includeMarkdown: boolean
+    model?: {
+      providerID: string
+      modelID: string
+    }
+  }
+  path?: never
+  query?: {
+    location?: {
+      directory?: string
+      workspace?: string
+    }
+  }
+  url: "/api/skill/translate"
+}
+
+export type V2SkillTranslateErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * UnauthorizedError
+   */
+  401: UnauthorizedError
+  /**
+   * SkillLibraryFailure
+   */
+  500: SkillLibraryFailure
+}
+
+export type V2SkillTranslateError = V2SkillTranslateErrors[keyof V2SkillTranslateErrors]
+
+export type V2SkillTranslateResponses = {
+  /**
+   * Success
+   */
+  200: {
+    location: LocationInfo
+    data: SkillLibraryTranslation
+  }
+}
+
+export type V2SkillTranslateResponse = V2SkillTranslateResponses[keyof V2SkillTranslateResponses]
+
+export type V2SkillInstallData = {
+  body: {
+    id?: string
+    source: SkillLibraryInstallSource
+  }
+  path?: never
+  query?: {
+    location?: {
+      directory?: string
+      workspace?: string
+    }
+  }
+  url: "/api/skill/install"
+}
+
+export type V2SkillInstallErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * UnauthorizedError
+   */
+  401: UnauthorizedError
+}
+
+export type V2SkillInstallError = V2SkillInstallErrors[keyof V2SkillInstallErrors]
+
+export type V2SkillInstallResponses = {
+  /**
+   * Success
+   */
+  200: {
+    location: LocationInfo
+    data: SkillLibraryOperation
+  }
+}
+
+export type V2SkillInstallResponse = V2SkillInstallResponses[keyof V2SkillInstallResponses]
+
+export type V2SkillOperationData = {
+  body?: never
+  path: {
+    id: string
+  }
+  query?: {
+    location?: {
+      directory?: string
+      workspace?: string
+    }
+  }
+  url: "/api/skill/operation/{id}"
+}
+
+export type V2SkillOperationErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * UnauthorizedError
+   */
+  401: UnauthorizedError
+}
+
+export type V2SkillOperationError = V2SkillOperationErrors[keyof V2SkillOperationErrors]
+
+export type V2SkillOperationResponses = {
+  /**
+   * Success
+   */
+  200: {
+    location: LocationInfo
+    data: SkillLibraryOperation
+  }
+}
+
+export type V2SkillOperationResponse = V2SkillOperationResponses[keyof V2SkillOperationResponses]
+
+export type V2SkillRemoveData = {
+  body?: never
+  path: {
+    id: string
+  }
+  query?: {
+    location?: {
+      directory?: string
+      workspace?: string
+    }
+  }
+  url: "/api/skill/library/{id}"
+}
+
+export type V2SkillRemoveErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * UnauthorizedError
+   */
+  401: UnauthorizedError
+  /**
+   * SkillLibraryFailure
+   */
+  500: SkillLibraryFailure
+}
+
+export type V2SkillRemoveError = V2SkillRemoveErrors[keyof V2SkillRemoveErrors]
+
+export type V2SkillRemoveResponses = {
+  /**
+   * Success
+   */
+  200: {
+    location: LocationInfo
+    data: boolean
+  }
+}
+
+export type V2SkillRemoveResponse = V2SkillRemoveResponses[keyof V2SkillRemoveResponses]
+
+export type V2SkillPrepareData = {
+  body: {
+    owner: string
+    restoreFrom?: string
+    skills: Array<{
+      id: string
+      revision?: string
+    }>
+  }
+  path?: never
+  query?: {
+    location?: {
+      directory?: string
+      workspace?: string
+    }
+  }
+  url: "/api/skill/selection"
+}
+
+export type V2SkillPrepareErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * UnauthorizedError
+   */
+  401: UnauthorizedError
+  /**
+   * SkillLibraryFailure
+   */
+  500: SkillLibraryFailure
+}
+
+export type V2SkillPrepareError = V2SkillPrepareErrors[keyof V2SkillPrepareErrors]
+
+export type V2SkillPrepareResponses = {
+  /**
+   * Success
+   */
+  200: {
+    location: LocationInfo
+    data: Array<SkillLibraryReference>
+  }
+}
+
+export type V2SkillPrepareResponse = V2SkillPrepareResponses[keyof V2SkillPrepareResponses]
 
 export type V2EventSubscribeData = {
   body?: never

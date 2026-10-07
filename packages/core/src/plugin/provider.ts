@@ -3,6 +3,7 @@ import { AmazonBedrockPlugin } from "./provider/amazon-bedrock"
 import { AnthropicPlugin } from "./provider/anthropic"
 import { AzureCognitiveServicesPlugin, AzurePlugin } from "./provider/azure"
 import { CerebrasPlugin } from "./provider/cerebras"
+import { CampusPlugin } from "./provider/campus"
 import { CloudflareAIGatewayPlugin } from "./provider/cloudflare-ai-gateway"
 import { CloudflareWorkersAIPlugin } from "./provider/cloudflare-workers-ai"
 import { CoherePlugin } from "./provider/cohere"
@@ -40,6 +41,7 @@ export const ProviderPlugins: PluginInternal.Plugin<PluginInternal.Requirements 
   AzureCognitiveServicesPlugin,
   AzurePlugin,
   CerebrasPlugin,
+  CampusPlugin,
   CloudflareAIGatewayPlugin,
   CloudflareWorkersAIPlugin,
   CoherePlugin,

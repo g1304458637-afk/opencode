@@ -1,3 +1,4 @@
+import type { Reference } from "@opencode-ai/schema/skill-library"
 import type { ServerApi } from "./server"
 import type { ServerProtocol } from "./server-protocol"
 import type { AgentPartInput, FilePartInput, OpencodeClient, Session, TextPartInput } from "@opencode-ai/sdk/v2/client"
@@ -23,7 +24,7 @@ type CompatibleSessionApi = Omit<
   "prompt" | "command" | "shell" | "compact" | "rename" | "archive" | "remove"
 > & {
   prompt: (input: SessionPromptInput & LegacyPrompt) => Promise<SessionPromptOutput>
-  command: (input: SessionCommandInput) => Promise<SessionCommandOutput>
+  command: (input: SessionCommandInput & Pick<LegacyPrompt, "selectedSkills">) => Promise<SessionCommandOutput>
   shell: (input: SessionShellInput & LegacyPrompt) => Promise<SessionShellOutput>
   compact: (input: SessionCompactInput & { model?: LegacyPrompt["model"] }) => Promise<SessionCompactOutput>
   rename: (input: Parameters<SessionApi["rename"]>[0] & LegacyLocation) => ReturnType<SessionApi["rename"]>
@@ -40,6 +41,7 @@ export type CompatibleApi = Omit<ServerApi, "session" | "permission"> & {
   readonly permission: CompatiblePermissionApi
 }
 type LegacyPrompt = {
+  selectedSkills?: Reference[]
   agent?: string
   model?: { providerID: string; modelID: string }
   variant?: string
@@ -85,9 +87,34 @@ function sessionInfo(session: Session): SessionInfo {
 
 export function createCompatibleApi(input: CompatibleInput): CompatibleApi {
   const v1 = createV1Api(input)
+  const current: CompatibleApi = {
+    ...input.current,
+    session: {
+      ...input.current.session,
+      async prompt(value) {
+        if (value.selectedSkills === undefined) return input.current.session.prompt(value)
+        const response = await input.legacy(input.directory).v2.session.prompt(
+          {
+            sessionID: value.sessionID,
+            id: value.id ?? undefined,
+            delivery: value.delivery ?? undefined,
+            prompt: {
+              text: value.text,
+              files: value.files?.map((file) => ({ ...file, source: file.mention })),
+              agents: value.agents?.map((agent) => ({ ...agent, source: agent.mention })),
+              selectedSkills: value.selectedSkills,
+            },
+          },
+          { throwOnError: true },
+        )
+        const result = response.data.data
+        return { ...result, type: "user", data: { text: value.text } }
+      },
+    },
+  }
   return lazyApi(
-    input.protocol.then((protocol) => (protocol === "v1" ? v1 : input.current)),
-    input.current,
+    input.protocol.then((protocol) => (protocol === "v1" ? v1 : current)),
+    current,
   )
 }
 
@@ -204,6 +231,7 @@ function createV1Api(input: CompatibleInput): CompatibleApi {
           agent: value.agent,
           model: value.model,
           variant: value.variant,
+          selectedSkills: value.selectedSkills,
           parts: value.legacyParts ?? [
             { type: "text", text: value.text },
             ...(value.files ?? []).map((file) => ({
@@ -238,8 +266,9 @@ function createV1Api(input: CompatibleInput): CompatibleApi {
           delivery: value.delivery ?? "steer",
         }
       },
-      async command(value: SessionCommandInput) {
+      async command(value: SessionCommandInput & Pick<LegacyPrompt, "selectedSkills">) {
         await legacy().session.command({
+          selectedSkills: value.selectedSkills,
           sessionID: value.sessionID,
           messageID: value.id ?? undefined,
           command: value.command,

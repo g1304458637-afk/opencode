@@ -1,3 +1,12 @@
+import {
+  ReadSkillTool,
+  SearchSkillsTool,
+  InstallSkillTool,
+  ListInstalledSkillsTool,
+  RemoveSkillTool,
+} from "./skill-management"
+import { SkillLibrary } from "@opencode-ai/core/skill/library"
+import { SkillSelection } from "@opencode-ai/core/skill/selection"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { httpClient } from "@opencode-ai/core/effect/app-node-platform"
 import { Ripgrep } from "@opencode-ai/core/ripgrep"
@@ -113,6 +122,13 @@ const layer = Layer.effect(
     const edit = yield* EditTool
     const greptool = yield* GrepTool
     const patchtool = yield* ApplyPatchTool
+    const skillManagement = yield* Effect.all({
+      read: ReadSkillTool,
+      search: SearchSkillsTool,
+      install: InstallSkillTool,
+      list: ListInstalledSkillsTool,
+      remove: RemoveSkillTool,
+    })
     const skilltool = yield* SkillTool
     const agent = yield* Agent.Service
     const codeMode = flags.experimentalCodeMode ? yield* Effect.promise(() => import("./code-mode")) : undefined
@@ -229,6 +245,15 @@ const layer = Layer.effect(
         return {
           custom,
           builtin: [
+            ...(SkillSelection.required()
+              ? yield* Effect.all([
+                  Tool.init(skillManagement.read),
+                  Tool.init(skillManagement.search),
+                  Tool.init(skillManagement.install),
+                  Tool.init(skillManagement.list),
+                  Tool.init(skillManagement.remove),
+                ])
+              : []),
             tool.invalid,
             ...(questionEnabled ? [tool.question] : []),
             tool.shell,
@@ -291,7 +316,10 @@ const layer = Layer.effect(
     const tools: Interface["tools"] = Effect.fn("ToolRegistry.tools")(function* (input) {
       const filtered = (yield* all()).filter((tool) => {
         if (tool.id === WebSearchTool.id) {
-          return webSearchEnabled(input.providerID, { exa: flags.enableExa, parallel: flags.enableParallel })
+          return (
+            SkillSelection.required() ||
+            webSearchEnabled(input.providerID, { exa: flags.enableExa, parallel: flags.enableParallel })
+          )
         }
 
         const usePatch =
@@ -434,6 +462,7 @@ export const node = LayerNode.make({
     Todo.node,
     Agent.node,
     Skill.node,
+    SkillLibrary.node,
     Session.node,
     BackgroundJob.node,
     Provider.node,

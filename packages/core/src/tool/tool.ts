@@ -1,3 +1,4 @@
+import type { Reference } from "@opencode-ai/schema/skill-library"
 export * as Tool from "./tool"
 
 import { ToolDefinition, ToolFailure, ToolOutput, type ToolCall } from "@opencode-ai/llm"
@@ -9,6 +10,7 @@ import type { SessionSchema } from "../session/schema"
 export interface Context {
   readonly sessionID: SessionSchema.ID
   readonly agent: AgentV2.ID
+  readonly selectedSkills?: readonly Reference[]
   readonly assistantMessageID: SessionMessage.ID
   readonly toolCallID: string
 }

@@ -1,3 +1,4 @@
+import type { Reference } from "@opencode-ai/schema/skill-library"
 export * as ToolRegistry from "./registry"
 
 import { ToolOutput, type ToolCall, type ToolDefinition, type ToolResultValue } from "@opencode-ai/llm"
@@ -16,6 +17,7 @@ import { makeLocationNode } from "../effect/app-node"
 export type ExecuteInput = {
   readonly sessionID: SessionSchema.ID
   readonly agent: AgentV2.ID
+  readonly selectedSkills?: readonly Reference[]
   readonly assistantMessageID: SessionMessage.ID
   readonly call: ToolCall
 }
@@ -64,6 +66,7 @@ const registryLayer = Layer.effect(
         agent: input.agent,
         assistantMessageID: input.assistantMessageID,
         toolCallID: input.call.id,
+        ...(input.selectedSkills === undefined ? {} : { selectedSkills: input.selectedSkills }),
       }).pipe(
         Effect.map((output) => ({ output })),
         Effect.catchTag("LLM.ToolFailure", (failure) =>

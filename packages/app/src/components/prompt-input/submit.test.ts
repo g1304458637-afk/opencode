@@ -48,6 +48,14 @@ const [promptStore, setPromptStore] = createStore<PromptStore>({
   context: { items: [] },
 })
 const prompt = {
+  skills: {
+    origin: () => undefined,
+    restore: () => undefined,
+    current: () => [],
+    set: () => undefined,
+    add: () => undefined,
+    remove: () => undefined,
+  },
   store: [() => promptStore, setPromptStore] as [() => PromptStore, typeof setPromptStore],
   ready: Object.assign(() => true, { promise: Promise.resolve(true) }),
   current: () => promptValue,
@@ -132,7 +140,7 @@ beforeAll(async () => {
     },
   }))
 
-  mock.module("@opencode-ai/ui/toast", () => ({
+  mock.module("@/utils/toast", () => ({
     Toast: { Region: () => null },
     showToast: () => 0,
   }))

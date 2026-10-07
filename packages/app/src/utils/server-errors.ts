@@ -1,3 +1,4 @@
+import { publicBrandText } from "@opencode-ai/brand"
 export type ConfigInvalidError = {
   name: "ConfigInvalidError"
   data: {
@@ -94,7 +95,7 @@ export function parseReadableConfigInvalidError(errorInput: ConfigInvalidError, 
 }
 
 function parseReadableProviderModelNotFoundError(errorInput: ProviderModelNotFoundError, translator?: Translator) {
-  const p = errorInput.data.providerID.trim()
+  const p = publicBrandText(errorInput.data.providerID.trim())
   const m = errorInput.data.modelID.trim()
   const list = (errorInput.data.suggestions ?? []).map((v) => v.trim()).filter(Boolean)
   const body = tr(translator, "error.chain.modelNotFound", `Model not found: ${p}/${m}`, { provider: p, model: m })

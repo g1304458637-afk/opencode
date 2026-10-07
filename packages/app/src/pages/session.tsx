@@ -1,3 +1,4 @@
+import type { Selectable } from "@opencode-ai/schema/skill-library"
 import type { FilePart, Project, UserMessage, VcsFileDiff } from "@opencode-ai/sdk/v2"
 import { getFilename } from "@opencode-ai/core/util/path"
 import { useDialog } from "@opencode-ai/ui/context/dialog"
@@ -105,7 +106,7 @@ import { createSessionOwnership } from "./session/session-ownership"
 import { createSessionLineage } from "./session/session-lineage"
 
 type FollowupItem = FollowupDraft & { id: string }
-type FollowupEdit = Pick<FollowupItem, "id" | "prompt" | "context">
+type FollowupEdit = Pick<FollowupItem, "id" | "prompt" | "context" | "skills">
 const emptyFollowups: FollowupItem[] = []
 
 type ChangeMode = "git" | "branch" | "turn"
@@ -1783,7 +1784,7 @@ export default function Page() {
   const queueFollowup = (draft: FollowupDraft) => {
     setFollowup("items", draft.sessionID, (items) => [
       ...(items ?? []),
-      { id: Identifier.ascending("message"), ...draft },
+      { id: draft.messageID ?? Identifier.ascending("message"), ...draft },
     ])
     setFollowup("failed", draft.sessionID, undefined)
     setFollowup("paused", draft.sessionID, undefined)
@@ -1814,6 +1815,7 @@ export default function Page() {
       id: item.id,
       prompt: item.prompt,
       context: item.context,
+      skills: item.skills,
     })
   }
 
@@ -1830,21 +1832,51 @@ export default function Page() {
           .catch(() => {})
       : Promise.resolve()
 
+  const restoredSkills = (id: string): Selectable[] =>
+    (userMessages().find((message) => message.id === id)?.selectedSkills ?? []).map((ref) => ({
+      id: ref.skillId,
+      name: ref.skillId.slice(0, 15),
+      description: "",
+      sourceType: "local",
+      repository: "",
+      path: "",
+      managed: true,
+      revision: ref.revision,
+      contentHash: ref.contentHash,
+    }))
+
+  createEffect(() => {
+    if (!params.id || !prompt.ready() || !messagesReady()) return
+    const target = prompt.capture()
+    // An explicit empty selection is durable task state and must never be inferred from history.
+    if (target.store[0]().skills !== undefined) return
+    const latest = userMessages().at(-1)
+    if (!latest || latest.sessionID !== params.id) return
+    target.skills.restore(restoredSkills(latest.id), latest.id)
+  })
+
   const revertMutation = useMutation(() => ({
     mutationFn: async (input: { sessionID: string; messageID: string }) => {
       const session = sdk().api.session
       const target = sync()
       const last = target.session.get(input.sessionID)?.revert
       const value = draft(input.messageID)
+      const selected = prompt.capture()
+      const before = selected.skills.current()
+      const origin = selected.skills.origin()
       await runPromptRollbackMutation({
-        capturePrompt: prompt.capture,
+        capturePrompt: () => selected,
         optimistic: (prompt) => {
           roll(input.sessionID, { messageID: input.messageID }, target)
           prompt.set(value)
+          selected.skills.restore(restoredSkills(input.messageID), input.messageID)
         },
         request: () => halt(input.sessionID).then(() => session.revert.stage(input)),
         complete: () => undefined,
-        rollback: () => roll(input.sessionID, last, target),
+        rollback: () => {
+          roll(input.sessionID, last, target)
+          selected.skills.restore(before, origin)
+        },
         fail,
       })
     },
@@ -1861,13 +1893,16 @@ export default function Page() {
       if (index < 0) return
       const next = userMessages()[index + 1]
       const last = target.session.get(sessionID)?.revert
-
+      const selected = prompt.capture()
+      const before = selected.skills.current()
+      const origin = selected.skills.origin()
       await runPromptRollbackMutation({
-        capturePrompt: prompt.capture,
+        capturePrompt: () => selected,
         optimistic: (promptSession) => {
           roll(sessionID, next ? { messageID: next.id } : undefined, target)
           if (next) {
             promptSession.set(draft(next.id))
+            selected.skills.restore(restoredSkills(next.id), next.id)
             return
           }
           promptSession.reset()
@@ -1877,7 +1912,10 @@ export default function Page() {
             ? halt(sessionID).then(() => session.revert.clear({ sessionID }))
             : halt(sessionID).then(() => session.revert.stage({ sessionID, messageID: next.id }).then(() => undefined)),
         complete: () => undefined,
-        rollback: () => roll(sessionID, last, target),
+        rollback: () => {
+          roll(sessionID, last, target)
+          selected.skills.restore(before, origin)
+        },
         fail,
       })
     },

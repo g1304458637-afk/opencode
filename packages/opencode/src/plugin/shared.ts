@@ -1,3 +1,4 @@
+import { publicBrandText } from "@opencode-ai/brand"
 import path from "path"
 import { fileURLToPath, pathToFileURL } from "url"
 import npa from "npm-package-arg"
@@ -200,7 +201,7 @@ export async function checkPluginCompatibility(target: string, opencodeVersion: 
   const range = engines.opencode
   if (typeof range !== "string") return
   if (!semver.satisfies(opencodeVersion, range)) {
-    throw new Error(`Plugin requires opencode ${range} but running ${opencodeVersion}`)
+    throw new Error(`${publicBrandText("Plugin requires opencode")} ${range} but running ${opencodeVersion}`)
   }
 }
 

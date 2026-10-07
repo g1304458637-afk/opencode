@@ -1,3 +1,4 @@
+import type { Selectable } from "@opencode-ai/schema/skill-library"
 import { checksum } from "@opencode-ai/core/util/encode"
 import type { FilePartSource } from "@opencode-ai/sdk/v2/client"
 import { batch, createMemo, type Accessor } from "solid-js"
@@ -69,6 +70,8 @@ export const DEFAULT_PROMPT: Prompt = [{ type: "text", content: "", start: 0, en
 export type PromptStore = {
   prompt: Prompt
   cursor?: number
+  skillOrigin?: string
+  skills?: Selectable[]
   model?: PromptModel
   context: {
     items: (ContextItem & { key: string })[]
@@ -195,6 +198,36 @@ function createPromptStateValue(store: PromptStore, setStore: SetStoreFunction<P
     current: () => store.prompt,
     cursor: createMemo(() => store.cursor),
     dirty: () => !isPromptEqual(store.prompt, DEFAULT_PROMPT),
+    skills: {
+      current: () => store.skills ?? [],
+      origin: () => store.skillOrigin,
+      restore: (skills: readonly Selectable[], owner?: string) =>
+        batch(() => {
+          setStore(
+            "skills",
+            skills.map((skill) => ({ ...skill })),
+          )
+          setStore("skillOrigin", owner)
+        }),
+      set: (skills: readonly Selectable[]) =>
+        batch(() => {
+          setStore(
+            "skills",
+            skills.map((skill) => ({ ...skill })),
+          )
+          setStore("skillOrigin", undefined)
+        }),
+      add: (skill: Selectable) =>
+        batch(() => {
+          setStore("skills", [...(store.skills ?? []).filter((item) => item.id !== skill.id), { ...skill }])
+          setStore("skillOrigin", undefined)
+        }),
+      remove: (id: string) =>
+        batch(() => {
+          setStore("skills", (items) => (items ?? []).filter((item) => item.id !== id))
+          setStore("skillOrigin", undefined)
+        }),
+    },
     model: {
       current: () => store.model,
       set: (model: PromptModel | undefined) => setStore("model", model),

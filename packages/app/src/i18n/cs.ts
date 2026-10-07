@@ -1,4 +1,7 @@
+import { CAMPUS_ENGLISH } from "./campus"
+
 export const dict = {
+  ...CAMPUS_ENGLISH,
   "settings.updates.action.download": "Stáhnout",
   "desktop.updater.dialog.download": "Stáhnout",
   "desktop.updater.dialog.available.message": "Nyní je k dispozici k instalaci nová verze OpenCode.",

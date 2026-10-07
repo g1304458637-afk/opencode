@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, mock, test } from "bun:test"
+import { SkillLibrary } from "@opencode-ai/core/skill/library"
 import { ConfigV1 } from "@opencode-ai/core/v1/config/config"
 import { SessionV1 } from "@opencode-ai/core/v1/session"
 import { Database } from "@opencode-ai/core/database/database"
@@ -224,6 +225,7 @@ function cfg(compaction?: ConfigV1.Info["compaction"]) {
 
 const defaultProvider = wide()
 const compactionTestNode = LayerNode.group([
+  SkillLibrary.node,
   SessionCompaction.node,
   SessionNs.node,
   SessionProjector.node,
@@ -932,6 +934,51 @@ describe("session.compaction.process", () => {
       if (last?.parts[0]?.type === "text") {
         expect(last.parts[0].text).toContain("Continue if you have next steps")
       }
+    }),
+  )
+
+  it.instance(
+    "compaction continuation preserves the submitted Skill revision",
+    Effect.gen(function* () {
+      const ssn = yield* SessionNs.Service
+      const library = yield* SkillLibrary.Service
+      const identity = {
+        sourceType: "local" as const,
+        repository: "compaction-test",
+        path: "",
+        name: "example",
+        description: "",
+      }
+      const installed = yield* library
+        .importEntries({ ...identity, id: SkillLibrary.identity(identity) }, [
+          {
+            path: "SKILL.md",
+            bytes: new TextEncoder().encode("---\nname: example\n---\nLocked instructions"),
+            executable: false,
+          },
+        ])
+        .pipe(Effect.orDie)
+      const refs = [{ skillId: installed.id, revision: installed.revision, contentHash: installed.contentHash }]
+      const session = yield* ssn.create({})
+      const original = yield* createUserMessage(session.id, "continue task")
+      yield* ssn.updateMessage({ ...original, selectedSkills: refs })
+      yield* library.pin(original.id, refs).pipe(Effect.orDie)
+      yield* library.remove(installed.id).pipe(Effect.orDie)
+      yield* SessionCompaction.use.create({ sessionID: session.id, agent: "build", model: ref, auto: true })
+      const messages = yield* ssn.messages({ sessionID: session.id })
+      expect(messages.at(-1)?.info).toMatchObject({ selectedSkills: refs })
+      yield* SessionCompaction.use.process({
+        parentID: messages.at(-1)!.info.id,
+        messages,
+        sessionID: session.id,
+        auto: true,
+      })
+      const after = yield* ssn.messages({ sessionID: session.id })
+      expect(after.at(-1)?.info).toMatchObject({ role: "user", selectedSkills: refs })
+      if (["hubu", "kai"].includes(process.env.BRAND ?? ""))
+        expect(yield* library.pin("restore-compacted-task", refs, after.at(-1)!.info.id).pipe(Effect.orDie)).toEqual(
+          refs,
+        )
     }),
   )
 

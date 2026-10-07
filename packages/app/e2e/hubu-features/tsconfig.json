@@ -1,0 +1,8 @@
+{
+  "extends": "../tsconfig.json",
+  "include": [
+    "./playwright.config.ts",
+    "../regression/hubu-*.ts",
+    "../utils/**/*.ts"
+  ]
+}

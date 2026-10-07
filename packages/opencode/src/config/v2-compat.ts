@@ -1,3 +1,4 @@
+import { publicBrandText } from "@opencode-ai/brand"
 export * as ConfigV2Compat from "./v2-compat"
 
 import { isDeepStrictEqual } from "node:util"
@@ -108,7 +109,9 @@ export function lower(input: unknown, source = "configuration"): Result {
       path: source,
       issues: permissions.map((path) => ({
         path,
-        message: 'V2 permissions are not supported by OpenCode V1. Use V1 "permission" rules or run opencode2.',
+        message:
+          publicBrandText("V2 permissions are not supported by OpenCode V1.") +
+          ' Use V1 "permission" rules or run opencode2.',
       })),
     })
 

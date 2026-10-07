@@ -1,3 +1,4 @@
+import { SkillLibrary } from "../skill-library"
 export * as SessionV1 from "./session"
 
 import { Effect, Schema, Types } from "effect"
@@ -349,6 +350,7 @@ export const User = Schema.Struct({
     modelID: Model.ID,
     variant: Schema.optional(Schema.String),
   }),
+  selectedSkills: Schema.optional(Schema.Array(SkillLibrary.Reference)),
   system: Schema.optional(Schema.String),
   tools: Schema.optional(Schema.Record(Schema.String, Schema.Boolean)),
 }).annotate({ identifier: "UserMessage" })

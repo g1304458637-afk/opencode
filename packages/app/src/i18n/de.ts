@@ -1,8 +1,10 @@
+import { CAMPUS_ENGLISH } from "./campus"
 import { dict as en } from "./en"
 
 type Keys = keyof typeof en
 
 export const dict = {
+  ...CAMPUS_ENGLISH,
   "settings.updates.action.download": "Herunterladen",
   "desktop.updater.dialog.download": "Herunterladen",
   "desktop.updater.dialog.available.message": "Eine neue Version von OpenCode ist zur Installation verfügbar.",

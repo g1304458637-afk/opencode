@@ -51,6 +51,7 @@ export default defineConfig({
       "import.meta.env.OPENCODE_CHANNEL": JSON.stringify(channel),
       "import.meta.env.MUC_VERSION": JSON.stringify(mucVersion),
       "import.meta.env.CAMPUS_LOCAL_BUILD": JSON.stringify(process.env.CAMPUS_LOCAL_BUILD ?? "0"),
+      "import.meta.env.HUBU_SKILL_REGISTRY_URL": JSON.stringify(campus.skillRegistryURL ?? ""),
       __CAMPUS_BRAND_CONFIG__: JSON.stringify(campus.brand),
     },
     build: {

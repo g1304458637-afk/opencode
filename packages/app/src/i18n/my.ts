@@ -1,4 +1,7 @@
+import { CAMPUS_ENGLISH } from "./campus"
+
 export const dict = {
+  ...CAMPUS_ENGLISH,
   "settings.updates.action.download": "ဒေါင်းလုဒ်လုပ်ရန်",
   "desktop.updater.dialog.download": "ဒေါင်းလုဒ်လုပ်ရန်",
   "desktop.updater.dialog.available.message": "OpenCode ၏ ဗားရှင်းအသစ်ကို ယခု ထည့်သွင်းနိုင်ပါပြီ။",

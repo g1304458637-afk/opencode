@@ -335,6 +335,28 @@ describe("session.retry.retryable", () => {
     expect(retryable).toEqual({ message: "Response decompression failed" })
   })
 
+  test("HUBU quota errors direct users to their account without upstream branding or prices", () => {
+    const previous = process.env.BRAND
+    process.env.BRAND = "hubu"
+    try {
+      const error = new SessionV1.APIError({
+        message: "Free usage exceeded",
+        isRetryable: true,
+        statusCode: 429,
+        responseBody: "FreeUsageLimitError",
+      }).toObject()
+      const result = SessionRetry.retryable(error, "sub2api")
+      expect(result?.action?.message).toContain("HUBU AI")
+      expect(result?.action?.message).not.toContain("K AI")
+      expect(result?.action?.message).not.toMatch(/OpenCode|\$10/)
+      expect(result?.action?.link).toEndWith("/dashboard")
+      expect(result?.action?.provider).toBe("sub2api")
+    } finally {
+      if (previous === undefined) delete process.env.BRAND
+      else process.env.BRAND = previous
+    }
+  })
+
   test("maps free limits to Go upsell action", () => {
     const error = Schema.decodeUnknownSync(SessionV1.APIError.Schema)(
       new SessionV1.APIError({

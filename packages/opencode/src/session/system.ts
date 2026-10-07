@@ -1,3 +1,4 @@
+import { publicBrandText, resolveBrand, type BrandConfig } from "@opencode-ai/brand"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { Context, Effect, Layer } from "effect"
 
@@ -15,7 +16,6 @@ import PROMPT_META from "./prompt/meta.txt"
 import PROMPT_CODEX from "./prompt/codex.txt"
 import PROMPT_TRINITY from "./prompt/trinity.txt"
 import type { Provider } from "@/provider/provider"
-import { MUC } from "@/provider/muc"
 import type { Agent } from "@/agent/agent"
 import { Permission } from "@/permission"
 import { Skill } from "@/skill"
@@ -26,7 +26,27 @@ import { Reference } from "@opencode-ai/core/reference"
 import { MCP } from "@/mcp"
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 
-export function provider(model: Provider.Model) {
+export function provider(model: Provider.Model, brand: BrandConfig = resolveBrand()) {
+  return selectedPrompt(model).map((text) => publicBrandText(text, brand))
+}
+
+export function modelIdentity(model: Provider.Model, brand: BrandConfig = resolveBrand()) {
+  if (brand.id === "hubu")
+    return [
+      "You are HUBUCode, the Hubei University campus coding assistant provided through HUBU AI.",
+      `The model selected for this turn is ${publicBrandText(model.name || model.api.id, brand)}. Its model ID is ${model.api.id}.`,
+      "When asked about your identity, identify yourself as HUBUCode. When asked about the model, give this turn's selected model; do not reuse model identities from conversation history. HUBU AI is the service, not a claim about who trained the model.",
+    ].join("\n")
+  if (brand.id !== "kai")
+    return `You are powered by the model named ${model.api.id}. The exact model ID is ${model.providerID}/${model.api.id}`
+  return [
+    "You are KCode, the coding assistant provided through K AI.",
+    `The model selected for this turn is ${publicBrandText(model.name || model.api.id, brand)}. Its model ID is ${model.api.id}.`,
+    "When asked about your identity, identify yourself as KCode and give this turn\'s selected model through K AI. The selected model can change between turns; do not reuse a previous model identity from conversation history. K AI is the service, not a claim about who trained the model.",
+  ].join("\n")
+}
+
+function selectedPrompt(model: Provider.Model) {
   if (model.api.id.includes("muse")) {
     const name = model.api.id.includes("muse-glimmer") ? "Muse Glimmer" : "Muse Spark"
     return [PROMPT_META.replaceAll("{{MODEL_NAME}}", name)]
@@ -74,7 +94,7 @@ const layer = Layer.effect(
         }).pipe(Effect.provide(locations.get(Location.Ref.make({ directory: AbsolutePath.make(ctx.directory) }))))
         return [
           [
-            `You are powered by the model named ${model.api.id}. The exact model ID is ${model.providerID === MUC.id ? MUC.name : model.providerID}/${model.api.id}`,
+            modelIdentity(model),
             `Here is some useful information about the environment you are running in:`,
             `<env>`,
             `  Working directory: ${ctx.directory}`,

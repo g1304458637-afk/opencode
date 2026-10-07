@@ -1,4 +1,7 @@
+import { CAMPUS_ENGLISH } from "./campus"
+
 export const dict = {
+  ...CAMPUS_ENGLISH,
   "settings.updates.action.download": "Преземи",
   "desktop.updater.dialog.download": "Преземи",
   "desktop.updater.dialog.available.message": "Новата верзија на OpenCode сега е достапна за инсталирање.",

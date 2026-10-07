@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test"
+import { BRANDS } from "@opencode-ai/brand"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { Effect, Layer } from "effect"
 import type { Agent } from "../../src/agent/agent"
@@ -84,6 +85,22 @@ const it = testEffect(
 )
 
 describe("session.system", () => {
+  test("HUBU identifies the current model without exposing legacy routing or KCode identity", () => {
+    for (const id of ["gpt-6.1-sol", "glm-5.3-flash", "claude-sonnet-4", "gemini-3-pro", "muse-spark", "kimi-k3"]) {
+      const model = { providerID: "sub2api", api: { id }, name: id } as Provider.Model
+      const prompt = SystemPrompt.provider(model, BRANDS.hubu!)[0]!
+      const identity = SystemPrompt.modelIdentity(model, BRANDS.hubu!)
+      expect(prompt).toContain("HUBUCode")
+      expect(prompt).not.toMatch(/open[ -]?code|sub2api/i)
+      expect(identity).toContain(id)
+      expect(identity).toContain("HUBU AI")
+      expect(identity).toContain("HUBUCode")
+      expect(identity).not.toContain("KCode")
+      expect(identity).not.toContain("sub2api/")
+      expect(String(model.providerID)).toBe("sub2api")
+    }
+  })
+
   test("selects the Meta prompt for Muse Spark model IDs", () => {
     for (const id of ["meta/muse-spark-preview", "muse-spark-1.1", "muse-spark-1.2"]) {
       const prompt = SystemPrompt.provider({ api: { id } } as Provider.Model)[0]

@@ -1,3 +1,6 @@
+import { SkillLibrary } from "@opencode-ai/core/skill/library"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
@@ -27,7 +30,9 @@ afterEach(async () => {
   await disposeAllInstances()
 })
 
-const it = testEffect(LayerNode.compile(LayerNode.group([ToolRegistry.node, CrossSpawnSpawner.node, Ripgrep.node])))
+const it = testEffect(
+  LayerNode.compile(LayerNode.group([ToolRegistry.node, SkillLibrary.node, CrossSpawnSpawner.node, Ripgrep.node])),
+)
 
 describe("tool.skill", () => {
   it.instance("execute returns skill content block with files", () =>
@@ -129,6 +134,93 @@ Use this skill.
         expect(error).toBeInstanceOf(Error)
         if (error instanceof Error) expect(error.message).toContain('Skill "missing-skill" not found.')
       }
+    }),
+  )
+  it.instance("HUBU selected skills still enforce skill permission before exposing resources", () =>
+    Effect.gen(function* () {
+      const previousBrand = process.env.BRAND
+      process.env.BRAND = "hubu"
+      yield* Effect.addFinalizer(() =>
+        Effect.sync(() => {
+          if (previousBrand === undefined) delete process.env.BRAND
+          else process.env.BRAND = previousBrand
+        }),
+      )
+      const library = yield* SkillLibrary.Service
+      const identity = {
+        sourceType: "local" as const,
+        repository: "skill-permission-test",
+        path: "",
+        name: "selected-skill",
+        description: "",
+      }
+      const installed = yield* library
+        .importEntries({ ...identity, id: SkillLibrary.identity(identity) }, [
+          {
+            path: "SKILL.md",
+            bytes: new TextEncoder().encode("---\nname: selected-skill\n---\nLocked instructions"),
+            executable: false,
+          },
+        ])
+        .pipe(Effect.orDie)
+      const registry = yield* ToolRegistry.Service
+      const agent = { name: "build", mode: "primary" as const, permission: [], options: {} }
+      const tool = (yield* registry.tools({
+        providerID: ProviderV2.ID.make("sub2api"),
+        modelID: ModelV2.ID.make("fixture"),
+        agent,
+      })).find((tool) => tool.id === SkillTool.id)
+      if (!tool) throw new Error("Skill tool not found")
+      const requests: Array<Omit<PermissionV1.Request, "id" | "sessionID" | "tool">> = []
+      const ctx: Omit<Tool.Context, "ask"> = {
+        ...baseCtx,
+        messages: [
+          {
+            info: {
+              id: baseCtx.messageID,
+              sessionID: baseCtx.sessionID,
+              role: "user",
+              time: { created: Date.now() },
+              agent: "build",
+              model: { providerID: ProviderV2.ID.make("sub2api"), modelID: ModelV2.ID.make("fixture") },
+              selectedSkills: [
+                { skillId: installed.id, revision: installed.revision, contentHash: installed.contentHash },
+              ],
+            },
+            parts: [],
+          },
+        ],
+      }
+      const denied = yield* tool
+        .execute(
+          { name: identity.name },
+          {
+            ...ctx,
+            ask: (request) =>
+              Effect.sync(() => {
+                requests.push(request)
+              }).pipe(Effect.andThen(Effect.die(new Error("Permission denied by fixture")))),
+          },
+        )
+        .pipe(Effect.exit)
+      expect(Exit.isFailure(denied)).toBe(true)
+      if (Exit.isFailure(denied)) expect(String(Cause.squash(denied.cause))).toContain("Permission denied by fixture")
+      const allowed = yield* tool.execute(
+        { name: identity.name },
+        {
+          ...ctx,
+          ask: (request) =>
+            Effect.sync(() => {
+              requests.push(request)
+            }),
+        },
+      )
+      expect(requests).toHaveLength(2)
+      expect(
+        requests.every((request) => request.permission === "skill" && request.patterns.includes(identity.name)),
+      ).toBe(true)
+      expect(allowed.metadata.name).toBe(identity.name)
+      expect(allowed.output).toContain("already loaded for this task")
     }),
   )
 })

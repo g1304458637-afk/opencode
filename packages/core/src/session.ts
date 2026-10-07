@@ -1,3 +1,5 @@
+import { SkillLibrary } from "./skill/library"
+import { SkillSelection } from "./skill/selection"
 export * as SessionV2 from "./session"
 export * from "./session/schema"
 
@@ -184,6 +186,7 @@ export class Service extends Context.Service<Service, Interface>()("@opencode/v2
 const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
+    const library = yield* SkillLibrary.Service
     const database = yield* Database.Service
     const db = database.db
     const events = yield* EventV2.Service
@@ -363,6 +366,10 @@ const layer = Layer.effect(
             yield* result.get(input.sessionID)
             const prompt = resolvePrompt(input.prompt)
             const messageID = input.id ?? SessionMessage.ID.create()
+            if (SkillSelection.required())
+              yield* library
+                .pin(messageID, prompt.selectedSkills ?? [])
+                .pipe(Effect.mapError(() => new PromptConflictError({ sessionID: input.sessionID, messageID })))
             const delivery = input.delivery ?? "steer"
             const expected = { sessionID: input.sessionID, messageID, prompt, delivery }
             const admitted = yield* SessionInput.admit(db, events, {
@@ -461,6 +468,7 @@ const resolvePrompt = (input: PromptInput.Prompt) =>
   Prompt.make({
     text: input.text,
     agents: input.agents,
+    selectedSkills: input.selectedSkills,
     files: input.files?.map((file) => {
       const dataMime = file.uri.match(/^data:([^;,]+)[;,]/i)?.[1]
       const target = URL.canParse(file.uri) ? new URL(file.uri).pathname : (file.name ?? file.uri)
@@ -476,6 +484,7 @@ export const node = makeGlobalNode({
   layer: layer.pipe(Layer.orDie),
   deps: [
     Database.node,
+    SkillLibrary.node,
     EventV2.node,
     ProjectV2.node,
     SessionExecution.node,

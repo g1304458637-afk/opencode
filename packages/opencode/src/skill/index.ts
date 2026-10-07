@@ -1,3 +1,5 @@
+import { SkillSelection } from "@opencode-ai/core/skill/selection"
+import { publicBrandText } from "@opencode-ai/brand"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import path from "path"
 import { Effect, Layer, Context, Schema } from "effect"
@@ -122,16 +124,17 @@ const add = Effect.fnUntraced(function* (state: State, match: string, events: Ev
 
   if (!isSkillFrontmatter(md.data)) return
 
-  if (state.skills[md.data.name]) {
+  const key = SkillSelection.required() ? match : md.data.name
+  if (state.skills[key]) {
     yield* Effect.logWarning("duplicate skill name", {
       name: md.data.name,
-      existing: state.skills[md.data.name].location,
+      existing: state.skills[key].location,
       duplicate: match,
     })
   }
 
   state.dirs.add(path.dirname(match))
-  state.skills[md.data.name] = {
+  state.skills[key] = {
     name: md.data.name,
     description: md.data.description,
     location: match,
@@ -277,7 +280,7 @@ const layer = Layer.effect(
         // skill with the same name can override it.
         s.skills[CUSTOMIZE_OPENCODE_SKILL_NAME] = {
           name: CUSTOMIZE_OPENCODE_SKILL_NAME,
-          description: CUSTOMIZE_OPENCODE_SKILL_DESCRIPTION,
+          description: publicBrandText(CUSTOMIZE_OPENCODE_SKILL_DESCRIPTION),
           location: "<built-in>",
           content: CUSTOMIZE_OPENCODE_SKILL_BODY,
         }
@@ -288,14 +291,21 @@ const layer = Layer.effect(
 
     const get = Effect.fn("Skill.get")(function* (name: string) {
       const s = yield* InstanceState.get(state)
-      return s.skills[name]
+      if (!SkillSelection.required()) return s.skills[name]
+      const matches = Object.values(s.skills).filter((skill) => skill.name === name)
+      return matches.length === 1 ? matches[0] : undefined
     })
 
     const require = Effect.fn("Skill.require")(function* (name: string) {
       const s = yield* InstanceState.get(state)
-      const info = s.skills[name]
+      const info = yield* get(name)
       if (info) return info
-      return yield* new NotFoundError({ name, available: Object.keys(s.skills).toSorted() })
+      return yield* new NotFoundError({
+        name,
+        available: Object.values(s.skills)
+          .map((skill) => skill.name)
+          .toSorted(),
+      })
     })
 
     const all = Effect.fn("Skill.all")(function* () {

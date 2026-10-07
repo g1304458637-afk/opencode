@@ -1,8 +1,8 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "f14a9b18-8207-487e-a3d3-227e629ba9ad",
-  "prevIds": ["169a0f0f-d58f-479f-b024-fa1c7b9a09db"],
+  "id": "4365c7bb-70f3-4789-aabf-ceb9dc906ef5",
+  "prevIds": ["faa4e709-1a39-4946-807a-4fc6eedf0ce0"],
   "ddl": [
     {
       "name": "workspace",
@@ -10,6 +10,30 @@
     },
     {
       "name": "data_migration",
+      "entityType": "tables"
+    },
+    {
+      "name": "skill_identity",
+      "entityType": "tables"
+    },
+    {
+      "name": "skill_installation",
+      "entityType": "tables"
+    },
+    {
+      "name": "skill_operation",
+      "entityType": "tables"
+    },
+    {
+      "name": "skill_reference",
+      "entityType": "tables"
+    },
+    {
+      "name": "skill_revision",
+      "entityType": "tables"
+    },
+    {
+      "name": "skill_selection",
       "entityType": "tables"
     },
     {
@@ -179,6 +203,156 @@
       "name": "time_completed",
       "entityType": "columns",
       "table": "data_migration"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "skill_identity"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "data",
+      "entityType": "columns",
+      "table": "skill_identity"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "skill_id",
+      "entityType": "columns",
+      "table": "skill_installation"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "revision",
+      "entityType": "columns",
+      "table": "skill_installation"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "installed_at",
+      "entityType": "columns",
+      "table": "skill_installation"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "id",
+      "entityType": "columns",
+      "table": "skill_operation"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "data",
+      "entityType": "columns",
+      "table": "skill_operation"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "owner",
+      "entityType": "columns",
+      "table": "skill_reference"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "skill_id",
+      "entityType": "columns",
+      "table": "skill_reference"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "revision",
+      "entityType": "columns",
+      "table": "skill_reference"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "skill_id",
+      "entityType": "columns",
+      "table": "skill_revision"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "revision",
+      "entityType": "columns",
+      "table": "skill_revision"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "data",
+      "entityType": "columns",
+      "table": "skill_revision"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "owner",
+      "entityType": "columns",
+      "table": "skill_selection"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "refs",
+      "entityType": "columns",
+      "table": "skill_selection"
     },
     {
       "type": "integer",
@@ -1492,6 +1666,28 @@
       "table": "workspace"
     },
     {
+      "columns": ["skill_id"],
+      "tableTo": "skill_identity",
+      "columnsTo": ["id"],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "nameExplicit": false,
+      "name": "fk_skill_installation_skill_id_skill_identity_id_fk",
+      "entityType": "fks",
+      "table": "skill_installation"
+    },
+    {
+      "columns": ["skill_id"],
+      "tableTo": "skill_identity",
+      "columnsTo": ["id"],
+      "onUpdate": "NO ACTION",
+      "onDelete": "NO ACTION",
+      "nameExplicit": false,
+      "name": "fk_skill_revision_skill_id_skill_identity_id_fk",
+      "entityType": "fks",
+      "table": "skill_revision"
+    },
+    {
       "columns": ["active_account_id"],
       "tableTo": "account",
       "columnsTo": ["id"],
@@ -1624,6 +1820,20 @@
       "table": "session_share"
     },
     {
+      "columns": ["owner", "skill_id"],
+      "nameExplicit": false,
+      "name": "skill_reference_pk",
+      "entityType": "pks",
+      "table": "skill_reference"
+    },
+    {
+      "columns": ["skill_id", "revision"],
+      "nameExplicit": false,
+      "name": "skill_revision_pk",
+      "entityType": "pks",
+      "table": "skill_revision"
+    },
+    {
       "columns": ["email", "url"],
       "nameExplicit": false,
       "name": "control_account_pk",
@@ -1656,6 +1866,34 @@
       "nameExplicit": false,
       "name": "data_migration_pk",
       "table": "data_migration",
+      "entityType": "pks"
+    },
+    {
+      "columns": ["id"],
+      "nameExplicit": false,
+      "name": "skill_identity_pk",
+      "table": "skill_identity",
+      "entityType": "pks"
+    },
+    {
+      "columns": ["skill_id"],
+      "nameExplicit": false,
+      "name": "skill_installation_pk",
+      "table": "skill_installation",
+      "entityType": "pks"
+    },
+    {
+      "columns": ["id"],
+      "nameExplicit": false,
+      "name": "skill_operation_pk",
+      "table": "skill_operation",
+      "entityType": "pks"
+    },
+    {
+      "columns": ["owner"],
+      "nameExplicit": false,
+      "name": "skill_selection_pk",
+      "table": "skill_selection",
       "entityType": "pks"
     },
     {
@@ -1755,6 +1993,20 @@
       "name": "session_share_pk",
       "table": "session_share",
       "entityType": "pks"
+    },
+    {
+      "columns": [
+        {
+          "value": "revision",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "name": "skill_reference_revision_idx",
+      "entityType": "indexes",
+      "table": "skill_reference"
     },
     {
       "columns": [

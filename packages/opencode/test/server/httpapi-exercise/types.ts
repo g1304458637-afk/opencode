@@ -1,3 +1,4 @@
+import type { SkillFixture } from "./skill-fixture"
 import type { Duration, Effect } from "effect"
 import { ConfigV1 } from "@opencode-ai/core/v1/config/config"
 import { SessionV1 } from "@opencode-ai/core/v1/session"
@@ -16,7 +17,7 @@ export type Mode = "effect" | "coverage" | "auth"
 export type Comparison = "none" | "status" | "json"
 export type CaptureMode = "full" | "stream"
 export type AuthPolicy = "protected" | "public" | "public-bypass" | "ticket-bypass"
-export type ProjectOptions = { git?: boolean; config?: Partial<ConfigV1.Info>; llm?: boolean }
+export type ProjectOptions = { git?: boolean; config?: Partial<ConfigV1.Info>; llm?: boolean; skills?: boolean }
 export type OpenApiSpec = { paths?: Record<string, Partial<Record<OpenApiMethod, unknown>>> }
 export type JsonObject = Record<string, unknown>
 
@@ -53,6 +54,7 @@ export type BackendApp = {
 /** Effect-native helpers available while setting up and asserting a scenario. */
 export type ScenarioContext = {
   directory: string | undefined
+  skills?: SkillFixture.Info
   headers: (extra?: Record<string, string>) => Record<string, string>
   file: (name: string, content: string) => Effect.Effect<void>
   session: (input?: { title?: string; parentID?: SessionID }) => Effect.Effect<SessionInfo>

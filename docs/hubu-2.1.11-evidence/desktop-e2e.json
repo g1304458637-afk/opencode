@@ -1,0 +1,19 @@
+{
+  "passed": true,
+  "version": "2.1.11",
+  "checks": [
+    "identity",
+    "crest",
+    "21px/14px at 1280 and 1600",
+    "native ZIP picker and local install",
+    "Chinese translation through local model",
+    "installed skill survives app restart",
+    "task selection survives renderer restart",
+    "legacy model request contains original skill",
+    "submitted task selection survives app restart",
+    "continuation executes the original revision",
+    "explicit deselection survives reload and removes skill context",
+    "offline local uninstall"
+  ],
+  "modelRequests": 6
+}

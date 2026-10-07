@@ -1,3 +1,5 @@
+import { promoteSkillDiscovery, type SkillDiscoveryState, type SkillTaskTarget } from "./skill-discovery-state"
+import type { Selectable } from "@opencode-ai/schema/skill-library"
 import type { Session } from "@opencode-ai/sdk/v2/client"
 import { createSimpleContext } from "@opencode-ai/ui/context"
 import { createStore, produce } from "solid-js/store"
@@ -67,6 +69,11 @@ export const { use: useTabs, provider: TabsProvider } = createSimpleContext({
     const [recent, setRecent, , recentReady] = persisted(Persist.window("tabs.recent"), createStore<RecentTab>({}))
     const [info, setInfo] = persisted(Persist.window("tabs.info"), createStore<Record<string, TabInfo>>({}))
     const [closed, setClosed, , closedReady] = persisted(Persist.window("tabs.closed"), createStore<ClosedTab[]>([]))
+
+    const [skills, setSkills, , skillsReady] = persisted(
+      Persist.window("skill-discovery"),
+      createStore<SkillDiscoveryState>({ discoveries: {}, pending: {} }),
+    )
 
     const params = useParams()
     const navigate = useNavigate()
@@ -173,7 +180,13 @@ export const { use: useTabs, provider: TabsProvider } = createSimpleContext({
       }).finally(() => closing.delete(key))
       memory.remove(key)
       removeInfo(key)
-      if (draftID) removeDraftPersisted(draftID)
+      if (
+        draftID &&
+        !Object.values(skills.discoveries).some(
+          (item) => item.origin?.tab.type === "draft" && item.origin.tab.draftID === draftID,
+        )
+      )
+        removeDraftPersisted(draftID)
     }
 
     const actions = {
@@ -233,6 +246,7 @@ export const { use: useTabs, provider: TabsProvider } = createSimpleContext({
         // after its backing draft tab has been removed from the store.
         const active = location.pathname === "/new-session" && location.query.draftId === draftID
         const next = { type: "session" as const, ...session }
+        setSkills(promoteSkillDiscovery(skills, `draft:${draftID}`, next, tabKey(next)))
         void startTransition(() => {
           setStore(
             produce((tabs) => {
@@ -371,6 +385,42 @@ export const { use: useTabs, provider: TabsProvider } = createSimpleContext({
           return
         }
         navigate("/")
+      },
+      skillsReady,
+      skillDiscovery: (tab: Tab) => skills.discoveries[tabKey(tab)],
+      pendingSkills: (tab: Tab) => skills.pending[tabKey(tab)] ?? [],
+      acknowledgeSkills: (tab: Tab) => setSkills("pending", tabKey(tab), []),
+      async newSkillDiscovery(
+        target: SkillTaskTarget | undefined,
+        directory: string,
+        prompt: string,
+        model?: PromptModel,
+      ) {
+        await skillsReady.promise
+        const tab = await actions.newDraft({ server: target?.tab.server ?? server.key, directory }, prompt, model)
+        setSkills("discoveries", tabKey(tab), { origin: target })
+        return tab
+      },
+      addSkillToTask(target: SkillTaskTarget, skill: Selectable) {
+        setSkills("pending", tabKey(target.tab), (items = []) => [
+          ...items.filter((item) => item.id !== skill.id),
+          skill,
+        ])
+        if (!store.some((item) => tabKey(item) === tabKey(target.tab))) setStore((items) => [...items, target.tab])
+        navigateTab(target.tab)
+      },
+      async returnFromSkillDiscovery(discovery: Tab, skill?: Selectable) {
+        await skillsReady.promise
+        const target = skills.discoveries[tabKey(discovery)]?.origin
+        if (!target) return false
+        if (skill)
+          setSkills("pending", tabKey(target.tab), (items = []) => [
+            ...items.filter((item) => item.id !== skill.id),
+            skill,
+          ])
+        if (!store.some((item) => tabKey(item) === tabKey(target.tab))) setStore((items) => [...items, target.tab])
+        navigateTab(target.tab)
+        return true
       },
       state<T>(tab: Tab, name: string, init: () => T) {
         return memory.ensure(tabKey(tab), name, init)

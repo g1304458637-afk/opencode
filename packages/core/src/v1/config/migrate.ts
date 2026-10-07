@@ -29,6 +29,8 @@ const keys = new Set([
 
 export function isV1(input: unknown) {
   if (typeof input !== "object" || input === null || Array.isArray(input)) return false
+  if ("skills" in input && typeof input.skills === "object" && input.skills !== null && !Array.isArray(input.skills))
+    return true
   return Object.keys(input).some((key) => keys.has(key))
 }
 

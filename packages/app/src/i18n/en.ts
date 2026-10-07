@@ -1,6 +1,8 @@
+import { CAMPUS_ENGLISH } from "./campus"
 import { DESKTOP_NATIVE_ENGLISH } from "./desktop-native"
 
 export const dict = {
+  ...CAMPUS_ENGLISH,
   ...DESKTOP_NATIVE_ENGLISH,
   "command.category.suggested": "Suggested",
   "command.category.view": "View",

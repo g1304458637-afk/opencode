@@ -1,3 +1,5 @@
+import { CampusModel } from "@opencode-ai/core/provider/campus-model"
+import { publicBrandText } from "@opencode-ai/brand"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import os from "os"
 import { ConfigV1 } from "@opencode-ai/core/v1/config/config"
@@ -31,16 +33,23 @@ import { ModelV2 } from "@opencode-ai/core/model"
 import { ModelStatus } from "./model-status"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { ProviderError } from "./error"
-import { MUC, sub2apiDefaultProvider, mucApiKey, mucGatewayV1, fetchSub2APIModels } from "./muc"
+import { MUC, sub2apiDefaultProvider, mucApiKey, mucGatewayV1, fetchSub2APIModelCatalog } from "./muc"
 
 const OPENAI_HEADER_TIMEOUT_DEFAULT = 300_000
 
 // MUC harness: 为网关动态发现的模型构造安全默认元数据（已知家族给更大上下文）
-function mucDynamicModel(providerID: string, modelID: string, baseURL: string, npm?: string): Model {
-  const context = modelID.startsWith("claude") ? 200_000 : 128_000
+function mucDynamicModel(
+  providerID: string,
+  modelID: string,
+  baseURL: string,
+  npm: string | undefined,
+  metadata: { image: boolean; reasoning?: boolean; context?: number; output?: number },
+): Model {
+  const context = metadata.context ?? (modelID.startsWith("claude") ? 200_000 : 128_000)
   // MUC: 动态模型思考强度档位 —— 按 ID 推断 reasoning 能力（glm 家族 / deepseek-r* / thinking，均大小写不敏感）
   const lower = modelID.toLowerCase()
-  const reasoning = lower.includes("glm") || lower.startsWith("deepseek-r") || lower.includes("thinking")
+  const reasoning =
+    metadata.reasoning ?? (lower.includes("glm") || lower.startsWith("deepseek-r") || lower.includes("thinking"))
   const model: Model = {
     id: ModelV2.ID.make(modelID),
     providerID: ProviderV2.ID.make(providerID),
@@ -51,14 +60,14 @@ function mucDynamicModel(providerID: string, modelID: string, baseURL: string, n
     headers: {},
     options: {},
     cost: { input: 0, output: 0, cache: { read: 0, write: 0 } },
-    limit: { context, output: 32_000 },
+    limit: { context, output: metadata.output ?? 32_000 },
     capabilities: {
       temperature: true,
       reasoning,
-      attachment: false,
+      attachment: metadata.image,
       toolcall: true,
       interleaved: false,
-      input: { text: true, audio: false, image: false, video: false, pdf: false },
+      input: { text: true, audio: false, image: metadata.image, video: false, pdf: false },
       output: { text: true, audio: false, image: false, video: false, pdf: false },
     },
     release_date: "",
@@ -1160,6 +1169,7 @@ export function toPublicInfo(provider: Info): Info {
     JSON.stringify(
       {
         ...provider,
+        name: publicBrandText(provider.name),
         models: Object.fromEntries(Object.entries(provider.models).filter(([, model]) => Schema.is(Model)(model))),
       },
       (_, value) => {
@@ -1534,7 +1544,7 @@ const layer = Layer.effect(
           const existing = database[providerID]
           const parsed: Info = {
             id: ProviderV2.ID.make(providerID),
-            name: provider.name ?? existing?.name ?? providerID,
+            name: publicBrandText(provider.name ?? existing?.name ?? providerID),
             env: provider.env ?? existing?.env ?? [],
             options: mergeDeep(existing?.options ?? {}, provider.options ?? {}),
             source: "config",
@@ -1551,11 +1561,19 @@ const layer = Layer.effect(
             (mucBaseURL?.includes(MUC.host) ?? false)
           if (mucDynamic && mucBaseURL) {
             const discovered = yield* Effect.promise(() =>
-              fetchSub2APIModels(mucBaseURL, mucOptions.apiKey),
-            ).pipe(Effect.orElseSucceed(() => [] as string[]))
-            for (const mucModelID of discovered) {
-              if (parsed.models[mucModelID] || provider.models?.[mucModelID]) continue
-              parsed.models[mucModelID] = mucDynamicModel(providerID, mucModelID, mucBaseURL, provider.npm)
+              fetchSub2APIModelCatalog(mucBaseURL, mucOptions.apiKey),
+            ).pipe(Effect.orElseSucceed(() => [] as CampusModel.Info[]))
+            for (const item of discovered) {
+              if (parsed.models[item.id] || provider.models?.[item.id]) continue
+              const known = Object.values(modelsDev)
+                .flatMap((entry) => Object.values(entry.models))
+                .find((model) => model.id === item.id)
+              parsed.models[item.id] = mucDynamicModel(providerID, item.id, mucBaseURL, provider.npm, {
+                image: CampusModel.image(item, known),
+                reasoning: item.reasoning ?? item.capabilities?.reasoning ?? known?.reasoning,
+                context: known?.limit.context,
+                output: known?.limit.output,
+              })
             }
           }
 
@@ -1718,7 +1736,7 @@ const layer = Layer.effect(
           const providerID = ProviderV2.ID.make(id)
           const partial: Partial<Info> = { source: "config" }
           if (provider.env) partial.env = provider.env
-          if (provider.name) partial.name = provider.name
+          if (provider.name) partial.name = publicBrandText(provider.name)
           if (provider.options) partial.options = provider.options
           mergeProvider(providerID, partial)
         }

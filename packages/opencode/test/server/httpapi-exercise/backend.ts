@@ -1,8 +1,9 @@
 import { ConfigProvider, Effect, Layer } from "effect"
 import { HttpRouter } from "effect/unstable/http"
 import { parse } from "./assertions"
+import { exerciseGlobalRoot } from "./environment"
 import { runtime, type Runtime } from "./runtime"
-import type { ActiveScenario, BackendApp, CallResult, CaptureMode, SeededContext } from "./types"
+import type { ActiveScenario, BackendApp, CallResult, CaptureMode, Method, RequestSpec, SeededContext } from "./types"
 
 type CallOptions = {
   auth?: {
@@ -17,16 +18,34 @@ export function call(scenario: ActiveScenario, ctx: SeededContext<unknown>, opti
   )
 }
 
+export function request(method: Method, spec: RequestSpec) {
+  return Effect.promise(async () =>
+    capture(
+      await app(await runtime(), {}).request(
+        new Request(new URL(spec.path, "http://localhost"), {
+          method,
+          headers: spec.body === undefined ? spec.headers : { "content-type": "application/json", ...spec.headers },
+          body: spec.body === undefined ? undefined : JSON.stringify(spec.body),
+        }),
+      ),
+      "full",
+    ),
+  )
+}
+
 export function callAuthProbe(scenario: ActiveScenario, credentials: "missing" | "valid" = "missing") {
   return Effect.promise(async () => {
     const controller = new AbortController()
+    const backend = app(await runtime(), { auth: { password: "secret" } })
+    // The first request also builds the Effect service graph. Give that cold
+    // start a bounded budget within the scenario's 30s deadline; warm probes
+    // retain their short timeout, including intentionally pending endpoints.
+    const timeout = backend.initialized ? 1_000 : 10_000
     return Promise.race([
-      Promise.resolve(
-        app(await runtime(), { auth: { password: "secret" } }).request(
-          toAuthProbeRequest(scenario, credentials, controller.signal),
-        ),
-      ).then((response) => capture(response, scenario.capture)),
-      Bun.sleep(1_000).then(() => {
+      Promise.resolve(backend.request(toAuthProbeRequest(scenario, credentials, controller.signal))).then((response) =>
+        capture(response, scenario.capture),
+      ),
+      Bun.sleep(timeout).then(() => {
         controller.abort("auth probe timed out")
         return {
           status: 0,
@@ -40,7 +59,7 @@ export function callAuthProbe(scenario: ActiveScenario, credentials: "missing" |
   })
 }
 
-type CachedApp = BackendApp & { readonly dispose: () => Promise<void> }
+type CachedApp = BackendApp & { initialized: boolean; readonly dispose: () => Promise<void> }
 
 const appCache: Partial<Record<string, CachedApp>> = {}
 
@@ -60,21 +79,29 @@ function app(modules: Runtime, options: CallOptions) {
     modules.HttpApiApp.routes.pipe(
       Layer.provide(
         ConfigProvider.layer(
-          ConfigProvider.fromUnknown({ OPENCODE_SERVER_PASSWORD: password, OPENCODE_SERVER_USERNAME: username }),
+          ConfigProvider.fromUnknown({
+            OPENCODE_SERVER_PASSWORD: password,
+            OPENCODE_SERVER_USERNAME: username,
+            OPENCODE_DISABLE_EXTERNAL_SKILLS: true,
+          }),
         ),
       ),
     ),
     { disableLogger: true, memoMap: modules.memoMap },
   )
-  return (appCache[cacheKey] = {
+  const cached: CachedApp = {
+    initialized: false,
     dispose: web.dispose,
-    request(input: string | URL | Request, init?: RequestInit) {
-      return web.handler(
+    async request(input: string | URL | Request, init?: RequestInit) {
+      const response = await web.handler(
         input instanceof Request ? input : new Request(new URL(input, "http://localhost"), init),
         modules.HttpApiApp.context,
       )
+      cached.initialized = true
+      return response
     },
-  })
+  }
+  return (appCache[cacheKey] = cached)
 }
 
 function toRequest(scenario: ActiveScenario, ctx: SeededContext<unknown>) {
@@ -92,6 +119,7 @@ function toAuthProbeRequest(scenario: ActiveScenario, credentials: "missing" | "
     body: scenario.method === "GET" ? undefined : {},
   }
   const headers = {
+    "x-opencode-directory": exerciseGlobalRoot,
     ...(spec.body === undefined ? {} : { "content-type": "application/json" }),
     ...spec.headers,
     ...(credentials === "valid" ? { authorization: basic("opencode", "secret") } : {}),

@@ -1,3 +1,5 @@
+import { SkillLibraryPage } from "@/components/skill-library"
+import { CampusProjectPage } from "@/components/campus/campus-project-page"
 import "@/index.css"
 import * as Sentry from "@sentry/solid"
 import { I18nProvider } from "@opencode-ai/ui/context"
@@ -640,6 +642,8 @@ function Routes(props: { serverScoped?: JSX.Element }) {
         <Route path="/:dir/session/:id" component={NewLayoutLegacySessionRedirect} />
         <Route path="/server/:serverKey/session/:id" component={TargetSessionRoute} />
       </Show>
+      <Route path="/skills" component={SkillLibraryPage} />
+      <Route path="/projects" component={CampusProjectPage} />
       <Route path="/new-session" component={DraftRoute} />
     </>
   )

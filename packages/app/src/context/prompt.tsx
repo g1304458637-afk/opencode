@@ -1,3 +1,4 @@
+import type { Selectable } from "@opencode-ai/schema/skill-library"
 import { base64Encode } from "@opencode-ai/core/util/encode"
 import { createSimpleContext } from "@opencode-ai/ui/context"
 import { useParams, useSearchParams } from "@solidjs/router"
@@ -150,6 +151,14 @@ export const { use: usePrompt, provider: PromptProvider } = createSimpleContext(
       current: withSuspense(() => session().current()),
       cursor: withSuspense(() => session().cursor()),
       dirty: withSuspense(() => session().dirty()),
+      skills: {
+        current: withSuspense(() => session().skills.current()),
+        origin: () => session().skills.origin(),
+        restore: (skills: readonly Selectable[], owner?: string) => session().skills.restore(skills, owner),
+        set: (skills: readonly Selectable[]) => session().skills.set(skills),
+        add: (skill: Selectable) => session().skills.add(skill),
+        remove: (id: string) => session().skills.remove(id),
+      },
       model: {
         current: withSuspense(() => session().model.current()),
         set: (model: PromptModel | undefined) => session().model.set(model),

@@ -1,0 +1,35 @@
+[Unit]
+Description=HUBU public Skill Registry
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=hubu-skills
+Group=hubu-skills
+WorkingDirectory=/srv/hubu-skill-registry
+ExecStart=/srv/hubu-skill-registry/current/hubu-skill-registry
+Environment=BRAND=hubu
+Environment=OPENCODE_CHANNEL=hubu
+Environment=HUBU_SKILL_REGISTRY_DATA=/srv/hubu-skill-registry/data
+Environment=HUBU_SKILL_REGISTRY_PORT=4492
+Environment=HUBU_SKILL_UPSTREAM_REPOSITORIES=
+EnvironmentFile=-/etc/hubu-skill-registry.env
+Environment=XDG_DATA_HOME=/srv/hubu-skill-registry/data/runtime/data
+Environment=XDG_CONFIG_HOME=/srv/hubu-skill-registry/data/runtime/config
+Environment=XDG_CACHE_HOME=/srv/hubu-skill-registry/data/runtime/cache
+Environment=XDG_STATE_HOME=/srv/hubu-skill-registry/data/runtime/state
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/srv/hubu-skill-registry/data
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+MemoryMax=384M
+TasksMax=64
+UMask=0027
+
+[Install]
+WantedBy=multi-user.target

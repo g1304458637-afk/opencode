@@ -1,3 +1,4 @@
+import { useCampusProjects } from "@/context/campus-projects"
 import { resolveBrand } from "@opencode-ai/brand"
 import { Icon } from "@opencode-ai/ui/icon"
 import { useNavigate } from "@solidjs/router"
@@ -14,6 +15,7 @@ import hubuCrest from "@/assets/hubu/crest-official.jpg"
 const brand = resolveBrand()
 
 export function WorkspaceSidebar() {
+  const campusProjects = useCampusProjects()
   const language = useLanguage()
   const command = useCommand()
   const layout = useLayout()
@@ -30,7 +32,10 @@ export function WorkspaceSidebar() {
       multiple: true,
       onSelect: (value) => {
         if (!value) return
-        for (const path of Array.isArray(value) ? value : [value]) layout.projects.open(path)
+        for (const path of Array.isArray(value) ? value : [value]) {
+          campusProjects.restoreProject(path)
+          layout.projects.open(path)
+        }
         navigate("/")
       },
     })
@@ -41,7 +46,7 @@ export function WorkspaceSidebar() {
       icon: "bubble-5" as const,
       label: language.t("home.sessions.search.sessions"),
       action: () => navigate("/"),
-      active: layout.route().type !== "draft",
+      active: ["home", "session", "dir-new-sesssion"].includes(layout.route().type),
     },
     {
       id: "new",
@@ -64,6 +69,24 @@ export function WorkspaceSidebar() {
       action: () => command.show(),
       active: false,
     },
+    ...(brand.id === "hubu"
+      ? [
+          {
+            id: "project-groups",
+            icon: "folder" as const,
+            label: language.t("sidebar.nav.projectsAndSessions"),
+            action: () => navigate("/projects"),
+            active: layout.route().type === "projects",
+          },
+          {
+            id: "skills",
+            icon: "code" as const,
+            label: language.t("skills.title"),
+            action: () => navigate("/skills"),
+            active: layout.route().type === "skills",
+          },
+        ]
+      : []),
   ]
   return (
     <aside class="campus-sidebar" data-brand={brand.id}>

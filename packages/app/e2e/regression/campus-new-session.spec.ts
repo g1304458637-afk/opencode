@@ -48,7 +48,7 @@ test("keeps the real composer usable at desktop, tablet, narrow and short sizes"
   ]) {
     await page.setViewportSize(viewport)
     await expect(hero.locator(submitSelector)).toBeInViewport()
-    await expect(hero.getByRole("heading")).toBeInViewport()
+    await expect(hero.getByRole("heading", { level: 1 })).toBeInViewport()
     await expect.poll(() => hero.evaluate((node) => node.scrollWidth <= node.clientWidth)).toBe(true)
     await expect
       .poll(() => page.locator('[data-slot="prompt-toolbar"]').evaluate((node) => node.scrollWidth <= node.clientWidth))
@@ -131,7 +131,7 @@ test("does not request video or animate with reduced motion and reacts to prefer
   const hero = page.locator(heroSelector)
   await expect(hero.locator(inputSelector)).toBeEditable()
   await expect(page.locator(".campus-workspace__background video")).toHaveCount(0)
-  await expect(hero.getByRole("heading")).toHaveCSS("animation-name", "none")
+  await expect(hero.getByRole("heading", { level: 1 })).toHaveCSS("animation-name", "none")
   expect(requests).toBe(0)
   await page.emulateMedia({ reducedMotion: "no-preference" })
   await expect.poll(() => requests).toBeGreaterThan(0)

@@ -1,0 +1,21 @@
+{
+  "purpose": "Isolated local validation only; never installed or published",
+  "baseCommit": "9d2e6114acc9e0ee3d576418615c7f85a677e338",
+  "source": "feature working tree including CI locale fix, built before final repository delivery",
+  "completedUTC": "2026-10-07T13:44:40.7541016Z",
+  "bun": "1.3.14",
+  "node": "v24.19.0",
+  "electron": "42.5.1",
+  "electronBuilder": "26.15.2",
+  "modelsSnapshotSHA256": "C43F80FA5781505542E8AE9EF5E13FD1789FB6113FF2E9BA7BFFA368DC60A5BF",
+  "installer": {
+    "name": "hubu-ai-2.1.11-win-x64.exe",
+    "bytes": 142190497,
+    "sha256": "FADF97AECFEAC57E89F3002244883932E0FBF655B6DA0AD59EC8F5D679A5264F"
+  },
+  "published": false,
+  "localBuild": true,
+  "registry": "http://127.0.0.1:4492/",
+  "nativeIconMatches": true,
+  "shortcutIconMatches": true
+}

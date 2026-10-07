@@ -1,3 +1,4 @@
+import { resolveBrand } from "@opencode-ai/brand"
 import type { NamedError } from "@opencode-ai/core/util/error"
 import { SessionV1 } from "@opencode-ai/core/v1/session"
 import { Cause, Clock, Duration, Effect, Schedule } from "effect"
@@ -83,6 +84,7 @@ function exponential(attempt: number, random: number) {
 }
 
 export function retryable(error: Err, provider: string) {
+  const brand = resolveBrand()
   // context overflow errors should not be retried
   if (SessionV1.ContextOverflowError.isInstance(error)) return undefined
   if (SessionV1.APIError.isInstance(error)) {
@@ -98,14 +100,31 @@ export function retryable(error: Err, provider: string) {
       return undefined
     if (error.data.responseBody?.includes("FreeUsageLimitError")) {
       return {
-        message: GO_UPSELL_MESSAGE,
+        message:
+          brand.id === "hubu"
+            ? "HUBU AI quota exceeded"
+            : brand.id === "kai"
+              ? "K AI quota exceeded"
+              : GO_UPSELL_MESSAGE,
         action: {
           reason: "free_tier_limit",
           provider,
-          title: "Free limit reached",
-          message: "Subscribe to OpenCode Go for reliable access to the best open-source models for $10/month.",
-          label: "subscribe",
-          link: GO_UPSELL_URL,
+          title:
+            brand.id === "hubu"
+              ? "HUBU AI quota reached"
+              : brand.id === "kai"
+                ? "K AI quota reached"
+                : "Free limit reached",
+          message:
+            brand.id === "hubu"
+              ? "Review your HUBU AI quota and plan on the account page."
+              : brand.id === "kai"
+                ? "Review your K AI quota and plan on the account page."
+                : "Subscribe to OpenCode Go for reliable access to the best open-source models for $10/month.",
+          label: ["hubu", "kai"].includes(brand.id) ? "account" : "subscribe",
+          link: ["hubu", "kai"].includes(brand.id)
+            ? `${process.env[brand.gatewayEnvVar]?.trim() || brand.gatewayURL}/dashboard`
+            : GO_UPSELL_URL,
         },
       }
     }

@@ -1,4 +1,7 @@
+import { CAMPUS_ENGLISH } from "./campus"
+
 export const dict = {
+  ...CAMPUS_ENGLISH,
   "settings.updates.action.download": "Lataa",
   "desktop.updater.dialog.download": "Lataa",
   "desktop.updater.dialog.available.message": "OpenCoden uusi versio on nyt saatavana asennettavaksi.",

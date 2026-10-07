@@ -223,6 +223,10 @@ import type {
   SessionUnshareResponses,
   SessionUpdateErrors,
   SessionUpdateResponses,
+  SkillLibraryInstallSource,
+  SkillLibraryReference,
+  SkillLibrarySourceCandidate,
+  SkillLibraryTranslationSource,
   SubtaskPartInput,
   SyncHistoryListErrors,
   SyncHistoryListResponses,
@@ -383,8 +387,28 @@ import type {
   V2SessionSwitchModelResponses,
   V2SessionWaitErrors,
   V2SessionWaitResponses,
+  V2SkillAvailableErrors,
+  V2SkillAvailableResponses,
+  V2SkillContentErrors,
+  V2SkillContentResponses,
+  V2SkillInstalledErrors,
+  V2SkillInstalledResponses,
+  V2SkillInstallErrors,
+  V2SkillInstallResponses,
   V2SkillListErrors,
   V2SkillListResponses,
+  V2SkillOperationErrors,
+  V2SkillOperationResponses,
+  V2SkillPrepareErrors,
+  V2SkillPrepareResponses,
+  V2SkillReadErrors,
+  V2SkillReadResponses,
+  V2SkillRemoveErrors,
+  V2SkillRemoveResponses,
+  V2SkillSearchErrors,
+  V2SkillSearchResponses,
+  V2SkillTranslateErrors,
+  V2SkillTranslateResponses,
   VcsApplyErrors,
   VcsApplyResponses,
   VcsDiffErrors,
@@ -3755,6 +3779,7 @@ export class Session2 extends HeyApiClient {
         [key: string]: boolean
       }
       format?: OutputFormat
+      selectedSkills?: Array<SkillLibraryReference>
       system?: string
       variant?: string
       parts?: Array<TextPartInput | FilePartInput | AgentPartInput | SubtaskPartInput>
@@ -3775,6 +3800,7 @@ export class Session2 extends HeyApiClient {
             { in: "body", key: "noReply" },
             { in: "body", key: "tools" },
             { in: "body", key: "format" },
+            { in: "body", key: "selectedSkills" },
             { in: "body", key: "system" },
             { in: "body", key: "variant" },
             { in: "body", key: "parts" },
@@ -4108,6 +4134,7 @@ export class Session2 extends HeyApiClient {
         [key: string]: boolean
       }
       format?: OutputFormat
+      selectedSkills?: Array<SkillLibraryReference>
       system?: string
       variant?: string
       parts?: Array<TextPartInput | FilePartInput | AgentPartInput | SubtaskPartInput>
@@ -4128,6 +4155,7 @@ export class Session2 extends HeyApiClient {
             { in: "body", key: "noReply" },
             { in: "body", key: "tools" },
             { in: "body", key: "format" },
+            { in: "body", key: "selectedSkills" },
             { in: "body", key: "system" },
             { in: "body", key: "variant" },
             { in: "body", key: "parts" },
@@ -4157,6 +4185,7 @@ export class Session2 extends HeyApiClient {
       sessionID: string
       directory?: string
       workspace?: string
+      selectedSkills?: Array<SkillLibraryReference>
       messageID?: string
       agent?: string
       model?: string
@@ -4182,6 +4211,7 @@ export class Session2 extends HeyApiClient {
             { in: "path", key: "sessionID" },
             { in: "query", key: "directory" },
             { in: "query", key: "workspace" },
+            { in: "body", key: "selectedSkills" },
             { in: "body", key: "messageID" },
             { in: "body", key: "agent" },
             { in: "body", key: "model" },
@@ -6542,6 +6572,322 @@ export class Skill extends HeyApiClient {
       url: "/api/skill",
       ...options,
       ...params,
+    })
+  }
+
+  public installed<ThrowOnError extends boolean = false>(
+    parameters?: {
+      location?: {
+        directory?: string
+        workspace?: string
+      }
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "query", key: "location" }] }])
+    return (options?.client ?? this.client).get<V2SkillInstalledResponses, V2SkillInstalledErrors, ThrowOnError>({
+      url: "/api/skill/library",
+      ...options,
+      ...params,
+    })
+  }
+
+  public available<ThrowOnError extends boolean = false>(
+    parameters?: {
+      location?: {
+        directory?: string
+        workspace?: string
+      }
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "query", key: "location" }] }])
+    return (options?.client ?? this.client).get<V2SkillAvailableResponses, V2SkillAvailableErrors, ThrowOnError>({
+      url: "/api/skill/available",
+      ...options,
+      ...params,
+    })
+  }
+
+  public search<ThrowOnError extends boolean = false>(
+    parameters: {
+      location?: {
+        directory?: string
+        workspace?: string
+      }
+      q: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "location" },
+            { in: "query", key: "q" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<V2SkillSearchResponses, V2SkillSearchErrors, ThrowOnError>({
+      url: "/api/skill/search",
+      ...options,
+      ...params,
+    })
+  }
+
+  public read<ThrowOnError extends boolean = false>(
+    parameters?: {
+      location?: {
+        directory?: string
+        workspace?: string
+      }
+      source?:
+        | {
+            type: "candidate"
+            candidate: SkillLibrarySourceCandidate
+          }
+        | {
+            type: "url"
+            url: string
+          }
+        | {
+            type: "local"
+            path: string
+          }
+        | {
+            type: "registry"
+            id: string
+            revision: string
+          }
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "location" },
+            { in: "body", key: "source" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<V2SkillReadResponses, V2SkillReadErrors, ThrowOnError>({
+      url: "/api/skill/read",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  public content<ThrowOnError extends boolean = false>(
+    parameters?: {
+      location?: {
+        directory?: string
+        workspace?: string
+      }
+      source?: SkillLibraryTranslationSource
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "location" },
+            { in: "body", key: "source" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<V2SkillContentResponses, V2SkillContentErrors, ThrowOnError>({
+      url: "/api/skill/content",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  public translate<ThrowOnError extends boolean = false>(
+    parameters?: {
+      location?: {
+        directory?: string
+        workspace?: string
+      }
+      source?: SkillLibraryTranslationSource
+      includeMarkdown?: boolean
+      model?: {
+        providerID: string
+        modelID: string
+      }
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "location" },
+            { in: "body", key: "source" },
+            { in: "body", key: "includeMarkdown" },
+            { in: "body", key: "model" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<V2SkillTranslateResponses, V2SkillTranslateErrors, ThrowOnError>({
+      url: "/api/skill/translate",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  public install<ThrowOnError extends boolean = false>(
+    parameters?: {
+      location?: {
+        directory?: string
+        workspace?: string
+      }
+      id?: string
+      source?: SkillLibraryInstallSource
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "location" },
+            { in: "body", key: "id" },
+            { in: "body", key: "source" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<V2SkillInstallResponses, V2SkillInstallErrors, ThrowOnError>({
+      url: "/api/skill/install",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  public operation<ThrowOnError extends boolean = false>(
+    parameters: {
+      id: string
+      location?: {
+        directory?: string
+        workspace?: string
+      }
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "id" },
+            { in: "query", key: "location" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<V2SkillOperationResponses, V2SkillOperationErrors, ThrowOnError>({
+      url: "/api/skill/operation/{id}",
+      ...options,
+      ...params,
+    })
+  }
+
+  public remove<ThrowOnError extends boolean = false>(
+    parameters: {
+      id: string
+      location?: {
+        directory?: string
+        workspace?: string
+      }
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "id" },
+            { in: "query", key: "location" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).delete<V2SkillRemoveResponses, V2SkillRemoveErrors, ThrowOnError>({
+      url: "/api/skill/library/{id}",
+      ...options,
+      ...params,
+    })
+  }
+
+  public prepare<ThrowOnError extends boolean = false>(
+    parameters?: {
+      location?: {
+        directory?: string
+        workspace?: string
+      }
+      owner?: string
+      restoreFrom?: string
+      skills?: Array<{
+        id: string
+        revision?: string
+      }>
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "location" },
+            { in: "body", key: "owner" },
+            { in: "body", key: "restoreFrom" },
+            { in: "body", key: "skills" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<V2SkillPrepareResponses, V2SkillPrepareErrors, ThrowOnError>({
+      url: "/api/skill/selection",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
     })
   }
 }

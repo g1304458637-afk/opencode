@@ -1,4 +1,7 @@
+import { CAMPUS_ENGLISH } from "./campus"
+
 export const dict = {
+  ...CAMPUS_ENGLISH,
   "settings.updates.action.download": "Боргирӣ кардан",
   "desktop.updater.dialog.download": "Боргирӣ кардан",
   "desktop.updater.dialog.available.message": "Версияи нави OpenCode ҳоло барои насб дастрас аст.",

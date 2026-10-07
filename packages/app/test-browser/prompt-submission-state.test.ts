@@ -15,6 +15,8 @@ describe("prompt submission state", () => {
       target,
       prompt: [{ type: "text", content: "prompt-A", start: 0, end: 8 }],
       context: [{ key: "file:src/index.ts:undefined:undefined", type: "file", path: "src/index.ts" }],
+      skills: [],
+      origin: undefined,
     })
   })
 
@@ -33,6 +35,8 @@ describe("prompt submission state", () => {
       target: session,
       prompt: [{ type: "text", content: "first prompt", start: 0, end: 12 }],
       context: [{ key: "file:src/index.ts:undefined:undefined", type: "file", path: "src/index.ts" }],
+      skills: [],
+      origin: undefined,
     })
     expect(session.context.items()).toHaveLength(1)
     expect(session.context.items()[0]).toMatchObject({ type: "file", path: "src/index.ts" })

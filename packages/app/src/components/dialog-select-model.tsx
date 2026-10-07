@@ -15,6 +15,7 @@ import { Icon } from "@opencode-ai/ui/v2/icon"
 import { Tag as TagV2 } from "@opencode-ai/ui/v2/badge-v2"
 import { MenuV2 } from "@opencode-ai/ui/v2/menu-v2"
 import { TooltipV2 } from "@opencode-ai/ui/v2/tooltip-v2"
+import { ModelVariantMenuItems } from "./model-variant-menu-items"
 import { ModelTooltip } from "./model-tooltip"
 import { useLanguage } from "@/context/language"
 import { decode64 } from "@/utils/base64"
@@ -228,6 +229,7 @@ export function ModelSelectorPopover(props: {
 export function ModelSelectorPopoverV2(props: {
   provider?: string
   model?: ModelState
+  variant?: ModelState["variant"]
   trigger: ModelSelectorTrigger
   onClose?: () => void
 }) {
@@ -244,6 +246,7 @@ export function ModelSelectorPopoverV2(props: {
       models={controller.models}
       groups={controller.groups}
       current={controller.current}
+      variant={props.variant}
       select={controller.select}
       onManage={() => {
         void import("./dialog-manage-models").then((module) => {
@@ -299,6 +302,7 @@ function ModelSelectorPopoverV2View(props: {
   models: (search: string) => ModelItem[]
   groups: (models: ModelItem[]) => { category: string; items: ModelItem[] }[]
   current: () => string | undefined
+  variant?: Pick<ModelState["variant"], "list" | "current" | "set">
   select: (item: ModelItem) => void
   onManage: () => void
   onClose: () => void
@@ -311,7 +315,8 @@ function ModelSelectorPopoverV2View(props: {
 
   const models = createMemo(() => props.models(store.search))
   const groups = createMemo(() => props.groups(models()))
-  const keys = () => [...models().map(modelKey), manageKey]
+  const variants = () => (props.variant?.list().length ? ["default", ...props.variant.list()] : [])
+  const keys = () => [...models().map(modelKey), ...variants().map((value) => `variant:${value}`), manageKey]
   const initialActive = () => {
     const selected = props.current()
     const options = keys()
@@ -350,7 +355,17 @@ function ModelSelectorPopoverV2View(props: {
       selectModel(item)
       return
     }
+    if (store.active.startsWith("variant:")) {
+      selectVariant(store.active.slice(8))
+      return
+    }
     if (store.active === manageKey) manage()
+  }
+  const selectVariant = (value: string) => {
+    props.variant?.set(value === "default" ? undefined : value)
+    dismiss.preventTriggerRestore()
+    setOpen(false)
+    dismiss.afterClose(props.onClose)
   }
   const moveActive = (delta: number) => {
     const options = keys()
@@ -503,6 +518,16 @@ function ModelSelectorPopoverV2View(props: {
               </Show>
             </div>
           </ScrollView>
+          <ModelVariantMenuItems
+            options={variants()}
+            current={props.variant?.current() ?? "default"}
+            active={store.active}
+            onActive={(value) => {
+              setStore("active", `variant:${value}`)
+              setTimeout(() => searchRef?.focus())
+            }}
+            onSelect={selectVariant}
+          />
           <div class="h-px bg-v2-border-border-muted" />
           <div class="flex flex-col p-0.5">
             <MenuV2.Item

@@ -1,3 +1,5 @@
+import { SkillLibrary } from "@opencode-ai/core/skill/library"
+import { SkillSelection } from "@opencode-ai/core/skill/selection"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { SessionV1 } from "@opencode-ai/core/v1/session"
 import { ConfigV1 } from "@opencode-ai/core/v1/config/config"
@@ -191,6 +193,7 @@ export const use = serviceUse(Service)
 const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
+    const library = yield* SkillLibrary.Service
     const config = yield* Config.Service
     const session = yield* Session.Service
     const agents = yield* Agent.Service
@@ -478,7 +481,10 @@ const layer = Layer.effect(
             format: original.format,
             tools: original.tools,
             system: original.system,
+            selectedSkills: original.selectedSkills,
           })
+          if (SkillSelection.required())
+            yield* library.pin(replayMsg.id, original.selectedSkills ?? [], original.id).pipe(Effect.orDie)
           for (const part of replay.parts) {
             if (part.type === "compaction") continue
             const replayPart =
@@ -523,7 +529,10 @@ const layer = Layer.effect(
               time: { created: Date.now() },
               agent: userMessage.agent,
               model: userMessage.model,
+              selectedSkills: userMessage.selectedSkills,
             })
+            if (SkillSelection.required())
+              yield* library.pin(continueMsg.id, userMessage.selectedSkills ?? [], userMessage.id).pipe(Effect.orDie)
             const text =
               (input.overflow
                 ? "The previous request exceeded the provider's size limit due to large media attachments. The conversation was compacted and media files were removed from context. If the user was asking about attached images or files, explain that the attachments were too large to process and suggest they try again with smaller or fewer files.\n\n"
@@ -563,14 +572,20 @@ const layer = Layer.effect(
       auto: boolean
       overflow?: boolean
     }) {
+      const previous = (yield* session.messages({ sessionID: input.sessionID }).pipe(Effect.orDie)).findLast(
+        (message) => message.info.role === "user",
+      )?.info
       const msg = yield* session.updateMessage({
         id: MessageID.ascending(),
         role: "user",
+        selectedSkills: previous?.role === "user" ? previous.selectedSkills : undefined,
         model: input.model,
         sessionID: input.sessionID,
         agent: input.agent,
         time: { created: Date.now() },
       })
+      if (SkillSelection.required())
+        yield* library.pin(msg.id, msg.selectedSkills ?? [], previous?.id).pipe(Effect.orDie)
       yield* session.updatePart({
         id: PartID.ascending(),
         messageID: msg.id,
@@ -594,6 +609,7 @@ export const node = LayerNode.make({
   service: Service,
   layer: layer,
   deps: [
+    SkillLibrary.node,
     Config.node,
     Session.node,
     Agent.node,
