@@ -86,9 +86,7 @@ test("animates todo lifecycle without replaying it across session tabs", async (
   await switchSession(page, otherID, otherTitle)
   await expect(dock).toHaveCount(0)
 
-  const returningOpen = sampleDock(page, 700)
-  await switchSession(page, sourceID, sourceTitle)
-  const openSamples = (await returningOpen).filter((sample) => sample.present)
+  const openSamples = (await sampleNavigation(page, sourceID, sourceTitle)).filter((sample) => sample.present)
   expect(openSamples.length).toBeGreaterThan(0)
   expect(openSamples[0]!.opacity).toBeGreaterThan(0.98)
   expect(openSamples[0]!.height).toBeGreaterThan(70)
@@ -104,10 +102,9 @@ test("animates todo lifecycle without replaying it across session tabs", async (
   events.push(todoEvent(sourceID, []))
 
   await switchSession(page, otherID, otherTitle)
-  const returningEmpty = sampleDock(page, 700)
-  await switchSession(page, sourceID, sourceTitle)
+  const emptySamples = await sampleNavigation(page, sourceID, sourceTitle)
   await expect(dock).toHaveCount(0)
-  expect((await returningEmpty).every((sample) => !sample.present)).toBe(true)
+  expect(emptySamples.every((sample) => !sample.present)).toBe(true)
 })
 
 function session(id: string, title: string, created: number) {
@@ -187,4 +184,37 @@ function sampleDock(page: Page, duration: number) {
     }
     return samples
   }, duration)
+}
+
+// Observe from before the click through the settled destination. The post-navigation
+// interval measures replay; it must not expire while Playwright is still clicking.
+async function sampleNavigation(page: Page, sessionID: string, title: string) {
+  const recording = await page.evaluateHandle(() => {
+    const samples: { present: boolean; height: number; opacity: number }[] = []
+    let frame = 0
+    const sample = () => {
+      const dock = document.querySelector<HTMLElement>('[data-component="session-todo-dock"]')
+      const clip = dock?.parentElement?.parentElement
+      const label = dock?.querySelector<HTMLElement>('[data-action="session-todo-toggle"] span[aria-label]')
+      samples.push({
+        present: !!dock,
+        height: clip?.getBoundingClientRect().height ?? 0,
+        opacity: label ? Number.parseFloat(getComputedStyle(label).opacity) : 0,
+      })
+      frame = requestAnimationFrame(sample)
+    }
+    sample()
+    return { samples, stop: () => cancelAnimationFrame(frame) }
+  })
+  try {
+    await switchSession(page, sessionID, title)
+    return await recording.evaluate(async (recording) => {
+      const start = performance.now()
+      while (performance.now() - start < 700) await new Promise(requestAnimationFrame)
+      return recording.samples
+    })
+  } finally {
+    await recording.evaluate((recording) => recording.stop())
+    await recording.dispose()
+  }
 }

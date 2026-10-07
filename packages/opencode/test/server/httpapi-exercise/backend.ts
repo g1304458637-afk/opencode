@@ -36,13 +36,16 @@ export function request(method: Method, spec: RequestSpec) {
 export function callAuthProbe(scenario: ActiveScenario, credentials: "missing" | "valid" = "missing") {
   return Effect.promise(async () => {
     const controller = new AbortController()
+    const backend = app(await runtime(), { auth: { password: "secret" } })
+    // The first request also builds the Effect service graph. Give that cold
+    // start a bounded budget within the scenario's 30s deadline; warm probes
+    // retain their short timeout, including intentionally pending endpoints.
+    const timeout = backend.initialized ? 1_000 : 10_000
     return Promise.race([
-      Promise.resolve(
-        app(await runtime(), { auth: { password: "secret" } }).request(
-          toAuthProbeRequest(scenario, credentials, controller.signal),
-        ),
-      ).then((response) => capture(response, scenario.capture)),
-      Bun.sleep(1_000).then(() => {
+      Promise.resolve(backend.request(toAuthProbeRequest(scenario, credentials, controller.signal))).then((response) =>
+        capture(response, scenario.capture),
+      ),
+      Bun.sleep(timeout).then(() => {
         controller.abort("auth probe timed out")
         return {
           status: 0,
@@ -56,7 +59,7 @@ export function callAuthProbe(scenario: ActiveScenario, credentials: "missing" |
   })
 }
 
-type CachedApp = BackendApp & { readonly dispose: () => Promise<void> }
+type CachedApp = BackendApp & { initialized: boolean; readonly dispose: () => Promise<void> }
 
 const appCache: Partial<Record<string, CachedApp>> = {}
 
@@ -86,15 +89,19 @@ function app(modules: Runtime, options: CallOptions) {
     ),
     { disableLogger: true, memoMap: modules.memoMap },
   )
-  return (appCache[cacheKey] = {
+  const cached: CachedApp = {
+    initialized: false,
     dispose: web.dispose,
-    request(input: string | URL | Request, init?: RequestInit) {
-      return web.handler(
+    async request(input: string | URL | Request, init?: RequestInit) {
+      const response = await web.handler(
         input instanceof Request ? input : new Request(new URL(input, "http://localhost"), init),
         modules.HttpApiApp.context,
       )
+      cached.initialized = true
+      return response
     },
-  })
+  }
+  return (appCache[cacheKey] = cached)
 }
 
 function toRequest(scenario: ActiveScenario, ctx: SeededContext<unknown>) {
