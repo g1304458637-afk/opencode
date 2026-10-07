@@ -1,4 +1,7 @@
+import { CAMPUS_ENGLISH } from "./campus"
+
 export const dict: Record<string, string> = {
+  ...CAMPUS_ENGLISH,
   "settings.updates.action.download": "ཕབ་ལེན་འབད།",
   "desktop.updater.dialog.download": "ཕབ་ལེན་འབད།",
   "desktop.updater.dialog.available.message": "OpenCode གི་ཐོན་རིམ་གསརཔ་ཅིག་ ད་ལྟོ་གཞི་བཙུགས་འབད་ནི་ལུ་འཐོབ་ཚུགས།",

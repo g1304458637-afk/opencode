@@ -1,4 +1,7 @@
+import { CAMPUS_ENGLISH } from "./campus"
+
 export const dict: Record<string, string> = {
+  ...CAMPUS_ENGLISH,
   "settings.updates.action.download": "බාගන්න",
   "desktop.updater.dialog.download": "බාගන්න",
   "desktop.updater.dialog.available.message": "OpenCode හි නව අනුවාදයක් ස්ථාපනය කිරීමට දැන් තිබේ.",

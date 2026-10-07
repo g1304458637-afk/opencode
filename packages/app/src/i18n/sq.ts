@@ -1,4 +1,7 @@
+import { CAMPUS_ENGLISH } from "./campus"
+
 export const dict = {
+  ...CAMPUS_ENGLISH,
   "settings.updates.action.download": "Shkarkoje",
   "desktop.updater.dialog.download": "Shkarkoje",
   "desktop.updater.dialog.available.message":

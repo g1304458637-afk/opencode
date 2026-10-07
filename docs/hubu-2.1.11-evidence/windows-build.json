@@ -1,8 +1,8 @@
 {
   "purpose": "Isolated local validation only; never installed or published",
-  "baseCommit": "34e49bc7768eef157ed5d78de9c1aecee73c898d",
-  "source": "uncommitted feature working tree built before repository delivery",
-  "completedUTC": "2026-10-07T13:11:34.481561Z",
+  "baseCommit": "9d2e6114acc9e0ee3d576418615c7f85a677e338",
+  "source": "feature working tree including CI locale fix, built before final repository delivery",
+  "completedUTC": "2026-10-07T13:44:40.7541016Z",
   "bun": "1.3.14",
   "node": "v24.19.0",
   "electron": "42.5.1",
@@ -10,8 +10,8 @@
   "modelsSnapshotSHA256": "C43F80FA5781505542E8AE9EF5E13FD1789FB6113FF2E9BA7BFFA368DC60A5BF",
   "installer": {
     "name": "hubu-ai-2.1.11-win-x64.exe",
-    "bytes": 142183228,
-    "sha256": "DE3D838485C995738589647AD1D2CE108CB811E6AEB58B44D3A89A00C1871BD4"
+    "bytes": 142190497,
+    "sha256": "FADF97AECFEAC57E89F3002244883932E0FBF655B6DA0AD59EC8F5D679A5264F"
   },
   "published": false,
   "localBuild": true,

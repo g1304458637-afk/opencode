@@ -1,4 +1,7 @@
+import { CAMPUS_ENGLISH } from "./campus"
+
 export const dict = {
+  ...CAMPUS_ENGLISH,
   "settings.updates.action.download": "ດາວໂຫຼດ",
   "desktop.updater.dialog.download": "ດາວໂຫຼດ",
   "desktop.updater.dialog.available.message": "ເວີຊັນໃໝ່ຂອງ OpenCode ມີໃຫ້ຕິດຕັ້ງແລ້ວ.",
