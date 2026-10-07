@@ -1,3 +1,4 @@
+import { SkillFixture } from "./skill-fixture"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { ConfigV1 } from "@opencode-ai/core/v1/config/config"
 import { SessionV1 } from "@opencode-ai/core/v1/session"
@@ -74,12 +75,14 @@ function withContext<A, E>(
         ? yield* Effect.promise(async () => (await runtime()).tmpdir(projectOptions(project, llm?.url)))
         : undefined
       yield* trace(options, scenario, `${label} context acquire done`)
-      return { dir, llm }
+      const skills = project?.skills && dir ? yield* Effect.promise(() => SkillFixture.create(dir.path)) : undefined
+      return { dir, llm, skills }
     }),
     (ctx) =>
       Effect.gen(function* () {
         yield* trace(options, scenario, `${label} tmpdir cleanup start`)
         yield* Effect.promise(async () => {
+          await ctx.skills?.dispose()
           await ctx.dir?.[Symbol.asyncDispose]()
         }).pipe(Effect.ignore)
         yield* trace(options, scenario, `${label} tmpdir cleanup done`)
@@ -125,6 +128,7 @@ function withContext<A, E>(
         }
         const base: ScenarioContext = {
           directory: context.dir?.path,
+          skills: context.skills,
           headers: (extra) => ({
             ...(context.dir?.path ? { "x-opencode-directory": context.dir.path } : {}),
             ...extra,
@@ -231,7 +235,6 @@ function fakeLlmConfig(url: string): Partial<ConfigV1.Info> {
       test: {
         name: "Test",
         id: "test",
-        env: [],
         npm: "@ai-sdk/openai-compatible",
         models: {
           "test-model": {

@@ -1,8 +1,9 @@
 import { ConfigProvider, Effect, Layer } from "effect"
 import { HttpRouter } from "effect/unstable/http"
 import { parse } from "./assertions"
+import { exerciseGlobalRoot } from "./environment"
 import { runtime, type Runtime } from "./runtime"
-import type { ActiveScenario, BackendApp, CallResult, CaptureMode, SeededContext } from "./types"
+import type { ActiveScenario, BackendApp, CallResult, CaptureMode, Method, RequestSpec, SeededContext } from "./types"
 
 type CallOptions = {
   auth?: {
@@ -14,6 +15,21 @@ type CallOptions = {
 export function call(scenario: ActiveScenario, ctx: SeededContext<unknown>, options: CallOptions = {}) {
   return Effect.promise(async () =>
     capture(await app(await runtime(), options).request(toRequest(scenario, ctx)), scenario.capture),
+  )
+}
+
+export function request(method: Method, spec: RequestSpec) {
+  return Effect.promise(async () =>
+    capture(
+      await app(await runtime(), {}).request(
+        new Request(new URL(spec.path, "http://localhost"), {
+          method,
+          headers: spec.body === undefined ? spec.headers : { "content-type": "application/json", ...spec.headers },
+          body: spec.body === undefined ? undefined : JSON.stringify(spec.body),
+        }),
+      ),
+      "full",
+    ),
   )
 }
 
@@ -60,7 +76,11 @@ function app(modules: Runtime, options: CallOptions) {
     modules.HttpApiApp.routes.pipe(
       Layer.provide(
         ConfigProvider.layer(
-          ConfigProvider.fromUnknown({ OPENCODE_SERVER_PASSWORD: password, OPENCODE_SERVER_USERNAME: username }),
+          ConfigProvider.fromUnknown({
+            OPENCODE_SERVER_PASSWORD: password,
+            OPENCODE_SERVER_USERNAME: username,
+            OPENCODE_DISABLE_EXTERNAL_SKILLS: true,
+          }),
         ),
       ),
     ),
@@ -92,6 +112,7 @@ function toAuthProbeRequest(scenario: ActiveScenario, credentials: "missing" | "
     body: scenario.method === "GET" ? undefined : {},
   }
   const headers = {
+    "x-opencode-directory": exerciseGlobalRoot,
     ...(spec.body === undefined ? {} : { "content-type": "application/json" }),
     ...spec.headers,
     ...(credentials === "valid" ? { authorization: basic("opencode", "secret") } : {}),
