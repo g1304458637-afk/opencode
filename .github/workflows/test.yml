@@ -219,7 +219,9 @@ jobs:
         if: runner.os == 'Linux'
         run: >-
           bun --cwd packages/app test:e2e:local -- e2e/regression/campus-new-session.spec.ts
-          e2e/regression/campus-workspace.spec.ts --output=e2e/test-results/campus-hubu
+          e2e/regression/campus-workspace.spec.ts e2e/regression/hubu-projects.spec.ts
+          e2e/regression/hubu-skills.spec.ts e2e/regression/hubu-task-skills.spec.ts
+          e2e/regression/hubu-task-start.spec.ts --output=e2e/test-results/campus-hubu
         env:
           CI: true
           BRAND: hubu
