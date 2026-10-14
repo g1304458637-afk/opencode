@@ -3,7 +3,7 @@ import { mkdirSync } from "node:fs"
 import * as http from "node:http"
 import { createServer } from "node:net"
 import { homedir, tmpdir } from "node:os"
-import { join } from "node:path"
+import { isAbsolute, join } from "node:path"
 import { getCACertificates, setDefaultCACertificates } from "node:tls"
 import type { Event } from "electron"
 import { app, BrowserWindow } from "electron"
@@ -167,6 +167,8 @@ const main = Effect.gen(function* () {
   process.env.OPENCODE_DISABLE_EMBEDDED_WEB_UI = "true"
 
   const appId = BRAND.campus ? BRAND.appId : app.isPackaged ? APP_IDS[CHANNEL] : "ai.opencode.desktop.dev"
+  const customProfile = app.commandLine.getSwitchValue("user-data-dir")
+  if (customProfile && !isAbsolute(customProfile)) throw new Error("user-data-dir must be absolute")
   const onboardingTestRoot = ((): string | undefined => {
     if (!TEST_ONBOARDING) return
 
@@ -188,9 +190,16 @@ const main = Effect.gen(function* () {
   app.setAppUserModelId(appId)
   app.setPath(
     "userData",
-    onboardingTestRoot ? join(onboardingTestRoot, "desktop") : join(app.getPath("appData"), appId),
+    onboardingTestRoot ? join(onboardingTestRoot, "desktop") : customProfile || join(app.getPath("appData"), appId),
   )
   if (onboardingTestRoot) app.setPath("sessionData", join(onboardingTestRoot, "session"))
+  if (customProfile && !onboardingTestRoot) {
+    // Explicit profiles own their default project and browser state; do not import the daily profile.
+    for (const [key, directory] of [["sessionData", "session"], ["documents", "documents"]] as const) {
+      mkdirSync(join(customProfile, directory), { recursive: true })
+      app.setPath(key, join(customProfile, directory))
+    }
+  }
   if (BRAND.campus) {
     // Runtime auth/config caches must never fall back to the other campus or upstream CLI profile.
     process.env.BRAND = BRAND.id
@@ -326,7 +335,7 @@ if (!app.isPackaged) app.commandLine.appendSwitch("remote-debugging-port", proce
 
   yield* Effect.promise(() => app.whenReady())
 
-  if (!TEST_ONBOARDING) migrate()
+  if (!TEST_ONBOARDING && !customProfile) migrate()
   yield* Effect.promise(() => cleanupStoreFiles(app.getPath("userData"))).pipe(
     Effect.tap((result) =>
       Effect.sync(() => {

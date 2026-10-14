@@ -119,6 +119,15 @@ body[data-campus-workspace] [data-component="tool-part-wrapper"] [data-slot="col
   border-top: 1px solid var(--workspace-border);
   padding: 12px 16px;
 }
+/* Keep ordinary command results readable; longer output retains a visible scroll affordance. */
+body[data-campus-workspace] [data-component="bash-output"] [data-slot="bash-scroll"] {
+  max-height: min(360px, 60dvh);
+  scrollbar-width: thin;
+}
+body[data-campus-workspace] [data-component="bash-output"] [data-slot="bash-scroll"]::-webkit-scrollbar {
+  display: block;
+  width: 6px;
+}
 body[data-campus-workspace] [data-component="text-shimmer"] {
   --shimmer-color: var(--workspace-highlight);
 }

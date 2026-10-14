@@ -27,7 +27,7 @@ export const MUC = {
     }
   })(),
   npm: "@ai-sdk/openai-compatible",
-  name: "Sub2API",
+  name: brand.appName,
 }
 
 const DEFAULT_GATEWAY = brand.gatewayURL || "https://admin.wuxuexi.top"

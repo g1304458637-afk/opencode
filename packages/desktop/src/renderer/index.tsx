@@ -31,10 +31,12 @@ import { windowFullscreen } from "./window-fullscreen"
 import { availableStartupServer, readyWslConnections } from "./wsl/connections"
 import "./styles.css"
 import { Splash } from "@opencode-ai/ui/logo"
+import { resolveBrand } from "@opencode-ai/brand"
 import { useTheme } from "@opencode-ai/ui/theme/context"
 
 // MUC Harness: muc 渠道版本来自 release.json（vite define）；其余渠道回退 package.json
 const APP_VERSION = import.meta.env.MUC_VERSION ?? pkg.version
+document.title = resolveBrand().appName
 
 const root = document.getElementById("root")
 if (import.meta.env.DEV && !(root instanceof HTMLElement)) {

@@ -392,7 +392,9 @@ export function MucStatus() {
                   </span>
                 )}
               </Show>
-              {usage()?.planName || "sub2api 账户"}
+              <Show when={!usage()?.planName?.trim() || usage()?.planName?.trim() !== subscriptionStatus()?.displayName?.trim()}>
+                {usage()?.planName || brand.appName}
+              </Show>
               <Show when={stale()}>
                 <span class="rounded bg-amber-100 px-1 text-[10px] text-amber-700">缓存</span>
               </Show>
