@@ -27,7 +27,8 @@ export const MUC = {
     }
   })(),
   npm: "@ai-sdk/openai-compatible",
-  name: "Sub2API",
+  // 用户可见的供应商标题（模型选择器等）。id 仍为 "sub2api" 以兼容已有会话与配置。
+  name: "campus ai",
 }
 
 const DEFAULT_GATEWAY = brand.gatewayURL || "https://admin.wuxuexi.top"
